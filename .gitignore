@@ -1,0 +1,49 @@
+# Java / Gradle
+*.class
+*.jar
+*.war
+*.ear
+.gradle/
+build/
+out/
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# Node.js / Frontend
+node_modules/
+dist/
+.nuxt/
+.cache/
+.next/
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.dockerignore
+
+# Database
+*.db
+*.sqlite
+
+# Temporary files
+tmp/
+temp/

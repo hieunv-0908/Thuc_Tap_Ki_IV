@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: funnyshop-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: funnyshop
+      MYSQL_USER: funnyshop
+      MYSQL_PASSWORD: funnyshop123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./database/data.sql:/docker-entrypoint-initdb.d/2-data.sql
+    networks:
+      - funnyshop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend (Spring Boot)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: funnyshop-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/funnyshop
+      SPRING_DATASOURCE_USERNAME: funnyshop
+      SPRING_DATASOURCE_PASSWORD: funnyshop123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      JWT_SECRET: your-secret-key-change-in-production
+      JWT_EXPIRATION: 86400000
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - funnyshop-network
+    restart: unless-stopped
+
+  # Frontend (React + Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: funnyshop-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - funnyshop-network
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+
+networks:
+  funnyshop-network:
+    driver: bridge

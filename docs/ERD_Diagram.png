@@ -1,0 +1,21 @@
+# ERD Diagram Placeholder
+
+This file is a placeholder for the Entity Relationship Diagram.
+
+To create the actual ERD diagram, you can use tools like:
+- MySQL Workbench
+- draw.io
+- Lucidchart
+- dbdiagram.io
+
+The database schema is defined in:
+- database/schema.sql (DDL)
+- database/data.sql (DML with sample data)
+
+Key entities and relationships:
+- users (1) ----< orders (many)
+- categories (1) ----< products (many)
+- products (1) ----< order_items (many)
+- orders (1) ----< order_items (many)
+- users (1) ----< cart (many)
+- products (1) ----< cart (many)
