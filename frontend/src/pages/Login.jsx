@@ -26,7 +26,10 @@ export default function Login() {
   const location = useLocation();
   const loginToStore = useAuthStore((s) => s.login);
 
-  const fromPath = location.state?.from || '/';
+  const fromPath =
+    location.state?.from ||
+    new URLSearchParams(location.search).get('redirect') ||
+    '/';
 
   const [formData, setFormData] = useState({
     username: '',
@@ -97,7 +100,7 @@ export default function Login() {
 
       // Role-based redirect
       if (res.user.role === 'ADMIN') {
-        navigate(fromPath !== '/' ? fromPath : '/');
+        navigate(fromPath !== '/' ? fromPath : '/admin/products');
       } else {
         navigate(fromPath);
       }

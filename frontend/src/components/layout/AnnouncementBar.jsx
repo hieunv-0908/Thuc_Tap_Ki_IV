@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Sparkles } from 'lucide-react';
 
 const STORAGE_KEY = 'funnyshop_announcement_dismissed';
@@ -8,14 +8,10 @@ const STORAGE_KEY = 'funnyshop_announcement_dismissed';
  * Height: h-9, bg-secondary-700, marquee on mobile, static centered on desktop
  */
 export default function AnnouncementBar() {
-  const [dismissed, setDismissed] = useState(true);
-
-  useEffect(() => {
-    const isDismissed = sessionStorage.getItem(STORAGE_KEY);
-    if (!isDismissed) {
-      setDismissed(false);
-    }
-  }, []);
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return Boolean(sessionStorage.getItem(STORAGE_KEY));
+  });
 
   const handleDismiss = () => {
     sessionStorage.setItem(STORAGE_KEY, 'true');
@@ -28,33 +24,32 @@ export default function AnnouncementBar() {
 
   return (
     <div className="relative z-50 h-9 w-full bg-secondary-700 text-white text-xs sm:text-sm font-medium flex items-center justify-between px-3 sm:px-4 overflow-hidden select-none">
-      {/* Decorative icon left */}
-      <div className="hidden sm:flex items-center gap-1.5 text-secondary-200">
-        <Sparkles className="size-3.5" aria-hidden="true" />
+      {/* Decorative sparkle left */}
+      <div className="hidden md:flex items-center gap-1.5 opacity-80">
+        <Sparkles className="size-3.5 text-secondary-300" />
+        <span>FunnyShop Deal Hot</span>
       </div>
 
-      {/* Message: marquee on mobile, centered static on desktop */}
-      <div className="flex-1 overflow-hidden mx-2 sm:mx-4">
-        {/* Mobile Marquee */}
-        <div className="sm:hidden whitespace-nowrap inline-block animate-[marquee_20s_linear_infinite]">
-          <span className="mx-4">{content}</span>
-          <span className="mx-4">{content}</span>
+      {/* Marquee on mobile, static on desktop */}
+      <div className="flex-1 flex justify-center items-center overflow-hidden px-2">
+        <div className="md:hidden whitespace-nowrap animate-marquee">
+          <span>{content}</span>
+          <span className="mx-4">·</span>
+          <span>{content}</span>
         </div>
-
-        {/* Desktop Static */}
-        <div className="hidden sm:block text-center font-medium truncate">
+        <div className="hidden md:block truncate text-center">
           {content}
         </div>
       </div>
 
-      {/* Dismiss button */}
+      {/* Close button */}
       <button
         type="button"
         onClick={handleDismiss}
-        className="p-1 text-white/80 hover:text-white hover:bg-white/10 rounded transition-colors shrink-0 cursor-pointer"
+        className="p-1 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0 ml-2"
         aria-label="Đóng thanh thông báo"
       >
-        <X className="size-3.5" />
+        <X className="size-4" />
       </button>
     </div>
   );
