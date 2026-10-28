@@ -44,6 +44,31 @@
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
+
+  /* Bóng bổ sung (v2.0) – chỉ phối từ màu đã có ở trên */
+  --shadow-soft:   0 2px 8px rgb(31 41 55 / 0.06);     /* từ --color-ink */
+  --shadow-brand:  0 8px 24px rgb(255 107 74 / 0.25);  /* từ primary-500 */
+  --shadow-violet: 0 8px 24px rgb(108 92 231 / 0.25);  /* từ secondary-500 */
+
+  /* Animation bổ sung (v2.0) */
+  --animate-float:      float 5s ease-in-out infinite;
+  --animate-float-slow: float 8s ease-in-out infinite;
+  --animate-pop:        pop 300ms ease-out;
+  --animate-marquee:    marquee 30s linear infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50%      { transform: translateY(-8px) rotate(3deg); }
+  }
+  @keyframes pop {
+    0%   { transform: scale(0.8); opacity: 0; }
+    60%  { transform: scale(1.08); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
 }
 
 @layer base {
@@ -78,5 +103,33 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     background: #9CA3AF;
+  }
+}
+
+/* Họa tiết nền (v2.0) – chỉ dùng màu có sẵn */
+@utility bg-dots {
+  background-image: radial-gradient(var(--color-primary-200) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+@utility bg-dots-violet {
+  background-image: radial-gradient(var(--color-secondary-200) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+@utility bg-grid {
+  background-image:
+    linear-gradient(var(--color-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+@utility bg-stripes {
+  background-image: repeating-linear-gradient(45deg, var(--color-primary-100) 0 8px, transparent 8px 16px);
+}
+
+/* Giảm chuyển động toàn cục */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

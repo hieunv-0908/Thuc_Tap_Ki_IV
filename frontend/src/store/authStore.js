@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export const useAuthStore = create(
   persist(
@@ -7,6 +7,9 @@ export const useAuthStore = create(
       token: null,
       user: null, // { id, fullName, email, role: 'CUSTOMER' | 'ADMIN' }
       isAuthenticated: false,
+      _hasHydrated: false,
+
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
 
       login: (token, user) => {
         set({
@@ -36,11 +39,15 @@ export const useAuthStore = create(
     }),
     {
       name: 'funnyshop_auth',
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         token: state.token,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

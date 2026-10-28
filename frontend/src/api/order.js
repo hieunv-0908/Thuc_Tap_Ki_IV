@@ -2,7 +2,8 @@ import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
 import { useAuthStore } from '../store/authStore';
 
-const isMock = import.meta.env.VITE_USE_MOCK !== 'false';
+// Backend hiện tại chỉ có Auth API, tạm dùng mock cho Order để tránh lỗi 401
+const isMock = true;
 
 export const orderApi = {
   createOrder: async ({ fullName, phone, address, items }) => {
@@ -10,7 +11,7 @@ export const orderApi = {
       const user = useAuthStore.getState().user;
       return await mockEngine.createOrder(user?.id, { fullName, phone, address, items });
     }
-    return await apiClient.post('/api/orders', { fullName, phone, address, items });
+    return await apiClient.post('/api/v1/orders', { fullName, phone, address, items });
   },
 
   getMyOrders: async () => {
@@ -18,13 +19,13 @@ export const orderApi = {
       const user = useAuthStore.getState().user;
       return await mockEngine.getMyOrders(user?.id);
     }
-    return await apiClient.get('/api/orders/my');
+    return await apiClient.get('/api/v1/orders/my');
   },
 
   getOrderById: async (id) => {
     if (isMock) {
       return await mockEngine.getOrderById(id);
     }
-    return await apiClient.get(`/api/orders/${id}`);
+    return await apiClient.get(`/api/v1/orders/${id}`);
   },
 };

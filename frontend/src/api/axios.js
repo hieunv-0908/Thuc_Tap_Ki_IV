@@ -30,12 +30,15 @@ apiClient.interceptors.response.use(
       const { status, data } = error.response;
 
       if (status === 401) {
-        const wasAuthenticated = useAuthStore.getState().isAuthenticated;
-        useAuthStore.getState().logout();
+        const store = useAuthStore.getState();
+        const wasAuthenticated = store.isAuthenticated;
+        // Không logout nếu đang ở endpoint auth (login / register)
+        const isAuthEndpoint = error.config?.url?.includes('/auth/');
 
-        if (wasAuthenticated) {
+        if (!isAuthEndpoint && wasAuthenticated) {
+          useAuthStore.getState().logout();
           toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-          if (!window.location.pathname.includes('/login')) {
+          if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
             window.location.href = '/login';
           }
         }
