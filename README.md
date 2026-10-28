@@ -1,198 +1,54 @@
-# FunnyShop - E-Commerce Application
+# Thiết kế mô hình dữ liệu người dùng và đơn hàng
 
-Full-stack e-commerce application built with Spring Boot (backend), React (frontend), and MySQL (database).
+## 1. Mục tiêu
 
-## Tech Stack
+Thiết kế và hoàn thiện cấu trúc dữ liệu cho dự án FunnyShop, bổ sung các thông tin cần thiết cho người dùng và đơn hàng, đồng thời định hướng tối ưu hiệu suất truy vấn và đảm bảo tính toàn vẹn dữ liệu trong cơ sở dữ liệu MySQL.
 
-### Backend
-- **Framework**: Spring Boot 3.x
-- **Language**: Java 17+
-- **Database**: MySQL 8.0
-- **Security**: Spring Security + JWT
-- **ORM**: Spring Data JPA
-- **AI Integration**: Spring AI (optional)
+## 2. Nội dung thực hiện
 
-### Frontend
-- **Framework**: React 18
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **State Management**: Zustand
-- **HTTP Client**: Axios
-- **Web Server**: Nginx
+### 2.1. Bổ sung thông tin người dùng
 
-### DevOps
-- **Containerization**: Docker & Docker Compose
-- **CI/CD**: GitHub Actions
+Bổ sung các trường thông tin phục vụ quản lý hồ sơ người dùng:
 
-## Project Structure
+- `full_name`: Họ và tên người dùng, kiểu `VARCHAR(100)`.
+- `phone`: Số điện thoại người dùng, kiểu `VARCHAR(20)`.
 
-```
-Thuc_Tap_Ki_IV/
-├── .github/
-│   └── workflows/
-│       └── ci.yml                   # GitHub Actions CI workflow
-├── backend/                         # Spring Boot application
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/funnyshop/
-│   │   │   │   ├── config/          # Security, CORS, JWT Config
-│   │   │   │   ├── controller/      # REST API Controllers
-│   │   │   │   ├── dto/             # Request / Response DTOs
-│   │   │   │   ├── entity/          # JPA Entities
-│   │   │   │   ├── exception/       # Global Exception Handler
-│   │   │   │   ├── repository/      # Spring Data JPA Repositories
-│   │   │   │   ├── service/         # Business Logic Services
-│   │   │   │   └── FunnyShopApp.java
-│   │   │   └── resources/
-│   │   │       ├── application.yml
-│   │   │       └── application-dev.yml
-│   │   └── test/                    # Unit & Integration Tests
-│   ├── build.gradle
-│   ├── Dockerfile
-│   └── .gitignore
-├── frontend/                        # React application
-│   ├── public/
-│   ├── src/
-│   │   ├── assets/
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   ├── layouts/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   ├── store/
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   ├── package.json
-│   ├── tailwind.config.js
-│   ├── vite.config.js
-│   └── .gitignore
-├── database/
-│   ├── schema.sql                   # Database schema
-│   └── data.sql                     # Sample data
-├── docs/
-│   ├── SRS.md                       # Software Requirements Specification
-│   └── ERD_Diagram.png              # Entity Relationship Diagram
-├── .gitignore
-├── docker-compose.yml
-└── README.md
-```
+Các trường này giúp lưu trữ thông tin cá nhân phục vụ quản lý tài khoản và hỗ trợ quá trình mua hàng.
 
-## Getting Started
+### 2.2. Bổ sung thông tin đơn hàng
 
-### Prerequisites
-- Docker and Docker Compose installed
-- Git
+Thiết kế bảng `orders` với các thông tin bổ sung phục vụ quá trình đặt hàng:
 
-### Running the Application
+- `customer_name`: Tên người nhận hàng, kiểu `VARCHAR(100)`, không được để trống.
+- `phone`: Số điện thoại người nhận hàng, kiểu `VARCHAR(20)`, không được để trống.
+- `payment_method`: Phương thức thanh toán, kiểu `VARCHAR(20)`, giá trị mặc định là `COD`.
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd Thuc_Tap_Ki_IV
-   ```
+Các trường thông tin này cho phép lưu riêng thông tin người nhận và phương thức thanh toán của từng đơn hàng.
 
-2. **Start all services using Docker Compose**
-   ```bash
-   docker-compose up -d
-   ```
+### 2.3. Thiết kế quan hệ dữ liệu
 
-3. **Access the application**
-   - Frontend: http://localhost
-   - Backend API: http://localhost:8080
-   - MySQL: localhost:3306
+Xác định các mối quan hệ giữa những bảng chính trong hệ thống:
 
-4. **Stop the services**
-   ```bash
-   docker-compose down
-   ```
+- `users` – `orders`: Một người dùng có thể có nhiều đơn hàng.
+- `orders` – `order_items`: Một đơn hàng có thể chứa nhiều sản phẩm.
+- `products` – `order_items`: Một sản phẩm có thể xuất hiện trong nhiều chi tiết đơn hàng.
+- `categories` – `products`: Một danh mục có thể chứa nhiều sản phẩm.
+- `users` – `cart`: Một người dùng có thể có nhiều sản phẩm trong giỏ hàng.
+- `products` – `cart`: Một sản phẩm có thể xuất hiện trong giỏ hàng của nhiều người dùng.
 
-5. **View logs**
-   ```bash
-   docker-compose logs -f
-   ```
+Các quan hệ được thể hiện thông qua khóa chính và khóa ngoại nhằm duy trì tính liên kết giữa các bảng.
 
-### Manual Setup (Without Docker)
+### 2.4. Định hướng tối ưu Index và Constraint
 
-#### Backend Setup
-1. Navigate to backend directory
-   ```bash
-   cd backend
-   ```
+- Xác định các trường cần sử dụng khóa chính (`PRIMARY KEY`) để định danh bản ghi.
+- Sử dụng khóa ngoại (`FOREIGN KEY`) để đảm bảo tính toàn vẹn tham chiếu.
+- Xác định các trường cần ràng buộc duy nhất (`UNIQUE`), chẳng hạn `username` và `email`.
+- Sử dụng `NOT NULL` cho những trường bắt buộc phải có dữ liệu.
+- Xem xét bổ sung Index cho các trường thường xuyên được sử dụng trong truy vấn tìm kiếm, lọc và kết nối bảng.
 
-2. Configure database in `src/main/resources/application.yml`
+## 3. Kết quả đạt được
 
-3. Build and run
-   ```bash
-   ./gradlew build
-   ./gradlew bootRun
-   ```
-
-#### Frontend Setup
-1. Navigate to frontend directory
-   ```bash
-   cd frontend
-   ```
-
-2. Install dependencies
-   ```bash
-   npm install
-   ```
-
-3. Start development server
-   ```bash
-   npm run dev
-   ```
-
-## Database Schema
-
-The application uses the following main tables:
-- **users**: User accounts and authentication
-- **categories**: Product categories
-- **products**: Product catalog
-- **orders**: Customer orders
-- **order_items**: Items within orders
-- **cart**: Shopping cart functionality
-
-See `database/schema.sql` for complete schema definition.
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-
-### Products
-- `GET /api/products` - Get all products
-- `GET /api/products/{id}` - Get product by ID
-- `POST /api/products` - Create product (admin)
-- `PUT /api/products/{id}` - Update product (admin)
-- `DELETE /api/products/{id}` - Delete product (admin)
-
-### Orders
-- `GET /api/orders` - Get user orders
-- `POST /api/orders` - Create order
-- `GET /api/orders/{id}` - Get order details
-
-## Development
-
-### Running Tests
-- Backend: `./gradlew test`
-- Frontend: `npm test`
-
-### Code Style
-- Backend: Follow Java coding conventions
-- Frontend: Follow ESLint rules
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-
-This project is licensed under the MIT License.
+- Xây dựng nội dung thiết kế ERD phục vụ quản lý người dùng, danh mục, sản phẩm, giỏ hàng, đơn hàng và chi tiết đơn hàng.
+- Xác định các trường thông tin bổ sung cho hồ sơ người dùng và thông tin nhận hàng.
+- Làm rõ các mối quan hệ giữa những bảng chính trong hệ thống.
+- Xác định các loại ràng buộc và hướng tối ưu Index cần áp dụng cho cơ sở dữ liệu.
