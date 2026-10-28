@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.funnyshop.exception.ResourceNotFoundException;
 
 @Service
 @RequiredArgsConstructor
@@ -62,5 +63,15 @@ public class ProductServiceImpl implements ProductService {
                 categoryId,
                 pageable
         );
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public Product getProductById(Long id) {
+        return productRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Không tìm thấy sản phẩm với ID: " + id
+                        )
+                );
     }
 }

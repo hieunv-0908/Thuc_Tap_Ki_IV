@@ -16,6 +16,21 @@ public class productController {
 
     private final ProductService productService;
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<Product>> getProductById(
+            @PathVariable Long id) {
+
+        Product product = productService.getProductById(id);
+
+        ApiResponse<Product> response = ApiResponse.<Product>builder()
+                .code(HttpStatus.OK.value())
+                .message("Lấy chi tiết sản phẩm thành công!")
+                .data(product)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<Page<Product>>> getProducts(
             @RequestParam(required = false) String keyword,
