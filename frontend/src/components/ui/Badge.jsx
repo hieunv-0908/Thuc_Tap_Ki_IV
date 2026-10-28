@@ -51,3 +51,14 @@ export function OrderBadge({ status, className = '' }) {
     </span>
   );
 }
+
+export function DiscountBadge({ percent, className = '' }) {
+  if (!percent || percent <= 0) return null;
+  return (
+    <span
+      className={`inline-flex items-center rounded-md bg-primary-700 px-2 py-0.5 text-xs font-bold text-white shadow-2xs ${className}`}
+    >
+      -{percent}%
+    </span>
+  );
+}

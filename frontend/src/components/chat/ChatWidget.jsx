@@ -1,7 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Sparkles, Bot } from 'lucide-react';
+import { MessageCircle, X, Send, Sparkles, Bot, AlertCircle } from 'lucide-react';
 import { aiApi } from '../../api/ai';
 import { formatCurrency } from '../../utils/formatCurrency';
+
+let messageCounter = 0;
+function createMessageId(prefix) {
+  messageCounter += 1;
+  return `${prefix}-${messageCounter}`;
+}
 
 /**
  * ChatWidget component complying with Design.md 6.16
@@ -10,7 +16,7 @@ export default function ChatWidget({ onSelectProduct }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
-      id: 'welcome',
+      id: 'welcome-1',
       sender: 'ai',
       text: 'Xin chào! Mình là Trợ lý AI FunnyShop. Mình có thể giúp bạn tìm quà tặng độc đáo hoặc gợi ý sản phẩm hôm nay 🎁',
       products: [],
@@ -18,7 +24,7 @@ export default function ChatWidget({ onSelectProduct }) {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [hasError, setHasError] = useState(false);
+  const [lastUserPrompt, setLastUserPrompt] = useState('');
 
   const messagesEndRef = useRef(null);
 
@@ -42,9 +48,9 @@ export default function ChatWidget({ onSelectProduct }) {
     const text = (textToSend || inputMessage).trim();
     if (!text || isLoading) return;
 
-    setHasError(false);
+    setLastUserPrompt(text);
     const userMsg = {
-      id: `user-${Date.now()}`,
+      id: createMessageId('user'),
       sender: 'user',
       text,
     };
@@ -56,23 +62,28 @@ export default function ChatWidget({ onSelectProduct }) {
     try {
       const response = await aiApi.chat(text);
       const aiMsg = {
-        id: `ai-${Date.now()}`,
+        id: createMessageId('ai'),
         sender: 'ai',
         text: response.reply || 'Mình có một số gợi ý phù hợp cho bạn:',
         products: response.products || [],
       };
       setMessages((prev) => [...prev, aiMsg]);
-    } catch (err) {
-      setHasError(true);
+    } catch {
       const errorMsg = {
-        id: `err-${Date.now()}`,
+        id: createMessageId('err'),
         sender: 'ai',
         isError: true,
-        text: 'Mình chưa trả lời được lúc này. Vui lòng thử lại sau nhé.',
+        text: 'Mình chưa trả lời được lúc này. Bạn vui lòng thử lại nhé.',
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRetry = () => {
+    if (lastUserPrompt) {
+      handleSendMessage(lastUserPrompt);
     }
   };
 
@@ -85,16 +96,16 @@ export default function ChatWidget({ onSelectProduct }) {
 
   return (
     <>
-      {/* Floating trigger button */}
+      {/* Floating trigger button (Design.md 6.16) */}
       {!isOpen && (
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-4 right-4 z-[45] size-14 rounded-full bg-secondary-500 text-white shadow-lg hover:bg-secondary-600 active:bg-secondary-700 flex items-center justify-center transition-transform hover:scale-105 cursor-pointer"
+          className="fixed bottom-4 right-4 z-[45] size-14 rounded-full bg-secondary-500 text-white shadow-violet hover:bg-secondary-600 active:bg-secondary-700 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
           aria-label="Mở trò chuyện với trợ lý FunnyShop"
         >
           <MessageCircle className="size-7" />
-          <span className="absolute -top-1 -left-1 flex h-3.5 w-3.5">
+          <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-primary-500" />
           </span>
@@ -103,7 +114,7 @@ export default function ChatWidget({ onSelectProduct }) {
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="fixed inset-x-2 bottom-2 sm:inset-x-auto sm:bottom-24 sm:right-4 z-[45] w-auto sm:w-[380px] h-[520px] max-h-[85vh] rounded-2xl bg-white shadow-2xl border border-line flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed inset-x-2 bottom-2 sm:inset-x-auto sm:bottom-24 sm:right-4 z-[45] w-auto sm:w-[380px] h-[520px] max-h-[85vh] rounded-2xl bg-white shadow-xl border border-line flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
           {/* Header */}
           <div className="bg-secondary-500 text-white px-4 py-3.5 flex items-center justify-between shrink-0 shadow-xs">
             <div className="flex items-center gap-2.5">
@@ -123,7 +134,7 @@ export default function ChatWidget({ onSelectProduct }) {
               type="button"
               onClick={() => setIsOpen(false)}
               className="p-1 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              aria-label="Đóng bảng chat"
+              aria-label="Đóng bảng trò chuyện"
             >
               <X className="size-5" />
             </button>
@@ -142,7 +153,7 @@ export default function ChatWidget({ onSelectProduct }) {
                   </div>
                 )}
 
-                <div className="max-w-[80%] flex flex-col gap-1.5">
+                <div className="max-w-[82%] flex flex-col gap-1.5">
                   <div
                     className={`px-3.5 py-2 text-sm leading-relaxed ${
                       m.sender === 'user'
@@ -152,7 +163,24 @@ export default function ChatWidget({ onSelectProduct }) {
                         : 'bg-white text-ink border border-line rounded-2xl rounded-bl-xs shadow-2xs'
                     }`}
                   >
+                    {m.isError && (
+                      <div className="flex items-center gap-1.5 font-semibold text-red-700 mb-1">
+                        <AlertCircle className="size-3.5 shrink-0" />
+                        <span>Thông báo</span>
+                      </div>
+                    )}
                     {m.text}
+                    {m.isError && (
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={handleRetry}
+                          className="text-xs font-semibold text-red-700 underline hover:text-red-900 cursor-pointer"
+                        >
+                          Thử lại
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Product Cards inside AI response if any */}
@@ -170,7 +198,7 @@ export default function ChatWidget({ onSelectProduct }) {
                             className="size-12 rounded-lg object-cover bg-gray-100 shrink-0"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-ink truncate">{p.name}</p>
+                            <p className="text-xs font-semibold text-ink truncate">{p.name}</p>
                             <p className="text-xs font-bold text-primary-700">
                               {formatCurrency(p.price)}
                             </p>
@@ -186,7 +214,7 @@ export default function ChatWidget({ onSelectProduct }) {
               </div>
             ))}
 
-            {/* AI is thinking */}
+            {/* AI is thinking bubble */}
             {isLoading && (
               <div className="flex items-center gap-2">
                 <div className="size-7 rounded-full bg-secondary-100 text-secondary-700 flex items-center justify-center shrink-0">

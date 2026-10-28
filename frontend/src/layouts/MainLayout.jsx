@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import AnnouncementBar from '../components/layout/AnnouncementBar';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import ChatWidget from '../components/chat/ChatWidget';
+import ScrollToTop from '../components/ui/ScrollToTop';
 import ToastContainer from '../components/ui/ToastContainer';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
+import QuantityStepper from '../components/ui/QuantityStepper';
 import { formatCurrency } from '../utils/formatCurrency';
-import { Star, ShoppingCart } from 'lucide-react';
+import { getCategoryMeta } from '../utils/constants';
+import { Star, ShoppingCart, CheckCircle2, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { toast } from '../store/toastStore';
-import QuantityStepper from '../components/ui/QuantityStepper';
 
 /**
  * MainLayout complying with Design.md 3.4
@@ -36,9 +39,14 @@ export default function MainLayout({ onSearch, searchQuery }) {
     }
   };
 
+  const categoryName = selectedProduct?.category?.name || '';
+  const meta = getCategoryMeta(categoryName);
+  const isOutOfStock = !selectedProduct || selectedProduct.stock <= 0;
+
   return (
     <div className="min-h-screen flex flex-col bg-page text-ink antialiased selection:bg-primary-100 selection:text-primary-900">
       <ToastContainer />
+      <AnnouncementBar />
       <Navbar onSearch={onSearch} initialSearchQuery={searchQuery} />
 
       <main className="flex-1 min-h-[calc(100vh-4rem)]">
@@ -47,8 +55,9 @@ export default function MainLayout({ onSearch, searchQuery }) {
 
       <Footer />
       <ChatWidget onSelectProduct={handleSelectProduct} />
+      <ScrollToTop />
 
-      {/* Quick Product Detail Modal */}
+      {/* Quick Product Detail Modal (Design.md 7.2) */}
       <Modal
         isOpen={Boolean(selectedProduct)}
         onClose={() => setSelectedProduct(null)}
@@ -56,57 +65,86 @@ export default function MainLayout({ onSearch, searchQuery }) {
         maxWidth="max-w-2xl"
       >
         {selectedProduct && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-            <div className="aspect-square rounded-xl overflow-hidden bg-gray-50 border border-line flex items-center justify-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
+            {/* Image */}
+            <div className="relative aspect-square rounded-2xl overflow-hidden bg-primary-50 border border-line flex items-center justify-center">
               <img
                 src={selectedProduct.imageUrl}
                 alt={selectedProduct.name}
                 className="w-full h-full object-cover"
               />
+              <span className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-xs px-2.5 py-1 text-xs font-medium text-ink-muted shadow-2xs">
+                <span>{meta.emoji}</span>
+                <span>{categoryName}</span>
+              </span>
             </div>
 
+            {/* Info */}
             <div className="flex flex-col justify-between">
               <div>
-                <span className="text-xs font-semibold text-secondary-600 uppercase tracking-wider">
-                  {selectedProduct.category?.name}
-                </span>
-                <h2 className="text-xl font-bold text-ink mt-1 mb-2 leading-snug">
+                <h2 className="text-xl font-bold text-ink mb-2 leading-snug">
                   {selectedProduct.name}
                 </h2>
 
+                {/* Rating & Stock */}
                 <div className="flex items-center gap-3 text-sm text-ink-muted mb-3">
                   <span className="flex items-center gap-1 font-semibold text-amber-600">
-                    <Star className="size-4 fill-amber-400 text-amber-400" />
+                    <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
                     {selectedProduct.rating || 4.5}
                   </span>
                   <span>|</span>
-                  <span
-                    className={
-                      selectedProduct.stock <= 5
-                        ? 'text-amber-700 font-medium'
-                        : 'text-ink-muted'
-                    }
-                  >
-                    {selectedProduct.stock === 0
-                      ? 'Hết hàng'
-                      : selectedProduct.stock <= 5
-                      ? `Chỉ còn ${selectedProduct.stock} sản phẩm`
-                      : `Còn ${selectedProduct.stock} sản phẩm`}
+                  <span className="inline-flex items-center gap-1 font-medium">
+                    {isOutOfStock ? (
+                      <span className="text-red-600 font-semibold">Hết hàng</span>
+                    ) : selectedProduct.stock <= 5 ? (
+                      <span className="text-amber-700 font-semibold">
+                        Chỉ còn {selectedProduct.stock} sản phẩm
+                      </span>
+                    ) : (
+                      <span className="text-emerald-700 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="size-3.5 text-emerald-600" /> Còn hàng ({selectedProduct.stock})
+                      </span>
+                    )}
                   </span>
                 </div>
 
-                <div className="text-2xl font-bold text-primary-700 mb-4">
-                  {formatCurrency(selectedProduct.price)}
+                {/* Price Box (Design.md 7.2) */}
+                <div className="rounded-xl bg-primary-50 p-3.5 mb-4">
+                  <div className="text-2xl font-bold text-primary-700">
+                    {formatCurrency(selectedProduct.price)}
+                  </div>
+                  {selectedProduct.originalPrice && selectedProduct.originalPrice > selectedProduct.price && (
+                    <div className="text-xs text-ink-subtle line-through mt-0.5">
+                      {formatCurrency(selectedProduct.originalPrice)}
+                    </div>
+                  )}
                 </div>
 
                 <p className="text-sm text-ink-muted leading-relaxed mb-4">
                   {selectedProduct.description}
                 </p>
+
+                {/* Trust mini icons */}
+                <div className="border-t border-dashed border-line pt-3 mb-4 grid grid-cols-3 gap-2 text-[11px] text-ink-muted">
+                  <div className="flex items-center gap-1">
+                    <Truck className="size-3.5 text-primary-600 shrink-0" />
+                    <span>Giao toàn quốc</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <ShieldCheck className="size-3.5 text-secondary-600 shrink-0" />
+                    <span>Thanh toán COD</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <RotateCcw className="size-3.5 text-amber-600 shrink-0" />
+                    <span>Đổi trả dễ dàng</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="pt-4 border-t border-line space-y-4">
-                {selectedProduct.stock > 0 && (
-                  <div className="flex items-center gap-3">
+              {/* Add to Cart Actions */}
+              <div className="pt-3 border-t border-line space-y-3">
+                {!isOutOfStock && (
+                  <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-ink">Số lượng:</span>
                     <QuantityStepper
                       value={modalQuantity}
@@ -117,17 +155,16 @@ export default function MainLayout({ onSearch, searchQuery }) {
                   </div>
                 )}
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="primary"
-                    fullWidth
-                    disabled={selectedProduct.stock <= 0}
-                    leftIcon={ShoppingCart}
-                    onClick={handleAddToCartFromModal}
-                  >
-                    {selectedProduct.stock <= 0 ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
-                  </Button>
-                </div>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  disabled={isOutOfStock}
+                  leftIcon={ShoppingCart}
+                  onClick={handleAddToCartFromModal}
+                >
+                  {isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
+                </Button>
               </div>
             </div>
           </div>

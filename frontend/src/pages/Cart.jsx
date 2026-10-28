@@ -5,11 +5,13 @@ import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import CartItem from '../components/cart/CartItem';
 import CartSummary from '../components/cart/CartSummary';
+import FreeShipBar from '../components/cart/FreeShipBar';
 import EmptyState from '../components/ui/EmptyState';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import Button from '../components/ui/Button';
 
 /**
- * Cart page component complying with Design.md 7.4 and FR-03
+ * Cart page component complying with Design.md 7.4 (v2.0)
  */
 export default function Cart() {
   const navigate = useNavigate();
@@ -24,7 +26,6 @@ export default function Cart() {
 
   const handleCheckout = () => {
     if (!isAuthenticated) {
-      // Per task.md: "Chưa đăng nhập bấm đặt hàng → /login rồi quay lại"
       navigate('/login', { state: { from: '/checkout' } });
     } else {
       navigate('/checkout');
@@ -36,14 +37,28 @@ export default function Cart() {
     setIsClearModalOpen(false);
   };
 
+  // Empty Cart State (Design.md 7.4: bg-grid rounded-3xl py-16 + ShoppingCart sticker + floating emoji)
   if (items.length === 0) {
     return (
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
-        <div className="bg-white rounded-2xl border border-line p-8 sm:p-12 shadow-xs">
+        <div className="relative overflow-hidden bg-grid rounded-3xl border border-line p-8 sm:p-16 text-center shadow-soft">
+          <span
+            className="absolute top-8 left-12 text-4xl opacity-50 animate-[float_5s_ease-in-out_infinite] pointer-events-none select-none hidden sm:block"
+            aria-hidden="true"
+          >
+            🧸
+          </span>
+          <span
+            className="absolute bottom-8 right-12 text-4xl opacity-50 animate-[float-slow_8s_ease-in-out_infinite] pointer-events-none select-none hidden sm:block"
+            aria-hidden="true"
+          >
+            🎁
+          </span>
+
           <EmptyState
             icon={ShoppingCart}
             title="Giỏ hàng của bạn đang trống"
-            description="Hãy khám phá thêm hàng trăm món đồ chơi, quà tặng thú vị tại FunnyShop nhé!"
+            description="Có vẻ như bạn chưa chọn được món quà ưng ý. Hãy khám phá ngay các sản phẩm vui nhộn tại FunnyShop nhé!"
             actionLabel="Tiếp tục mua sắm"
             onAction={() => navigate('/')}
           />
@@ -53,31 +68,35 @@ export default function Cart() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 md:py-10 pb-24 sm:pb-10">
+    <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 md:py-10 pb-24 sm:pb-10 space-y-6">
       {/* Page Title & Back Link */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-primary-700 transition-colors mb-2"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-muted hover:text-primary-700 transition-colors mb-2"
           >
             <ArrowLeft className="size-4" />
             Tiếp tục mua sắm
           </Link>
-          <h1 className="text-2xl md:text-3xl font-bold text-ink">
-            Giỏ hàng ({totalCount} sản phẩm)
+          <h1 className="text-2xl md:text-3xl font-extrabold text-ink">
+            Giỏ hàng của bạn ({totalCount} sản phẩm)
           </h1>
         </div>
 
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
+          leftIcon={Trash2}
           onClick={() => setIsClearModalOpen(true)}
-          className="self-start sm:self-auto inline-flex items-center gap-1.5 text-sm text-ink-subtle hover:text-red-600 transition-colors cursor-pointer"
+          className="self-start sm:self-auto text-ink-subtle hover:text-red-600 hover:bg-red-50"
         >
-          <Trash2 className="size-4" />
           Xóa toàn bộ giỏ hàng
-        </button>
+        </Button>
       </div>
+
+      {/* Free Shipping Progress Bar (Design.md 7.4) */}
+      <FreeShipBar currentTotal={totalPrice} />
 
       {/* Main Grid: Items (2 cols) vs Summary (1 col) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">

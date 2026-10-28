@@ -1,8 +1,8 @@
-import { Check, Clock, Package, Truck, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Check, ClipboardList, Package, Truck, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { ORDER_STATUS } from '../../utils/constants';
 
 const STEPS = [
-  { key: ORDER_STATUS.PENDING, label: 'Chờ xử lý', icon: Clock },
+  { key: ORDER_STATUS.PENDING, label: 'Chờ xử lý', icon: ClipboardList },
   { key: ORDER_STATUS.PROCESSING, label: 'Đang xử lý', icon: Package },
   { key: ORDER_STATUS.SHIPPING, label: 'Đang giao', icon: Truck },
   { key: ORDER_STATUS.COMPLETED, label: 'Hoàn thành', icon: CheckCircle2 },
@@ -10,11 +10,7 @@ const STEPS = [
 
 /**
  * OrderTimeline component complying with Design.md 7.6
- * 4 steps: Chờ xử lý → Đang xử lý → Đang giao → Hoàn thành
- * Passed step: bg-primary-700
- * Current step: ring-4 ring-primary-100 bg-primary-700 text-white
- * Future step: bg-gray-200 text-ink-subtle
- * CANCELLED status: red alert box "Đơn hàng đã bị hủy"
+ * Icons per v2.0: ClipboardList, Package, Truck, CheckCircle2
  */
 export default function OrderTimeline({ status }) {
   if (status === ORDER_STATUS.CANCELLED) {
@@ -26,7 +22,7 @@ export default function OrderTimeline({ status }) {
         <div>
           <h4 className="font-semibold text-base">Đơn hàng đã bị hủy</h4>
           <p className="text-xs sm:text-sm text-red-700 mt-0.5">
-            Đơn hàng này không còn hiệu lực giao nhận. Số lượng sản phẩm đã được hoàn trả lại kho.
+            Đơn hàng này đã bị hủy. Các mặt hàng đã được hoàn trả lại tồn kho.
           </p>
         </div>
       </div>
@@ -34,16 +30,15 @@ export default function OrderTimeline({ status }) {
   }
 
   const currentIdx = STEPS.findIndex((s) => s.key === status);
-  // Default to 0 if not found
   const activeIndex = currentIdx >= 0 ? currentIdx : 0;
 
   return (
     <div className="w-full py-4 sm:py-6">
       <div className="relative flex items-center justify-between">
-        {/* Background connecting bar */}
+        {/* Background track line */}
         <div className="absolute top-5 left-5 right-5 sm:left-8 sm:right-8 h-1 bg-gray-200 -z-0" />
-        
-        {/* Colored progress bar */}
+
+        {/* Colored progress line */}
         <div
           className="absolute top-5 left-5 sm:left-8 h-1 bg-primary-700 transition-all duration-500 -z-0"
           style={{
@@ -68,7 +63,7 @@ export default function OrderTimeline({ status }) {
                   isPassed
                     ? 'bg-primary-700 text-white shadow-xs'
                     : isCurrent
-                    ? 'bg-primary-700 text-white ring-4 ring-primary-100 shadow-sm scale-110'
+                    ? 'bg-primary-700 text-white ring-4 ring-primary-100 shadow-sm scale-105'
                     : 'bg-gray-100 border-2 border-line text-ink-subtle'
                 }`}
               >

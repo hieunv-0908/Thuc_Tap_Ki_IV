@@ -1,7 +1,8 @@
 import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
 
-const isMock = import.meta.env.VITE_USE_MOCK !== 'false';
+// Backend hiện tại chỉ có Auth API, tạm dùng mock cho Admin để tránh lỗi 401
+const isMock = true;
 
 export const adminApi = {
   createProduct: async (productData) => {

@@ -27,18 +27,23 @@ export function Spinner({ size = 'md', className = '' }) {
 
 export function ProductCardSkeleton() {
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-line bg-white shadow-sm p-3">
-      <Skeleton className="w-full aspect-square rounded-lg mb-3" />
-      <Skeleton className="h-4 w-3/4 mb-2" />
-      <Skeleton className="h-3 w-1/2 mb-3" />
-      <div className="flex items-center justify-between mb-3">
-        <Skeleton className="h-5 w-20" />
-        <Skeleton className="h-3 w-12" />
+    <div className="flex flex-col overflow-hidden rounded-xl border border-line bg-white shadow-soft p-3 sm:p-4">
+      {/* Square image skeleton with chip placeholder */}
+      <div className="relative aspect-square w-full rounded-lg bg-gray-200 animate-pulse mb-3 overflow-hidden">
+        <Skeleton className="absolute bottom-2 left-2 h-5 w-20 rounded-full" />
       </div>
-      <Skeleton className="h-10 w-full rounded-lg mt-auto" />
+      {/* Name skeleton lines */}
+      <Skeleton className="h-4 w-5/6 mb-1.5" />
+      <Skeleton className="h-4 w-3/5 mb-3" />
+      {/* Meta rating & price */}
+      <div className="flex items-center justify-between mb-3">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-4 w-12" />
+      </div>
+      {/* Button skeleton */}
+      <Skeleton className="h-11 w-full rounded-lg mt-auto" />
     </div>
   );
 }
 
 export default Skeleton;
-
