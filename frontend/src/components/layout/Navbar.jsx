@@ -268,7 +268,7 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                       >
                         <User className="size-4 text-ink-subtle" />
                         <span>Hồ sơ cá nhân</span>
-                      </Link>
+                      </Link>
 
                       <Link
                         to="/orders"
@@ -280,10 +280,14 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                       </Link>
 
                       {isAdmin() && (
-                        <div className="px-4 py-2 text-xs font-semibold text-secondary-600 bg-secondary-50 flex items-center gap-2 rounded-md mx-2 my-1">
+                        <Link
+                          to="/admin/products"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="px-4 py-2 text-xs font-semibold text-secondary-700 bg-secondary-50 hover:bg-secondary-100 flex items-center gap-2 rounded-md mx-2 my-1 transition-colors"
+                        >
                           <Shield className="size-3.5 text-secondary-500" />
-                          <span>Quyền Quản trị viên</span>
-                        </div>
+                          <span>Trang quản trị (Admin)</span>
+                        </Link>
                       )}
                     </div>
 
@@ -421,6 +425,17 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                     <User className="size-5 text-ink-subtle" />
                     <span>Hồ sơ cá nhân</span>
                   </Link>
+
+                  {isAdmin() && (
+                    <Link
+                      to="/admin/products"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-secondary-800 bg-secondary-50 hover:bg-secondary-100 transition-colors"
+                    >
+                      <Shield className="size-5 text-secondary-600" />
+                      <span>Trang quản trị (Admin)</span>
+                    </Link>
+                  )}
                 </>
               ) : null}
             </div>

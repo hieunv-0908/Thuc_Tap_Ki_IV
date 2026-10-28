@@ -1,4 +1,4 @@
-export const INITIAL_CATEGORIES = [
+﻿export const INITIAL_CATEGORIES = [
   { id: 1, name: 'Điện thoại & Phụ kiện', slug: 'dien-thoai-phu-kien' },
   { id: 2, name: 'Thời trang & Phụ kiện', slug: 'thoi-trang-phu-kien' },
   { id: 3, name: 'Đồ chơi & Quà tặng hài hước', slug: 'do-choi-qua-tang' },
@@ -213,15 +213,15 @@ export const INITIAL_USERS = [
   {
     id: 1,
     fullName: 'Quản trị viên FunnyShop',
-    email: 'admin@funny.shop',
-    password: 'Admin@123',
+    email: 'admin',
+    password: 'admin123',
     role: 'ADMIN',
   },
   {
     id: 2,
     fullName: 'Nguyễn Văn Khách',
-    email: 'customer@funny.shop',
-    password: 'Customer@123',
+    email: 'user1',
+    password: '123456',
     role: 'CUSTOMER',
   },
 ];

@@ -456,7 +456,7 @@ class MockEngine {
     const msg = (message || '').toLowerCase();
 
     // Recommend products based on message keywords
-    let recommendedProducts = [];
+    let recommendedProducts;
     if (msg.includes('tai nghe') || msg.includes('điện thoại') || msg.includes('phụ kiện')) {
       recommendedProducts = this.products.filter((p) => p.category?.id === 1).slice(0, 3);
     } else if (msg.includes('áo') || msg.includes('thời trang') || msg.includes('mũ') || msg.includes('kính')) {

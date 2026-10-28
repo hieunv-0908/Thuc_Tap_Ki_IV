@@ -2,7 +2,7 @@ import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
 
 // Chỉ gọi API thật Backend cho Auth (Đăng nhập / Đăng ký)
-const isMock = false;
+const isMock = true; // �?i th�nh false khi Backend d� s?n s�ng
 
 export const authApi = {
   /**
