@@ -157,24 +157,48 @@ The application uses the following main tables:
 
 See `database/schema.sql` for complete schema definition.
 
-## API Endpoints
+API Endpoints
+1. Authentication & Profile
+POST /api/v1/auth/register - Đăng ký tài khoản người dùng mới (Public)
 
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
+POST /api/v1/auth/login - Đăng nhập hệ thống & trả về JWT Token (Public)
 
-### Products
-- `GET /api/products` - Get all products
-- `GET /api/products/{id}` - Get product by ID
-- `POST /api/products` - Create product (admin)
-- `PUT /api/products/{id}` - Update product (admin)
-- `DELETE /api/products/{id}` - Delete product (admin)
+POST /api/v1/users/me - Lấy thông tin chi tiết hồ sơ cá nhân (Authenticated)
 
-### Orders
-- `GET /api/orders` - Get user orders
-- `POST /api/orders` - Create order
-- `GET /api/orders/{id}` - Get order details
+PUT /api/v1/users/me - Cập nhật thông tin cá nhân (Họ tên, SĐT, Địa chỉ) (Authenticated)
 
+2. Catalog, Products & Categories
+GET /api/v1/products - Lấy danh sách sản phẩm (Search, Filter, Sort) (Public)
+
+GET /api/v1/products/{id} - Lấy thông tin chi tiết của 01 sản phẩm (Public)
+
+POST /api/v1/admin/products - Thêm mới sản phẩm (Admin)
+
+PUT /api/v1/admin/products/{id} - Cập nhật thông tin sản phẩm (Admin)
+
+DELETE /api/v1/admin/products/{id} - Xóa hoặc ẩn sản phẩm (Admin)
+
+GET /api/v1/categories - Lấy danh sách danh mục (Public)
+
+POST /api/v1/admin/categories - Tạo mới danh mục sản phẩm (Admin)
+
+3. Orders & Checkout
+POST /api/v1/orders/checkout - Tạo đơn hàng mới thanh toán COD (Customer)
+
+GET /api/v1/orders/my-orders - Xem lịch sử danh sách đơn hàng cá nhân (Customer)
+
+GET /api/v1/orders/{id} - Xem chi tiết 01 đơn hàng (Customer / Admin)
+
+GET /api/v1/admin/orders - Admin xem danh sách toàn bộ đơn hàng (Admin)
+
+PUT /api/v1/admin/orders/{id}/status - Admin cập nhật tiến trình trạng thái đơn hàng (Admin)
+
+PUT /api/v1/admin/orders/{id} - Admin cập nhật thông tin đơn hàng (Admin)
+
+4. AI Integration (Spring AI Module)
+POST /api/v1/admin/ai/generate-desc - Tự động sinh mô tả sản phẩm chuẩn SEO (Admin)
+
+POST /api/v1/ai/chat - AI Chatbot tư vấn & tìm kiếm sản phẩm (Public / Customer)
 ## Development
 
 ### Running Tests
