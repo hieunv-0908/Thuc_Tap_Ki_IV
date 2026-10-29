@@ -57,21 +57,22 @@ export default function AdminProductForm() {
       try {
         const catRes = await categoryApi.getCategories();
         if (isMounted) {
-          setCategories(catRes || []);
-          if (!isEditMode && catRes && catRes.length > 0) {
-            setCategoryId(String(catRes[0].id));
+          const catList = Array.isArray(catRes) ? catRes : (Array.isArray(catRes?.data) ? catRes.data : (catRes?.content || []));
+          setCategories(catList);
+          if (!isEditMode && catList && catList.length > 0) {
+            setCategoryId(String(catList[0].id));
           }
         }
 
         if (isEditMode) {
           setFetchingProduct(true);
           const prod = await productApi.getProductById(id);
-          if (isMounted) {
+          if (isMounted && prod) {
             setName(prod.name || '');
-            setCategoryId(String(prod.category?.id || ''));
+            setCategoryId(String(prod.category?.id || prod.categoryId || ''));
             setPrice(String(prod.price || ''));
-            setStock(String(prod.stock !== undefined ? prod.stock : 0));
-            setImageUrl(prod.imageUrl || '');
+            setStock(String(prod.stock !== undefined ? prod.stock : (prod.stockQuantity !== undefined ? prod.stockQuantity : 0)));
+            setImageUrl(prod.imageUrl || prod.image || '');
             setDescription(prod.description || '');
           }
         }
@@ -166,6 +167,7 @@ export default function AdminProductForm() {
         categoryId: Number(categoryId),
         price: Number(price),
         stock: Number(stock),
+        stockQuantity: Number(stock),
         imageUrl: imageUrl.trim() || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600',
         description: description.trim(),
       };

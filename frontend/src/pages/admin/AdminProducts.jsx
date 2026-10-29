@@ -53,11 +53,13 @@ export default function AdminProducts() {
       setLoading(true);
       setError(null);
       const [prodRes, catRes] = await Promise.all([
-        productApi.getProducts({ size: 1000 }),
+        adminApi.getProducts({ size: 1000 }),
         categoryApi.getCategories(),
       ]);
-      setProducts(prodRes?.content || []);
-      setCategories(catRes || []);
+      const productList = prodRes?.content || (Array.isArray(prodRes?.data) ? prodRes.data : (Array.isArray(prodRes) ? prodRes : []));
+      const categoryList = Array.isArray(catRes) ? catRes : (Array.isArray(catRes?.data) ? catRes.data : (catRes?.content || []));
+      setProducts(productList);
+      setCategories(categoryList);
     } catch (err) {
       console.error('Lỗi tải danh sách sản phẩm:', err);
       setError(err.message || 'Không thể tải danh sách sản phẩm.');
@@ -67,34 +69,8 @@ export default function AdminProducts() {
   }, []);
 
   useEffect(() => {
-    let ignore = false;
-    async function init() {
-      try {
-        setLoading(true);
-        setError(null);
-        const [prodRes, catRes] = await Promise.all([
-          productApi.getProducts({ size: 1000 }),
-          categoryApi.getCategories(),
-        ]);
-        if (!ignore) {
-          setProducts(prodRes?.content || []);
-          setCategories(catRes || []);
-        }
-      } catch (err) {
-        if (!ignore) {
-          setError(err.message || 'Không thể tải danh sách sản phẩm.');
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    }
-    init();
-    return () => {
-      ignore = true;
-    };
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
   // Overall statistics calculated from full list
   const stats = useMemo(() => {

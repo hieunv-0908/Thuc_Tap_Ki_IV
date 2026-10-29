@@ -1,8 +1,7 @@
 import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
 
-// Chỉ gọi API thật Backend cho Auth (Đăng nhập / Đăng ký)
-const isMock = true; // �?i th�nh false khi Backend d� s?n s�ng
+const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const authApi = {
   /**
@@ -14,12 +13,26 @@ export const authApi = {
     if (isMock) {
       return await mockEngine.login({ email: username, password });
     }
-    const res = await apiClient.post('/api/v1/auth/login', { username, password });
-    // Chuẩn hoá response: trả về { token, user } để các component dùng thống nhất
-    return {
-      token: res.data.accessToken,
-      user: res.data.user,
-    };
+
+    console.log('[login] Gửi request =>', { username });
+    try {
+      const res = await apiClient.post('/api/v1/auth/login', { username, password });
+      console.log('[login] Nhận response thành công =>', res);
+
+      // axios interceptor đã unwrap response.data, nên:
+      // res = { code: 200, message: "...", data: { accessToken: "...", user: {...} } }
+      const token = res?.data?.accessToken || res?.accessToken;
+      const user = res?.data?.user || res?.user;
+      console.log('[login] Extracted token & user =>', { token, user });
+
+      return {
+        token,
+        user,
+      };
+    } catch (error) {
+      console.error('[login] Request thất bại (HTTP Error từ Backend) =>', error);
+      throw error;
+    }
   },
 
   /**
@@ -38,6 +51,6 @@ export const authApi = {
       fullName,
       phone: phone || '',
     });
-    return res.data;
+    return res?.data || res;
   },
 };

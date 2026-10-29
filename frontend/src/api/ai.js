@@ -1,8 +1,7 @@
 import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
 
-// Backend hiện tại chỉ có Auth API, tạm dùng mock cho AI để tránh lỗi 401
-const isMock = true;
+const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const aiApi = {
   generateDescription: async (productName) => {
