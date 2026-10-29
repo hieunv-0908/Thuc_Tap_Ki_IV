@@ -84,7 +84,7 @@ public class SecurityConfig {
             // 4. Cấu hình Phân quyền Endpoints
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/products/**", "/api/v1/categories/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/products/**", "/api/products/**", "/api/v1/categories/**", "/api/categories/**").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             );
