@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Trash2, Package } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { getCategoryMeta } from '../../utils/constants';
 import QuantityStepper from '../ui/QuantityStepper';
 import { toast } from '../../store/toastStore';
 
 /**
- * CartItem component complying with Design.md 6.12
- * Desktop: [ảnh 80×80] [tên + đơn giá] [stepper] [thành tiền] [xóa]
- * Mobile: ảnh + tên/đơn giá ở trên, dưới là stepper và thành tiền, nút xóa góc phải trên.
+ * CartItem component complying with Design.md 6.12 & 7.4
+ * Desktop: [ảnh 80×80] [tên + đơn giá + category chip] [stepper] [thành tiền] [xóa]
  */
 export default function CartItem({
   item,
@@ -19,6 +19,8 @@ export default function CartItem({
 
   const maxStock = product.stock || 1;
   const itemTotal = (product.price || 0) * quantity;
+  const categoryName = product.category?.name || '';
+  const meta = getCategoryMeta(categoryName);
 
   const handleQuantityChange = (newQty) => {
     if (newQty > maxStock) {
@@ -35,7 +37,7 @@ export default function CartItem({
   };
 
   return (
-    <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-line bg-white shadow-2xs hover:border-gray-300 transition-colors">
+    <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-line bg-white shadow-soft hover:border-primary-200 transition-colors">
       {/* Mobile delete button: Top right */}
       <button
         type="button"
@@ -48,7 +50,7 @@ export default function CartItem({
 
       {/* Left: Product image + info */}
       <div className="flex items-center gap-3.5 flex-1 min-w-0 pr-8 sm:pr-0">
-        <div className="size-20 sm:size-20 shrink-0 rounded-lg overflow-hidden border border-line bg-gray-50 flex items-center justify-center">
+        <div className="size-20 shrink-0 rounded-lg overflow-hidden border border-line bg-gray-50 flex items-center justify-center">
           {imgError ? (
             <div className="w-full h-full bg-primary-50 flex items-center justify-center text-primary-400">
               <Package className="size-8" />
@@ -65,17 +67,28 @@ export default function CartItem({
         </div>
 
         <div className="min-w-0 flex-1">
-          <h4 className="text-sm sm:text-base font-medium text-ink line-clamp-2 leading-snug">
+          {/* Category Chip */}
+          {categoryName && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-muted mb-0.5">
+              <span>{meta.emoji}</span>
+              <span>{categoryName}</span>
+            </span>
+          )}
+
+          <h4 className="text-sm sm:text-base font-semibold text-ink line-clamp-2 leading-snug">
             {product.name}
           </h4>
+
           <div className="mt-1 flex items-center gap-2 text-xs sm:text-sm">
             <span className="text-ink-muted">Đơn giá:</span>
             <span className="font-semibold text-primary-700">
               {formatCurrency(product.price)}
             </span>
           </div>
+
+          {/* Low stock warning */}
           {maxStock <= 5 && (
-            <p className="mt-1 text-xs text-amber-700 font-medium">
+            <p className="mt-1 text-xs text-amber-700 font-semibold flex items-center gap-1">
               Chỉ còn {maxStock} sản phẩm trong kho
             </p>
           )}

@@ -50,7 +50,7 @@ public class AuthServiceImpl implements AuthService {
                 .fullName(registerRequest.getFullName())
                 .phone(registerRequest.getPhone())
                 .role(User.Role.CUSTOMER)
-                .status("ACTIVE")
+                .status(User.Status.ACTIVE)
                 .build();
 
         // Lưu vào database
@@ -99,7 +99,7 @@ public class AuthServiceImpl implements AuthService {
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .role(user.getRole().name())
-                .status(user.getStatus())
+                .status(user.getStatus().name())
                 .build();
     }
 }

@@ -18,7 +18,7 @@
 | 3 | Auth & Hồ sơ | ☐ |
 | 4 | Catalog (Trang chủ, Chi tiết) | ☑ |
 | 5 | Cart, Checkout, Order History | ☑ |
-| 6 | Admin | ☐ |
+| 6 | Admin | ☑ |
 | 7 | Chatbot AI | ☐ |
 | 8 | Tối ưu & Docker (trong `frontend/`) | ☐ |
 | 9 | QA & Hoàn thiện | ☐ |
@@ -161,22 +161,22 @@
 ## Phase 6 – Admin
 
 **Quản lý sản phẩm (FR-04)**
-- [ ] `/admin/products`: bảng (ảnh, tên, danh mục, giá, tồn kho, Sửa/Xóa), tìm kiếm, phân trang
-- [ ] ConfirmDialog khi xóa + toast
-- [ ] Cảnh báo tồn kho thấp (≤ 5), badge "Hết hàng"
-- [ ] `/admin/products/new` và `/admin/products/:id`: form Tên, Giá, Tồn kho, Danh mục, URL ảnh (xem trước), Mô tả
-- [ ] Validate: tên bắt buộc, giá > 0, tồn kho nguyên ≥ 0, URL ảnh hợp lệ
+- [x] `/admin/products`: bảng (ảnh, tên, danh mục, giá, tồn kho, Sửa/Xóa), tìm kiếm, phân trang
+- [x] ConfirmDialog khi xóa + toast
+- [x] Cảnh báo tồn kho thấp (≤ 5), badge "Hết hàng"
+- [x] `/admin/products/new` và `/admin/products/:id`: form Tên, Giá, Tồn kho, Danh mục, URL ảnh (xem trước), Mô tả
+- [x] Validate: tên bắt buộc, giá > 0, tồn kho nguyên ≥ 0, URL ảnh hợp lệ
 
 **AI (FR-05, mục 2.6)**
-- [ ] Nút "✨ Tạo mô tả bằng AI" với 4 trạng thái: mặc định / đang tạo / có kết quả (sửa được) / lỗi + Thử lại
-- [ ] Nút "Tạo dữ liệu mẫu bằng AI" (modal chọn 5/10/20) → tải lại bảng
+- [x] Nút "✨ Tạo mô tả bằng AI" với 4 trạng thái: mặc định / đang tạo / có kết quả (sửa được) / lỗi + Thử lại
+- [x] Nút "Tạo dữ liệu mẫu bằng AI" (modal chọn 5/10/20) → tải lại bảng
 
 **Quản lý đơn hàng (FR-06)**
-- [ ] `/admin/orders`: bảng đơn, lọc theo trạng thái
-- [ ] Dropdown chỉ hiện **bước hợp lệ tiếp theo** (`PENDING→PROCESSING→SHIPPING→COMPLETED`, hoặc `CANCELLED`)
-- [ ] ConfirmDialog khi hủy đơn ("Tồn kho sẽ được hoàn lại")
-- [ ] Xem chi tiết đơn (modal hoặc trang)
-- [ ] Commit: `feat(frontend): trang quản trị`
+- [x] `/admin/orders`: bảng đơn, lọc theo trạng thái
+- [x] Dropdown chỉ hiện **bước hợp lệ tiếp theo** (`PENDING→PROCESSING→SHIPPING→COMPLETED`, hoặc `CANCELLED`)
+- [x] ConfirmDialog khi hủy đơn ("Tồn kho sẽ được hoàn lại")
+- [x] Xem chi tiết đơn (modal hoặc trang)
+- [x] Commit: `feat(frontend): trang quản trị`
 
 ## Phase 7 – Chatbot AI (mục 2.6)
 
@@ -251,4 +251,4 @@
 
 | Ngày | Ghi chú |
 |---|---|
-| | |
+| 28/10/2026 | Hoàn thành toàn diện Phase 6 (Trang quản trị Admin): Dựng AdminLayout (SidebarAdmin, Topbar, drawer mobile), kiểm tra phân quyền bảo vệ route (403 Forbidden); Dựng AdminProducts (/admin/products) với thẻ thống kê, tìm kiếm, lọc danh mục/tồn kho, cảnh báo tồn kho thấp (≤ 5) và badge hết hàng, xóa sản phẩm kèm ConfirmDialog; Dựng AdminProductForm (/admin/products/new, /admin/products/:id) bố cục 2 cột, xem trước ảnh, tích hợp nút ✨ Tạo mô tả bằng AI chuẩn 4 trạng thái; Tích hợp modal Tạo dữ liệu mẫu bằng AI (5/10/20 sản phẩm); Dựng AdminOrders (/admin/orders) với chip lọc trạng thái, dropdown chuyển trạng thái theo quy tắc nghiêm ngặt, modal xem chi tiết đơn hàng, hủy đơn hoàn tồn kho; Đã kiểm thử `npm run build` và `npm run lint` đạt 0 lỗi. |

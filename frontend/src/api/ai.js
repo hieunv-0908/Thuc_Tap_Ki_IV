@@ -1,7 +1,7 @@
 import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
 
-const isMock = import.meta.env.VITE_USE_MOCK !== 'false';
+const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const aiApi = {
   generateDescription: async (productName) => {
