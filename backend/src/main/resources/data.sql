@@ -1,6 +1,6 @@
 -- Insert Users
 INSERT INTO users (username, email, password, full_name, phone, role, status, created_at, updated_at) VALUES
-('admin', 'admin@funnyshop.com', '$2a$10$e84WvH6V8LwT8Z.eC0vHdeRzB8F.NnB0cI3bEaXp1o2q3r4s5t6u', 'Admin User', '0901234567', 'ADMIN', 'ACTIVE', NOW(), NOW()),
+('admin', 'admin@funnyshop.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Admin User', '0901234567', 'ADMIN', 'ACTIVE', NOW(), NOW()),
 ('user1', 'user1@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Nguyen Van A', '0912345678', 'CUSTOMER', 'ACTIVE', NOW(), NOW()),
 ('user2', 'user2@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Tran Thi B', '0923456789', 'CUSTOMER', 'ACTIVE', NOW(), NOW());
 

@@ -1,42 +1,61 @@
 import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
 
-// Backend hiện tại chỉ có Auth API, tạm dùng mock cho Admin để tránh lỗi 401
-const isMock = true;
+import { productApi } from './product';
+
+const isMock = false;
 
 export const adminApi = {
+  getProducts: async ({ q = '', categoryId = '', sort = '', page = 1, size = 1000 } = {}) => {
+    return await productApi.getProducts({ q, categoryId, sort, page, size });
+  },
+
   createProduct: async (productData) => {
     if (isMock) {
       return await mockEngine.adminCreateProduct(productData);
     }
-    return await apiClient.post('/api/admin/products', productData);
+    const payload = {
+      ...productData,
+      stockQuantity: productData.stock !== undefined ? Number(productData.stock) : Number(productData.stockQuantity || 0),
+    };
+    const res = await apiClient.post('/api/v1/admin/products', payload);
+    return res?.data !== undefined ? res.data : res;
   },
 
   updateProduct: async (id, productData) => {
     if (isMock) {
       return await mockEngine.adminUpdateProduct(id, productData);
     }
-    return await apiClient.put(`/api/admin/products/${id}`, productData);
+    const payload = {
+      ...productData,
+      stockQuantity: productData.stock !== undefined ? Number(productData.stock) : Number(productData.stockQuantity || 0),
+    };
+    const res = await apiClient.put(`/api/v1/admin/products/${id}`, payload);
+    return res?.data !== undefined ? res.data : res;
   },
 
   deleteProduct: async (id) => {
     if (isMock) {
       return await mockEngine.adminDeleteProduct(id);
     }
-    return await apiClient.delete(`/api/admin/products/${id}`);
+    const res = await apiClient.delete(`/api/v1/admin/products/${id}`);
+    return res?.data !== undefined ? res.data : res;
   },
 
   getAllOrders: async () => {
     if (isMock) {
       return await mockEngine.adminGetAllOrders();
     }
-    return await apiClient.get('/api/admin/orders');
+    const res = await apiClient.get('/api/v1/admin/orders');
+    const data = res?.data !== undefined ? res.data : res;
+    return Array.isArray(data) ? data : (data?.content || []);
   },
 
   updateOrderStatus: async (id, status) => {
     if (isMock) {
       return await mockEngine.adminUpdateOrderStatus(id, status);
     }
-    return await apiClient.patch(`/api/admin/orders/${id}/status`, { status });
+    const res = await apiClient.patch(`/api/v1/admin/orders/${id}/status`, { status });
+    return res?.data !== undefined ? res.data : res;
   },
 };

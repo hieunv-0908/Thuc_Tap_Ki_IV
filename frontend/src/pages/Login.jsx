@@ -91,21 +91,25 @@ export default function Login() {
     setIsSubmitting(true);
     try {
       const res = await authApi.login({
-        username: formData.username,
+        username: formData.username.trim(),
         password: formData.password,
       });
 
       loginToStore(res.token, res.user);
-      toast.success(`Chào mừng ${res.user.fullName} trở lại!`);
+      toast.success(`Chào mừng ${res.user?.fullName || res.user?.username || 'bạn'} trở lại!`);
 
       // Role-based redirect
-      if (res.user.role === 'ADMIN') {
+      if (res.user?.role === 'ADMIN') {
         navigate(fromPath !== '/' ? fromPath : '/admin/products');
       } else {
         navigate(fromPath);
       }
     } catch (err) {
-      setServerError(err.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
+      if (err.status === 401) {
+        setServerError('Tên đăng nhập hoặc mật khẩu không chính xác.');
+      } else {
+        setServerError(err.message || 'Đăng nhập không thành công. Vui lòng thử lại.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -268,28 +272,28 @@ export default function Login() {
           <div className="mt-6 pt-5 border-t border-line">
             <p className="text-xs text-ink-subtle font-medium text-center mb-2.5 flex items-center justify-center gap-1.5">
               <Sparkles className="size-3.5 text-secondary-500" />
-              Tài khoản mẫu để kiểm thử nhanh:
+              Tài khoản mẫu từ Database:
             </p>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => handleQuickFill('user1', '123456')}
-                className="p-2 text-xs text-ink rounded-lg border border-line bg-gray-50 hover:bg-gray-100 text-left transition-colors cursor-pointer"
-              >
-                <div className="font-semibold text-ink">Khách hàng</div>
-                <div className="text-[11px] text-ink-subtle truncate">user1 / 123456</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin', 'admin123')}
+                onClick={() => handleQuickFill('admin', '123456')}
                 className="p-2 text-xs text-ink rounded-lg border border-secondary-200 bg-secondary-50/60 hover:bg-secondary-100 text-left transition-colors cursor-pointer"
               >
                 <div className="font-semibold text-secondary-700 flex items-center gap-1">
                   <ShieldCheck className="size-3" />
-                  Quản trị viên
+                  Admin
                 </div>
-                <div className="text-[11px] text-secondary-800 truncate">admin / admin123</div>
+                <div className="text-[11px] text-secondary-800 truncate">admin / password</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickFill('user1', 'password')}
+                className="p-2 text-xs text-ink rounded-lg border border-line bg-gray-50 hover:bg-gray-100 text-left transition-colors cursor-pointer"
+              >
+                <div className="font-semibold text-ink">Khách hàng</div>
+                <div className="text-[11px] text-ink-subtle truncate">user1 / password</div>
               </button>
             </div>
           </div>
