@@ -59,7 +59,7 @@ public class UserServiceImpl implements UserService {
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .role(user.getRole().name())
-                .status(user.getStatus())
+                .status(user.getStatus().name())
                 .build();
     }
 }
