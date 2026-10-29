@@ -1,8 +1,12 @@
 package com.funnyshop.service.impl;
 
+import com.funnyshop.dto.request.ProductCreateRequest;
+import com.funnyshop.dto.request.ProductUpdateRequest;
 import com.funnyshop.dto.response.ProductResponse;
+import com.funnyshop.entity.Category;
 import com.funnyshop.entity.Product;
 import com.funnyshop.exception.ResourceNotFoundException;
+import com.funnyshop.repository.CategoryRepository;
 import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
 
     @Override
     public Page<ProductResponse> getProducts(
@@ -85,5 +90,71 @@ public class ProductServiceImpl implements ProductService {
                         )
                 );
         return ProductResponse.fromEntity(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse createProduct(ProductCreateRequest request) {
+        Category category = categoryRepository.findByIdAndIsDeletedFalse(request.getCategoryId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Không tìm thấy danh mục với ID: " + request.getCategoryId()
+                        )
+                );
+
+        Product product = Product.builder()
+                .name(request.getName().trim())
+                .description(request.getDescription())
+                .price(request.getPrice())
+                .stockQuantity(request.getStockQuantity())
+                .category(category)
+                .imageUrl(request.getImageUrl())
+                .isDeleted(false)
+                .build();
+
+        Product savedProduct = productRepository.save(product);
+        return ProductResponse.fromEntity(savedProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse updateProduct(Long id, ProductUpdateRequest request) {
+        Product product = productRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Không tìm thấy sản phẩm với ID: " + id
+                        )
+                );
+
+        Category category = categoryRepository.findByIdAndIsDeletedFalse(request.getCategoryId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Không tìm thấy danh mục với ID: " + request.getCategoryId()
+                        )
+                );
+
+        product.setName(request.getName().trim());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
+        product.setStockQuantity(request.getStockQuantity());
+        product.setCategory(category);
+        product.setImageUrl(request.getImageUrl());
+
+        Product updatedProduct = productRepository.save(product);
+        return ProductResponse.fromEntity(updatedProduct);
+    }
+
+    @Override
+    @Transactional
+    public void deleteProduct(Long id) {
+        Product product = productRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Không tìm thấy sản phẩm với ID: " + id
+                        )
+                );
+
+        product.setIsDeleted(true);
+        productRepository.save(product);
     }
 }

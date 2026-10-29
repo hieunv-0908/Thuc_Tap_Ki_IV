@@ -1,5 +1,6 @@
 package com.funnyshop.entity;
 
+import com.funnyshop.enums.OrderStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,9 +44,10 @@ public class Order {
     @Builder.Default
     private String paymentMethod = "COD";
 
+    @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
     @Builder.Default
-    private String status = "PENDING";
+    private OrderStatus status = OrderStatus.PENDING;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -61,6 +63,9 @@ public class Order {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
+        if (this.status == null) {
+            this.status = OrderStatus.PENDING;
+        }
     }
 
     @PreUpdate
