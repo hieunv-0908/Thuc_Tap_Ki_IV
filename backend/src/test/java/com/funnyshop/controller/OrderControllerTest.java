@@ -1,5 +1,6 @@
 package com.funnyshop.controller;
 
+import com.funnyshop.dto.request.OrderCheckoutRequest;
 import com.funnyshop.dto.response.OrderResponse;
 import com.funnyshop.entity.User;
 import com.funnyshop.enums.OrderStatus;
@@ -29,6 +30,7 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -69,10 +71,123 @@ class OrderControllerTest {
                 .id(10L)
                 .userId(2L)
                 .customerName("Nguyen Van A")
+                .phone("0912345678")
+                .shippingAddress("123 Cầu Giấy, Hà Nội")
+                .paymentMethod("COD")
                 .totalAmount(new BigDecimal("350000.00"))
                 .status(OrderStatus.PENDING)
                 .build();
     }
+
+    // ==========================================
+    // TESTS FOR CHECKOUT
+    // ==========================================
+
+    @Test
+    @DisplayName("POST /api/v1/orders/checkout - Tạo đơn hàng COD thành công trả về 201 Created")
+    void checkout_Success_Returns201() throws Exception {
+        when(orderService.checkout(eq(2L), any(OrderCheckoutRequest.class))).thenReturn(sampleOrder);
+
+        String json = """
+            {
+                "fullName": "Nguyen Van A",
+                "phone": "0912345678",
+                "address": "123 Cầu Giấy, Hà Nội",
+                "paymentMethod": "COD",
+                "items": [
+                    {
+                        "productId": 10,
+                        "quantity": 2
+                    }
+                ]
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/orders/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code", is(201)))
+                .andExpect(jsonPath("$.message", is("Đặt hàng thành công!")))
+                .andExpect(jsonPath("$.data.id", is(10)))
+                .andExpect(jsonPath("$.data.customerName", is("Nguyen Van A")))
+                .andExpect(jsonPath("$.data.paymentMethod", is("COD")))
+                .andExpect(jsonPath("$.data.status", is("PENDING")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/orders - Alias endpoint tạo đơn hàng thành công trả về 201 Created")
+    void checkout_AliasEndpoint_Returns201() throws Exception {
+        when(orderService.checkout(eq(2L), any(OrderCheckoutRequest.class))).thenReturn(sampleOrder);
+
+        String json = """
+            {
+                "fullName": "Nguyen Van A",
+                "phone": "0912345678",
+                "address": "123 Cầu Giấy, Hà Nội",
+                "items": [
+                    {
+                        "productId": 10,
+                        "quantity": 1
+                    }
+                ]
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code", is(201)))
+                .andExpect(jsonPath("$.data.id", is(10)));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/orders/checkout - Validation lỗi khi items rỗng trả về 400 Bad Request")
+    void checkout_EmptyItems_Returns400() throws Exception {
+        String json = """
+            {
+                "fullName": "Nguyen Van A",
+                "phone": "0912345678",
+                "address": "123 Cầu Giấy, Hà Nội",
+                "items": []
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/orders/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is(400)));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/orders/checkout - Validation lỗi khi số điện thoại không hợp lệ trả về 400")
+    void checkout_InvalidPhone_Returns400() throws Exception {
+        String json = """
+            {
+                "fullName": "Nguyen Van A",
+                "phone": "12345",
+                "address": "123 Cầu Giấy, Hà Nội",
+                "items": [
+                    {
+                        "productId": 10,
+                        "quantity": 1
+                    }
+                ]
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/orders/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is(400)));
+    }
+
+    // ==========================================
+    // TESTS FOR GET ORDERS
+    // ==========================================
 
     @Test
     @DisplayName("GET /api/v1/orders/my-orders - Customer lấy danh sách đơn cá nhân thành công")
@@ -113,4 +228,3 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.message", is("Bạn không có quyền truy cập đơn hàng này!")));
     }
 }
-
