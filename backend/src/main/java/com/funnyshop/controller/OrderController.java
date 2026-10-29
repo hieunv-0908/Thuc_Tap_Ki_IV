@@ -1,11 +1,13 @@
 package com.funnyshop.controller;
 
+import com.funnyshop.dto.request.OrderCheckoutRequest;
 import com.funnyshop.dto.response.ApiResponse;
 import com.funnyshop.dto.response.OrderResponse;
 import com.funnyshop.entity.User;
 import com.funnyshop.security.JwtTokenProvider;
 import com.funnyshop.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +50,23 @@ public class OrderController {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 
+    @PostMapping({"/checkout", ""})
+    public ResponseEntity<ApiResponse<OrderResponse>> checkout(
+            @Valid @RequestBody OrderCheckoutRequest checkoutRequest,
+            HttpServletRequest request
+    ) {
+        Long currentUserId = getCurrentUserId(request);
+        OrderResponse response = orderService.checkout(currentUserId, checkoutRequest);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                ApiResponse.<OrderResponse>builder()
+                        .code(HttpStatus.CREATED.value())
+                        .message("Đặt hàng thành công!")
+                        .data(response)
+                        .build()
+        );
+    }
+
     @GetMapping({"/my-orders", "/my"})
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getMyOrders(HttpServletRequest request) {
         Long currentUserId = getCurrentUserId(request);
@@ -81,4 +100,3 @@ public class OrderController {
         );
     }
 }
-
