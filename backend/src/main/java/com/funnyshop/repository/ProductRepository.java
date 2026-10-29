@@ -16,14 +16,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query(value = """
         SELECT p FROM Product p
         LEFT JOIN FETCH p.category
-        WHERE (:keyword IS NULL
+        WHERE (p.isDeleted = false)
+          AND (:keyword IS NULL
                OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
           AND (:categoryId IS NULL
                OR p.category.id = :categoryId)
         """,
         countQuery = """
         SELECT count(p) FROM Product p
-        WHERE (:keyword IS NULL
+        WHERE (p.isDeleted = false)
+          AND (:keyword IS NULL
                OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
           AND (:categoryId IS NULL
                OR p.category.id = :categoryId)
@@ -34,6 +36,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             Pageable pageable
     );
 
-    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.id = :id")
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.id = :id AND p.isDeleted = false")
     Optional<Product> findByIdWithCategory(@Param("id") Long id);
+
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.id = :id")
+    Optional<Product> findByIdWithCategoryAdmin(@Param("id") Long id);
+
+    Optional<Product> findByIdAndIsDeletedFalse(Long id);
 }
