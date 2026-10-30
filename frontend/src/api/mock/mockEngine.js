@@ -245,6 +245,26 @@ class MockEngine {
       }
     }
 
+    const createdAt = new Date();
+    const datePart = [
+      String(createdAt.getDate()).padStart(2, '0'),
+      String(createdAt.getMonth() + 1).padStart(2, '0'),
+      createdAt.getFullYear(),
+    ].join('');
+    const idPrefix = `DH${datePart}`;
+    const availableSuffixes = Array.from({ length: 9000 }, (_, index) =>
+      String(index + 1000)
+    ).filter(
+      (suffix) => !this.orders.some((order) => String(order.id) === `${idPrefix}${suffix}`)
+    );
+
+    if (availableSuffixes.length === 0) {
+      throw { status: 409, message: 'Đã hết mã đơn hàng có thể tạo trong ngày hôm nay.' };
+    }
+
+    const orderId =
+      idPrefix + availableSuffixes[Math.floor(Math.random() * availableSuffixes.length)];
+
     // Deduct stock
     const detailedItems = items.map((item) => {
       const product = this.products.find((p) => p.id === item.productId);
@@ -261,14 +281,14 @@ class MockEngine {
     const totalPrice = detailedItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
 
     const newOrder = {
-      id: Date.now(),
+      id: orderId,
       userId: userId || 2, // Default to customer if not given
       fullName: fullName.trim(),
       phone: phone.trim(),
       address: address.trim(),
       status: 'PENDING',
       totalPrice,
-      createdAt: new Date().toISOString(),
+      createdAt: createdAt.toISOString(),
       items: detailedItems,
     };
 
@@ -286,7 +306,7 @@ class MockEngine {
 
   async getOrderById(orderId) {
     await this.delay();
-    const order = this.orders.find((o) => o.id === Number(orderId));
+    const order = this.orders.find((o) => String(o.id) === String(orderId));
     if (!order) {
       throw { status: 404, message: 'Đơn hàng không tồn tại.' };
     }
@@ -367,7 +387,7 @@ class MockEngine {
 
   async adminUpdateOrderStatus(orderId, newStatus) {
     await this.delay();
-    const order = this.orders.find((o) => o.id === Number(orderId));
+    const order = this.orders.find((o) => String(o.id) === String(orderId));
     if (!order) {
       throw { status: 404, message: 'Đơn hàng không tồn tại.' };
     }
