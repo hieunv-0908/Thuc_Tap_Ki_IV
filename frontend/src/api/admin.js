@@ -1,7 +1,6 @@
 import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
-
-import { productApi } from './product';
+import { normalizeProduct } from './product';
 
 const isMock = false;
 
@@ -57,19 +56,11 @@ export const adminApi = {
     return res?.data !== undefined ? res.data : res;
   },
 
-  restoreProduct: async (id) => {
-    if (isMock) {
-      return await mockEngine.adminRestoreProduct?.(id);
-    }
-    const res = await apiClient.put(`/api/v1/admin/products/${id}/restore`);
-    return res?.data !== undefined ? res.data : res;
-  },
-
   getAllOrders: async () => {
     if (isMock) {
       return await mockEngine.adminGetAllOrders();
     }
-    const res = await apiClient.get('/api/v1/admin/orders');
+    const res = await apiClient.get('/api/v1/admin/orders', { params: { page, size } });
     const data = res?.data !== undefined ? res.data : res;
     return Array.isArray(data) ? data : (data?.content || []);
   },
@@ -79,6 +70,22 @@ export const adminApi = {
       return await mockEngine.adminUpdateOrderStatus(id, status);
     }
     const res = await apiClient.patch(`/api/v1/admin/orders/${id}/status`, { status });
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  // ── Categories ──────────────────────────────────────────────────────────
+  createCategory: async ({ name, description = '' }) => {
+    const res = await apiClient.post('/api/v1/admin/categories', { name, description });
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  updateCategory: async (id, { name, description = '' }) => {
+    const res = await apiClient.put(`/api/v1/admin/categories/${id}`, { name, description });
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  deleteCategory: async (id) => {
+    const res = await apiClient.delete(`/api/v1/admin/categories/${id}`);
     return res?.data !== undefined ? res.data : res;
   },
 };

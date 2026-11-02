@@ -14,12 +14,12 @@ export const orderApi = {
     return res?.data !== undefined ? res.data : res;
   },
 
-  getMyOrders: async () => {
+  getMyOrders: async ({ page = 0, size = 100 } = {}) => {
     if (isMock) {
       const user = useAuthStore.getState().user;
       return await mockEngine.getMyOrders(user?.id);
     }
-    const res = await apiClient.get('/api/v1/orders/my');
+    const res = await apiClient.get('/api/v1/orders/my', { params: { page, size } });
     const data = res?.data !== undefined ? res.data : res;
     return Array.isArray(data) ? data : (data?.content || []);
   },
