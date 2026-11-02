@@ -1,5 +1,6 @@
 package com.funnyshop.security;
 
+import com.funnyshop.security.blacklist.TokenBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +23,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final CustomUserDetailsService customUserDetailsService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(
@@ -33,8 +35,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // 1. Trích xuất Token từ Header Authorization
             String jwt = getJwtFromRequest(request);
 
-            // 2. Kiểm tra Token có tồn tại và hợp lệ không
+            // 2. Kiểm tra Token có tồn tại và hợp lệ về chữ ký/thời hạn
             if (jwt != null && jwtTokenProvider.validateToken(jwt)) {
+
+                // 2.1. Kiểm tra Token có bị thu hồi trong danh sách đen (Blacklist) không
+                if (tokenBlacklistService.isBlacklisted(jwt)) {
+                    log.warn("Truy cập bị từ chối: Token đã bị thu hồi trong Blacklist");
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                // 2.2. Kiểm tra token có phải là Refresh Token cố tình gọi API bảo vệ không
+                if (jwtTokenProvider.isRefreshToken(jwt)) {
+                    log.warn("Truy cập bị từ chối: Không thể sử dụng Refresh Token làm Access Token truy cập tài nguyên!");
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
                 // 3. Trích xuất username từ Token
                 String username = jwtTokenProvider.getUsernameFromToken(jwt);
 

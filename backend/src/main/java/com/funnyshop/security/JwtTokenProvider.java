@@ -22,8 +22,11 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration}")
-    private long jwtExpirationDate;
+    @Value("${jwt.access-expiration:${jwt.expiration:1800000}}")
+    private long jwtAccessExpiration;
+
+    @Value("${jwt.refresh-expiration:604800000}")
+    private long jwtRefreshExpiration;
 
     // Chuyển đổi secret string thành SecretKey HMAC-SHA256
     private SecretKey getSigningKey() {
@@ -32,19 +35,47 @@ public class JwtTokenProvider {
     }
 
     /**
-     * Sinh JWT Token từ đối tượng UserDetails + Custom Claims (userId, role)
+     * Sinh JWT Token mặc định (Access Token) từ UserDetails + Custom Claims (userId, role)
      */
     public String generateToken(UserDetails userDetails, Long userId, String role) {
+        return generateAccessToken(userDetails, userId, role);
+    }
+
+    /**
+     * Sinh Access Token có thời hạn ngắn (mặc định 30 phút), kèm claim tokenType = "ACCESS"
+     */
+    public String generateAccessToken(UserDetails userDetails, Long userId, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("role", role);
+        claims.put("tokenType", "ACCESS");
 
         Date currentDate = new Date();
-        Date expireDate = new Date(currentDate.getTime() + jwtExpirationDate);
+        Date expireDate = new Date(currentDate.getTime() + jwtAccessExpiration);
 
         return Jwts.builder()
                 .claims(claims)
-                .subject(userDetails.getUsername()) // Lưu email/username vào subject
+                .subject(userDetails.getUsername())
+                .issuedAt(currentDate)
+                .expiration(expireDate)
+                .signWith(getSigningKey(), Jwts.SIG.HS256)
+                .compact();
+    }
+
+    /**
+     * Sinh Refresh Token có thời hạn dài (mặc định 7 ngày), kèm claim tokenType = "REFRESH"
+     */
+    public String generateRefreshToken(UserDetails userDetails, Long userId) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userId);
+        claims.put("tokenType", "REFRESH");
+
+        Date currentDate = new Date();
+        Date expireDate = new Date(currentDate.getTime() + jwtRefreshExpiration);
+
+        return Jwts.builder()
+                .claims(claims)
+                .subject(userDetails.getUsername())
                 .issuedAt(currentDate)
                 .expiration(expireDate)
                 .signWith(getSigningKey(), Jwts.SIG.HS256)
@@ -72,6 +103,47 @@ public class JwtTokenProvider {
     public String getRoleFromToken(String token) {
         Claims claims = getAllClaimsFromToken(token);
         return claims.get("role", String.class);
+    }
+
+    /**
+     * Trích xuất loại Token (ACCESS hoặc REFRESH)
+     */
+    public String getTokenTypeFromToken(String token) {
+        Claims claims = getAllClaimsFromToken(token);
+        return claims.get("tokenType", String.class);
+    }
+
+    /**
+     * Kiểm tra xem token có phải là Refresh Token không
+     */
+    public boolean isRefreshToken(String token) {
+        try {
+            String type = getTokenTypeFromToken(token);
+            return "REFRESH".equalsIgnoreCase(type);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Lấy thời gian sống còn lại của Token tính bằng mili-giây (cho Blacklist TTL)
+     */
+    public long getRemainingExpirationMillis(String token) {
+        try {
+            Date expiration = getClaimFromToken(token, Claims::getExpiration);
+            long diff = expiration.getTime() - System.currentTimeMillis();
+            return Math.max(0, diff);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    public long getAccessExpirationMillis() {
+        return jwtAccessExpiration;
+    }
+
+    public long getRefreshExpirationMillis() {
+        return jwtRefreshExpiration;
     }
 
     /**
