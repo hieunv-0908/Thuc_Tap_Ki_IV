@@ -162,7 +162,7 @@ class FullApplicationIntegrationTest {
     }
 
     // ==========================================
-    // KIỂM THỬ ADMIN CRUD & SOFT DELETE
+    // KIỂM THỬ ADMIN CRUD & SOFT DELETE & RESTORE
     // ==========================================
 
     @Test
@@ -230,6 +230,64 @@ class FullApplicationIntegrationTest {
     }
 
     @Test
+    @DisplayName("Admin - PUT /api/v1/admin/products/{id}/restore khôi phục sản phẩm đã xóa mềm")
+    void testAdminRestoreProduct() throws Exception {
+        // Đánh dấu xóa mềm
+        mockMvc.perform(delete("/api/v1/admin/products/" + activeProduct.getId())
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+
+        // Khôi phục qua endpoint restore
+        mockMvc.perform(put("/api/v1/admin/products/" + activeProduct.getId() + "/restore")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.data.isDeleted", is(false)));
+
+        // Kiểm tra trong database bản ghi đã về isDeleted = false
+        Product inDb = productRepository.findById(activeProduct.getId()).orElse(null);
+        org.junit.jupiter.api.Assertions.assertNotNull(inDb);
+        org.junit.jupiter.api.Assertions.assertFalse(inDb.getIsDeleted());
+
+        // Public GET lại tìm thấy bình thường
+        mockMvc.perform(get("/api/v1/products/" + activeProduct.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id", is(activeProduct.getId().intValue())));
+    }
+
+    @Test
+    @DisplayName("Admin - PUT /api/v1/admin/products/{id} với isDeleted = false khôi phục sản phẩm")
+    void testAdminUpdateProductWithIsDeletedFalse() throws Exception {
+        // Đánh dấu xóa mềm
+        mockMvc.perform(delete("/api/v1/admin/products/" + activeProduct.getId())
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+
+        String updateProductJson = """
+            {
+                "name": "Áo Sơ Mi Nam Restored",
+                "price": 320000.00,
+                "stockQuantity": 45,
+                "categoryId": %d,
+                "isDeleted": false
+            }
+            """.formatted(activeCategory.getId());
+
+        mockMvc.perform(put("/api/v1/admin/products/" + activeProduct.getId())
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateProductJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.data.isDeleted", is(false)))
+                .andExpect(jsonPath("$.data.name", is("Áo Sơ Mi Nam Restored")));
+
+        Product inDb = productRepository.findById(activeProduct.getId()).orElse(null);
+        org.junit.jupiter.api.Assertions.assertNotNull(inDb);
+        org.junit.jupiter.api.Assertions.assertFalse(inDb.getIsDeleted());
+    }
+
+    @Test
     @DisplayName("Security - Customer gọi API Admin bị từ chối 403 Forbidden")
     void testCustomerCallingAdminApiForbidden() throws Exception {
         mockMvc.perform(delete("/api/v1/admin/products/" + activeProduct.getId())
@@ -259,9 +317,9 @@ class FullApplicationIntegrationTest {
     }
 
     @Test
-    @DisplayName("Admin - PUT /api/v1/admin/orders/{id}/status chuyển trạng thái PENDING -> PROCESSING thành công")
-    void testAdminUpdateOrderStatusSuccess() throws Exception {
-        String statusJson = """
+    @DisplayName("Admin - Cập nhật trạng thái hợp lệ PENDING -> PROCESSING thành công")
+    void testAdminUpdateOrderStatusValidTransition() throws Exception {
+        String updateStatusJson = """
             {
                 "status": "PROCESSING"
             }
@@ -270,16 +328,16 @@ class FullApplicationIntegrationTest {
         mockMvc.perform(put("/api/v1/admin/orders/" + customerOrder.getId() + "/status")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(statusJson))
+                        .content(updateStatusJson))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code", is(200)))
                 .andExpect(jsonPath("$.data.status", is("PROCESSING")));
     }
 
     @Test
-    @DisplayName("Admin - Chuyển trạng thái vi phạm quy tắc PENDING -> COMPLETED trả 400 Bad Request")
-    void testAdminUpdateOrderStatusInvalidRuleFails() throws Exception {
-        String statusJson = """
+    @DisplayName("Admin - Cập nhật trạng thái không hợp lệ PENDING -> COMPLETED trả lỗi 400 Bad Request")
+    void testAdminUpdateOrderStatusInvalidTransition() throws Exception {
+        String updateStatusJson = """
             {
                 "status": "COMPLETED"
             }
@@ -288,14 +346,14 @@ class FullApplicationIntegrationTest {
         mockMvc.perform(put("/api/v1/admin/orders/" + customerOrder.getId() + "/status")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(statusJson))
+                        .content(updateStatusJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code", is(400)))
                 .andExpect(jsonPath("$.message", containsString("Không thể chuyển trạng thái")));
     }
 
     @Test
-    @DisplayName("Customer - GET /api/v1/orders/my-orders xem lịch sử đơn hàng của mình")
+    @DisplayName("Customer - GET /api/v1/orders/my-orders chỉ thấy đơn hàng của chính mình")
     void testCustomerGetMyOrders() throws Exception {
         mockMvc.perform(get("/api/v1/orders/my-orders")
                         .header("Authorization", "Bearer " + customerToken))

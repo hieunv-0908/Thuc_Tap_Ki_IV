@@ -3,6 +3,11 @@ spring:
     name: funnyshop
   profiles:
     active: dev
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 3000ms
 
 server:
   port: 8080
@@ -10,8 +15,18 @@ server:
 jwt:
   # Chuỗi Secret Key tối thiểu 256 bits (32 chars) cho HMAC-SHA256
   secret: 404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971
-  # Thời hạn Token: 86400000 ms = 24 giờ
-  expiration: 86400000
+  # Thời hạn Access Token mặc định: 1800000 ms = 30 phút
+  access-expiration: 1800000
+  # Giữ backward-compatible với jwt.expiration cũ nếu có
+  expiration: 1800000
+  # Thời hạn Refresh Token: 604800000 ms = 7 ngày
+  refresh-expiration: 604800000
+
+app:
+  security:
+    token-blacklist:
+      # Chuyển đổi giữa 2 chế độ: 'in-memory' (local dev RAM) hoặc 'redis' (production/staging)
+      provider: in-memory
 
 logging:
   level:

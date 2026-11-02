@@ -24,6 +24,23 @@ services:
       timeout: 5s
       retries: 5
 
+  # Redis Cache & Token Blacklist
+  redis:
+    image: redis:7.2-alpine
+    container_name: funnyshop-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - funnyshop-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   # Backend (Spring Boot)
   backend:
     build:
@@ -35,12 +52,17 @@ services:
       SPRING_DATASOURCE_USERNAME: funnyshop
       SPRING_DATASOURCE_PASSWORD: funnyshop123
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      APP_SECURITY_TOKEN_BLACKLIST_PROVIDER: redis
       JWT_SECRET: your-secret-key-change-in-production
-      JWT_EXPIRATION: 86400000
+      JWT_EXPIRATION: 1800000
     ports:
       - "8080:8080"
     depends_on:
       mysql:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - funnyshop-network
@@ -62,6 +84,7 @@ services:
 
 volumes:
   mysql-data:
+  redis-data:
 
 networks:
   funnyshop-network:
