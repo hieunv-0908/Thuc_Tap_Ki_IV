@@ -16,6 +16,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
 import { toast } from '../../store/toastStore';
 import Button from '../ui/Button';
+import ConfirmDialog from '../ui/ConfirmDialog';
 
 const QUICK_SEARCH_CHIPS = [
   { label: 'Gấu bông Capybara', emoji: '🧸' },
@@ -39,6 +40,7 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const userDropdownRef = useRef(null);
   const searchContainerRef = useRef(null);
@@ -101,10 +103,15 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleOpenLogoutConfirm = () => {
     setIsUserMenuOpen(false);
     setIsMobileMenuOpen(false);
+    setShowLogoutConfirm(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutConfirm(false);
+    logout();
     toast.info('Đã đăng xuất tài khoản.');
     navigate('/');
   };
@@ -309,7 +316,7 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                     <div className="border-t border-line pt-1">
                       <button
                         type="button"
-                        onClick={handleLogout}
+                        onClick={handleOpenLogoutConfirm}
                         className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer text-left"
                       >
                         <LogOut className="size-4" />
@@ -462,7 +469,7 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                   variant="outline"
                   fullWidth
                   leftIcon={LogOut}
-                  onClick={handleLogout}
+                  onClick={handleOpenLogoutConfirm}
                 >
                   Đăng xuất
                 </Button>
@@ -484,6 +491,18 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
           </div>
         </div>
       )}
+
+      {/* Logout Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleConfirmLogout}
+        title="Xác nhận đăng xuất"
+        description="Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không?"
+        confirmText="Đăng xuất"
+        cancelText="Hủy"
+        variant="danger"
+      />
     </>
   );
 }
