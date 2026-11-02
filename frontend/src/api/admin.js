@@ -5,27 +5,23 @@ import { normalizeProduct } from './product';
 const isMock = false;
 
 export const adminApi = {
-  getProducts: async ({ q = '', categoryId = '', sort = '', page = 0, size = 100 } = {}) => {
-    // AdminProductController chỉ có POST/PUT/DELETE, không có GET
-    // → Dùng public ProductController để lấy danh sách sản phẩm
-    const params = new URLSearchParams();
-    if (q) params.append('q', q);
-    if (categoryId) params.append('categoryId', categoryId);
-    if (sort) params.append('sort', sort);
-    params.append('page', page);
-    params.append('size', size);
-    const res = await apiClient.get(`/api/v1/products?${params.toString()}`);
-    const raw = res?.data !== undefined ? res.data : res;
-    if (raw && Array.isArray(raw.content)) {
+  getProducts: async ({ q = '', categoryId = '', sort = '', page = 1, size = 100 } = {}) => {
+    const firstPageRes = await productApi.getProducts({ q, categoryId, sort, page, size });
+    if (size >= 100 && firstPageRes.totalPages > 1 && (!page || page === 1)) {
+      let allContent = [...(firstPageRes.content || [])];
+      for (let p = 2; p <= firstPageRes.totalPages; p++) {
+        const nextRes = await productApi.getProducts({ q, categoryId, sort, page: p, size: 100 });
+        if (nextRes.content) {
+          allContent = allContent.concat(nextRes.content);
+        }
+      }
       return {
-        content: (raw.content || []).map(normalizeProduct),
-        totalPages: raw.totalPages ?? 1,
-        totalElements: raw.totalElements ?? raw.content.length,
-        page: raw.page ?? page,
+        ...firstPageRes,
+        content: allContent,
+        totalElements: allContent.length,
       };
     }
-    const list = Array.isArray(raw) ? raw : [];
-    return { content: list.map(normalizeProduct), totalPages: 1, totalElements: list.length, page };
+    return firstPageRes;
   },
 
   createProduct: async (productData) => {
