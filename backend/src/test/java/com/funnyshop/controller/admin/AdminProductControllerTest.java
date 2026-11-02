@@ -50,6 +50,7 @@ class AdminProductControllerTest {
                 .name("Sản phẩm mới")
                 .price(new BigDecimal("200000.00"))
                 .stockQuantity(15)
+                .isDeleted(false)
                 .build();
     }
 
@@ -87,7 +88,8 @@ class AdminProductControllerTest {
                 "name": "Sản phẩm sửa",
                 "price": 250000.00,
                 "stockQuantity": 20,
-                "categoryId": 1
+                "categoryId": 1,
+                "isDeleted": false
             }
             """;
 
@@ -111,5 +113,19 @@ class AdminProductControllerTest {
                 .andExpect(jsonPath("$.message", is("Ẩn/xóa mềm sản phẩm thành công!")));
 
         verify(productService, times(1)).deleteProduct(1L);
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/admin/products/{id}/restore - Khôi phục sản phẩm thành công")
+    void restoreProduct_Success() throws Exception {
+        when(productService.restoreProduct(1L)).thenReturn(sampleResponse);
+
+        mockMvc.perform(put("/api/v1/admin/products/1/restore")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Khôi phục sản phẩm thành công!")));
+
+        verify(productService, times(1)).restoreProduct(1L);
     }
 }
