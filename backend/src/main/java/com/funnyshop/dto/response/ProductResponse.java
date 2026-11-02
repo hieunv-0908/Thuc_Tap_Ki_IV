@@ -24,6 +24,7 @@ public class ProductResponse {
     private Integer stock;
     private CategoryResponse category;
     private String imageUrl;
+    private Boolean isDeleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -40,6 +41,7 @@ public class ProductResponse {
                 .stock(product.getStockQuantity())
                 .category(CategoryResponse.fromEntity(product.getCategory()))
                 .imageUrl(product.getImageUrl())
+                .isDeleted(product.getIsDeleted())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .build();

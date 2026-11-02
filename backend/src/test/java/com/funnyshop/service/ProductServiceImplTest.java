@@ -17,17 +17,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,22 +40,22 @@ class ProductServiceImplTest {
     @InjectMocks
     private ProductServiceImpl productService;
 
-    private Category mockCategory;
     private Product mockProduct;
+    private Category mockCategory;
 
     @BeforeEach
     void setUp() {
         mockCategory = Category.builder()
                 .id(1L)
-                .name("Thời trang")
-                .description("Quần áo")
+                .name("Thời trang Nam")
+                .description("Quần áo nam")
                 .isDeleted(false)
                 .build();
 
         mockProduct = Product.builder()
                 .id(100L)
                 .name("Áo Thun Funny")
-                .description("Áo cotton")
+                .description("Áo cotton mềm mại")
                 .price(new BigDecimal("150000.00"))
                 .stockQuantity(50)
                 .category(mockCategory)
@@ -66,7 +64,7 @@ class ProductServiceImplTest {
     }
 
     @Test
-    @DisplayName("getProductById - Thành công khi ID tồn tại và chưa bị xóa")
+    @DisplayName("getProductById - Tìm thấy sản phẩm chưa xóa trả về DTO")
     void getProductById_Success() {
         when(productRepository.findByIdWithCategory(100L)).thenReturn(Optional.of(mockProduct));
 
@@ -75,28 +73,27 @@ class ProductServiceImplTest {
         assertNotNull(response);
         assertEquals(100L, response.getId());
         assertEquals("Áo Thun Funny", response.getName());
-        verify(productRepository).findByIdWithCategory(100L);
+        assertEquals(50, response.getStockQuantity());
+        assertEquals(50, response.getStock());
+        assertFalse(response.getIsDeleted());
     }
 
     @Test
-    @DisplayName("getProductById - Ném NotFoundException khi không tìm thấy")
+    @DisplayName("getProductById - Không tìm thấy ném ngoại lệ ResourceNotFoundException")
     void getProductById_NotFound() {
         when(productRepository.findByIdWithCategory(999L)).thenReturn(Optional.empty());
 
-        assertThrows(
-                ResourceNotFoundException.class,
-                () -> productService.getProductById(999L)
-        );
+        assertThrows(ResourceNotFoundException.class, () -> productService.getProductById(999L));
     }
 
     @Test
-    @DisplayName("createProduct - Thêm mới sản phẩm thành công với isDeleted = false")
+    @DisplayName("createProduct - Thêm mới sản phẩm hợp lệ thành công")
     void createProduct_Success() {
         ProductCreateRequest request = ProductCreateRequest.builder()
                 .name("Sản phẩm mới")
                 .description("Mô tả")
-                .price(new BigDecimal("180000.00"))
-                .stockQuantity(30)
+                .price(new BigDecimal("200000.00"))
+                .stockQuantity(20)
                 .categoryId(1L)
                 .build();
 
@@ -112,6 +109,7 @@ class ProductServiceImplTest {
         assertNotNull(response);
         assertEquals(101L, response.getId());
         assertEquals("Sản phẩm mới", response.getName());
+        assertFalse(response.getIsDeleted());
         verify(productRepository).save(any(Product.class));
     }
 
@@ -126,7 +124,7 @@ class ProductServiceImplTest {
                 .categoryId(1L)
                 .build();
 
-        when(productRepository.findByIdAndIsDeletedFalse(100L)).thenReturn(Optional.of(mockProduct));
+        when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
         when(categoryRepository.findByIdAndIsDeletedFalse(1L)).thenReturn(Optional.of(mockCategory));
         when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -138,6 +136,28 @@ class ProductServiceImplTest {
     }
 
     @Test
+    @DisplayName("updateProduct - Cập nhật kèm thay đổi trạng thái xóa mềm isDeleted")
+    void updateProduct_WithIsDeleted_ToggleStatus() {
+        ProductUpdateRequest request = ProductUpdateRequest.builder()
+                .name("Áo Thun Funny v2")
+                .price(new BigDecimal("160000.00"))
+                .stockQuantity(40)
+                .categoryId(1L)
+                .isDeleted(true)
+                .build();
+
+        when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
+        when(categoryRepository.findByIdAndIsDeletedFalse(1L)).thenReturn(Optional.of(mockCategory));
+        when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
+
+        ProductResponse response = productService.updateProduct(100L, request);
+
+        assertNotNull(response);
+        assertTrue(response.getIsDeleted());
+        assertTrue(mockProduct.getIsDeleted());
+    }
+
+    @Test
     @DisplayName("deleteProduct - Xóa mềm sản phẩm (chuyển cờ isDeleted thành true)")
     void deleteProduct_SoftDelete_Success() {
         when(productRepository.findByIdAndIsDeletedFalse(100L)).thenReturn(Optional.of(mockProduct));
@@ -146,6 +166,21 @@ class ProductServiceImplTest {
         productService.deleteProduct(100L);
 
         assertTrue(mockProduct.getIsDeleted());
+        verify(productRepository).save(mockProduct);
+    }
+
+    @Test
+    @DisplayName("restoreProduct - Khôi phục sản phẩm đã xóa mềm (chuyển cờ isDeleted thành false)")
+    void restoreProduct_Success() {
+        mockProduct.setIsDeleted(true);
+        when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
+        when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
+
+        ProductResponse response = productService.restoreProduct(100L);
+
+        assertNotNull(response);
+        assertFalse(response.getIsDeleted());
+        assertFalse(mockProduct.getIsDeleted());
         verify(productRepository).save(mockProduct);
     }
 
@@ -169,4 +204,3 @@ class ProductServiceImplTest {
         assertTrue(order.isDescending());
     }
 }
-

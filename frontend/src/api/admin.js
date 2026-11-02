@@ -60,7 +60,7 @@ export const adminApi = {
     return res?.data !== undefined ? res.data : res;
   },
 
-  getAllOrders: async ({ page = 0, size = 100 } = {}) => {
+  getAllOrders: async () => {
     if (isMock) {
       return await mockEngine.adminGetAllOrders();
     }
