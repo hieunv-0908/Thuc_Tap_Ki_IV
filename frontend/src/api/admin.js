@@ -6,8 +6,23 @@ import { productApi } from './product';
 const isMock = false;
 
 export const adminApi = {
-  getProducts: async ({ q = '', categoryId = '', sort = '', page = 1, size = 1000 } = {}) => {
-    return await productApi.getProducts({ q, categoryId, sort, page, size });
+  getProducts: async ({ q = '', categoryId = '', sort = '', page = 1, size = 100 } = {}) => {
+    const firstPageRes = await productApi.getProducts({ q, categoryId, sort, page, size });
+    if (size >= 100 && firstPageRes.totalPages > 1 && (!page || page === 1)) {
+      let allContent = [...(firstPageRes.content || [])];
+      for (let p = 2; p <= firstPageRes.totalPages; p++) {
+        const nextRes = await productApi.getProducts({ q, categoryId, sort, page: p, size: 100 });
+        if (nextRes.content) {
+          allContent = allContent.concat(nextRes.content);
+        }
+      }
+      return {
+        ...firstPageRes,
+        content: allContent,
+        totalElements: allContent.length,
+      };
+    }
+    return firstPageRes;
   },
 
   createProduct: async (productData) => {

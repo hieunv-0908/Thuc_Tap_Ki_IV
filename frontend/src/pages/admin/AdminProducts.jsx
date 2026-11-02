@@ -11,6 +11,7 @@ import {
   PackageX,
   Layers,
   X,
+  RotateCcw,
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Table from '../../components/ui/Table';
@@ -18,7 +19,6 @@ import Pagination from '../../components/ui/Pagination';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import StatCard from '../../components/admin/StatCard';
 import AiMockModal from '../../components/admin/AiMockModal';
-import { productApi } from '../../api/product';
 import { categoryApi } from '../../api/category';
 import { adminApi } from '../../api/admin';
 import { toast } from '../../store/toastStore';
@@ -47,13 +47,13 @@ export default function AdminProducts() {
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Fetch initial data
+  // Fetch data for user actions (retry, after delete/restore)
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const [prodRes, catRes] = await Promise.all([
-        adminApi.getProducts({ size: 1000 }),
+        adminApi.getProducts({ size: 100 }),
         categoryApi.getCategories(),
       ]);
       const productList = prodRes?.content || (Array.isArray(prodRes?.data) ? prodRes.data : (Array.isArray(prodRes) ? prodRes : []));
@@ -68,9 +68,39 @@ export default function AdminProducts() {
     }
   }, []);
 
+  // Initial load
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    let ignore = false;
+    async function init() {
+      try {
+        setLoading(true);
+        setError(null);
+        const [prodRes, catRes] = await Promise.all([
+          adminApi.getProducts({ size: 100 }),
+          categoryApi.getCategories(),
+        ]);
+        if (!ignore) {
+          const productList = prodRes?.content || (Array.isArray(prodRes?.data) ? prodRes.data : (Array.isArray(prodRes) ? prodRes : []));
+          const categoryList = Array.isArray(catRes) ? catRes : (Array.isArray(catRes?.data) ? catRes.data : (catRes?.content || []));
+          setProducts(productList);
+          setCategories(categoryList);
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error('Lỗi tải danh sách sản phẩm:', err);
+          setError(err.message || 'Không thể tải danh sách sản phẩm.');
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+    init();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   // Overall statistics calculated from full list
   const stats = useMemo(() => {
@@ -163,6 +193,18 @@ export default function AdminProducts() {
     }
   };
 
+  // Handle Restore
+  const handleRestoreProduct = async (id, name) => {
+    try {
+      await adminApi.restoreProduct(id);
+      toast.success(`Đã khôi phục sản phẩm "${name}".`);
+      await fetchData();
+    } catch (err) {
+      console.error('Lỗi khôi phục sản phẩm:', err);
+      toast.error(err.message || 'Không thể khôi phục sản phẩm. Vui lòng thử lại.');
+    }
+  };
+
   // Table Columns Definition
   const columns = [
     {
@@ -187,9 +229,16 @@ export default function AdminProducts() {
         const catMeta = getCategoryMeta(row.category?.name);
         return (
           <div className="max-w-md">
-            <p className="font-semibold text-ink line-clamp-1 hover:text-primary-700 transition-colors">
-              {row.name}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-ink line-clamp-1 hover:text-primary-700 transition-colors">
+                {row.name}
+              </p>
+              {row.isDeleted && (
+                <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
+                  Đã ẩn
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-1.5 mt-1">
               <span
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border ${catMeta.bg} ${catMeta.border} ${catMeta.text}`}
@@ -246,24 +295,38 @@ export default function AdminProducts() {
       className: 'text-right whitespace-nowrap',
       render: (row) => (
         <div className="flex items-center justify-end gap-1.5">
-          <button
-            type="button"
-            onClick={() => navigate(`/admin/products/${row.id}`)}
-            className="p-1.5 rounded-lg text-ink-muted hover:text-secondary-700 hover:bg-secondary-50 transition-colors cursor-pointer"
-            title="Chỉnh sửa sản phẩm"
-            aria-label={`Chỉnh sửa ${row.name}`}
-          >
-            <Pencil className="size-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeleteTarget(row)}
-            className="p-1.5 rounded-lg text-ink-muted hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
-            title="Xóa sản phẩm"
-            aria-label={`Xóa ${row.name}`}
-          >
-            <Trash2 className="size-4" />
-          </button>
+          {row.isDeleted ? (
+            <button
+              type="button"
+              onClick={() => handleRestoreProduct(row.id, row.name)}
+              className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-colors cursor-pointer"
+              title="Khôi phục sản phẩm"
+              aria-label={`Khôi phục ${row.name}`}
+            >
+              <RotateCcw className="size-4" />
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => navigate(`/admin/products/${row.id}`)}
+                className="p-1.5 rounded-lg text-ink-muted hover:text-secondary-700 hover:bg-secondary-50 transition-colors cursor-pointer"
+                title="Chỉnh sửa sản phẩm"
+                aria-label={`Chỉnh sửa ${row.name}`}
+              >
+                <Pencil className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(row)}
+                className="p-1.5 rounded-lg text-ink-muted hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                title="Xóa sản phẩm"
+                aria-label={`Xóa ${row.name}`}
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </>
+          )}
         </div>
       ),
     },
