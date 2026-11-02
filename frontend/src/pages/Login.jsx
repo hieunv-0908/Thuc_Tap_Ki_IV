@@ -277,7 +277,7 @@ export default function Login() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => handleQuickFill('admin', '123456')}
+                onClick={() => handleQuickFill('admin', 'admin123')}
                 className="p-2 text-xs text-ink rounded-lg border border-secondary-200 bg-secondary-50/60 hover:bg-secondary-100 text-left transition-colors cursor-pointer"
               >
                 <div className="font-semibold text-secondary-700 flex items-center gap-1">

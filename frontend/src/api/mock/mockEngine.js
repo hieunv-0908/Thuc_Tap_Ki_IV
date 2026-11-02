@@ -484,6 +484,71 @@ class MockEngine {
       products: recommendedProducts,
     };
   }
+
+  // --- ADMIN USERS ---
+  async adminGetUsers() {
+    await this.delay(200, 400);
+    return this.users.map((u) => ({
+      id: u.id,
+      fullName: u.fullName,
+      username: u.username || u.email?.split('@')[0],
+      email: u.email,
+      phone: u.phone || '0901234567',
+      role: u.role || 'CUSTOMER',
+      status: u.status || 'ACTIVE',
+      createdAt: u.createdAt || '2026-10-01T08:00:00.000Z',
+    }));
+  }
+
+  async adminUpdateUserStatus(id, status) {
+    await this.delay(200, 400);
+    const user = this.users.find((u) => u.id === Number(id));
+    if (!user) throw new Error('Không tìm thấy người dùng với ID: ' + id);
+    user.status = status;
+    this.saveDatabase();
+    return { ...user };
+  }
+
+  async adminUpdateUserRole(id, role) {
+    await this.delay(200, 400);
+    const user = this.users.find((u) => u.id === Number(id));
+    if (!user) throw new Error('Không tìm thấy người dùng với ID: ' + id);
+    user.role = role;
+    this.saveDatabase();
+    return { ...user };
+  }
+
+  async adminCreateUser(userData) {
+    await this.delay(300, 500);
+    const existing = this.users.find(
+      (u) => u.email.toLowerCase() === userData.email.toLowerCase()
+    );
+    if (existing) throw new Error('Email này đã được sử dụng!');
+
+    const newUser = {
+      id: Date.now(),
+      fullName: userData.fullName || 'Người dùng mới',
+      username: userData.username || userData.email.split('@')[0],
+      email: userData.email.toLowerCase(),
+      phone: userData.phone || '',
+      password: userData.password || '123456',
+      role: userData.role || 'CUSTOMER',
+      status: userData.status || 'ACTIVE',
+      createdAt: new Date().toISOString(),
+    };
+    this.users.unshift(newUser);
+    this.saveDatabase();
+    return { ...newUser };
+  }
+
+  async adminDeleteUser(id) {
+    await this.delay(250, 400);
+    const index = this.users.findIndex((u) => u.id === Number(id));
+    if (index === -1) throw new Error('Không tìm thấy người dùng với ID: ' + id);
+    this.users.splice(index, 1);
+    this.saveDatabase();
+    return { success: true };
+  }
 }
 
 export const mockEngine = new MockEngine();

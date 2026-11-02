@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Package, ClipboardList, Layers, Store, LogOut, X } from 'lucide-react';
+import { Package, ClipboardList, Layers, Users, Store, LogOut, X } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 
@@ -28,6 +28,11 @@ export default function SidebarAdmin({ onCloseMobile }) {
       to: '/admin/orders',
       label: 'Đơn hàng',
       icon: ClipboardList,
+    },
+    {
+      to: '/admin/users',
+      label: 'Người dùng',
+      icon: Users,
     },
   ];
 
