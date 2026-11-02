@@ -1,6 +1,6 @@
 import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
-import { normalizeProduct } from './product';
+import { productApi, normalizeProduct } from './product';
 
 const isMock = false;
 
@@ -56,11 +56,15 @@ export const adminApi = {
     return res?.data !== undefined ? res.data : res;
   },
 
-  getAllOrders: async () => {
+  getAllOrders: async ({ page = 0, size = 100 } = {}) => {
     if (isMock) {
       return await mockEngine.adminGetAllOrders();
     }
-    const res = await apiClient.get('/api/v1/admin/orders', { params: { page, size } });
+    const zeroBasedPage = page > 0 ? page - 1 : 0;
+    const safeSize = Math.min(100, Math.max(1, Number(size) || 10));
+    const res = await apiClient.get('/api/v1/admin/orders', {
+      params: { page: zeroBasedPage, size: safeSize },
+    });
     const data = res?.data !== undefined ? res.data : res;
     return Array.isArray(data) ? data : (data?.content || []);
   },

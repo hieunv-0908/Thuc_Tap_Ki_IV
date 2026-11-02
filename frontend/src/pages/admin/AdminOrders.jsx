@@ -67,7 +67,6 @@ export default function AdminOrders() {
     let ignore = false;
     async function init() {
       try {
-        setLoading(true);
         setError(null);
         const res = await adminApi.getAllOrders({ page: 0, size: 100 });
         if (!ignore) {

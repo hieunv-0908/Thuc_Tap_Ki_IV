@@ -19,6 +19,7 @@ import Pagination from '../../components/ui/Pagination';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import StatCard from '../../components/admin/StatCard';
 import AiMockModal from '../../components/admin/AiMockModal';
+import { productApi } from '../../api/product';
 import { categoryApi } from '../../api/category';
 import { adminApi } from '../../api/admin';
 import { toast } from '../../store/toastStore';
@@ -52,14 +53,25 @@ export default function AdminProducts() {
     try {
       setLoading(true);
       setError(null);
-      const [prodRes, catRes] = await Promise.all([
-        adminApi.getProducts({ size: 100 }),
+      const [prodResult, catResult] = await Promise.allSettled([
+        adminApi.getProducts ? adminApi.getProducts({ size: 100 }) : productApi.getProducts({ size: 100 }),
         categoryApi.getCategories(),
       ]);
-      const productList = prodRes?.content || (Array.isArray(prodRes?.data) ? prodRes.data : (Array.isArray(prodRes) ? prodRes : []));
-      const categoryList = Array.isArray(catRes) ? catRes : (Array.isArray(catRes?.data) ? catRes.data : (catRes?.content || []));
-      setProducts(productList);
-      setCategories(categoryList);
+
+      if (prodResult.status === 'fulfilled') {
+        const prodRes = prodResult.value;
+        const productList = prodRes?.content || (Array.isArray(prodRes?.data) ? prodRes.data : (Array.isArray(prodRes) ? prodRes : []));
+        setProducts(productList);
+      } else {
+        console.error('Lỗi tải sản phẩm:', prodResult.reason);
+        setError(prodResult.reason?.message || 'Không thể tải danh sách sản phẩm.');
+      }
+
+      if (catResult.status === 'fulfilled') {
+        const catRes = catResult.value;
+        const categoryList = Array.isArray(catRes) ? catRes : (Array.isArray(catRes?.data) ? catRes.data : (catRes?.content || []));
+        setCategories(categoryList);
+      }
     } catch (err) {
       console.error('Lỗi tải danh sách sản phẩm:', err);
       setError(err.message || 'Không thể tải danh sách sản phẩm.');
@@ -71,19 +83,28 @@ export default function AdminProducts() {
   // Initial load
   useEffect(() => {
     let ignore = false;
-    async function init() {
+    async function loadInitial() {
       try {
-        setLoading(true);
         setError(null);
-        const [prodRes, catRes] = await Promise.all([
-          adminApi.getProducts({ size: 100 }),
+        const [prodResult, catResult] = await Promise.allSettled([
+          adminApi.getProducts ? adminApi.getProducts({ size: 100 }) : productApi.getProducts({ size: 100 }),
           categoryApi.getCategories(),
         ]);
         if (!ignore) {
-          const productList = prodRes?.content || (Array.isArray(prodRes?.data) ? prodRes.data : (Array.isArray(prodRes) ? prodRes : []));
-          const categoryList = Array.isArray(catRes) ? catRes : (Array.isArray(catRes?.data) ? catRes.data : (catRes?.content || []));
-          setProducts(productList);
-          setCategories(categoryList);
+          if (prodResult.status === 'fulfilled') {
+            const prodRes = prodResult.value;
+            const productList = prodRes?.content || (Array.isArray(prodRes?.data) ? prodRes.data : (Array.isArray(prodRes) ? prodRes : []));
+            setProducts(productList);
+          } else {
+            console.error('Lỗi tải sản phẩm:', prodResult.reason);
+            setError(prodResult.reason?.message || 'Không thể tải danh sách sản phẩm.');
+          }
+
+          if (catResult.status === 'fulfilled') {
+            const catRes = catResult.value;
+            const categoryList = Array.isArray(catRes) ? catRes : (Array.isArray(catRes?.data) ? catRes.data : (catRes?.content || []));
+            setCategories(categoryList);
+          }
         }
       } catch (err) {
         if (!ignore) {
@@ -96,7 +117,7 @@ export default function AdminProducts() {
         }
       }
     }
-    init();
+    loadInitial();
     return () => {
       ignore = true;
     };
