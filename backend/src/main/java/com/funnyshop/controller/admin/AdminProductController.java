@@ -59,5 +59,21 @@ public class AdminProductController {
                         .message("Ẩn/xóa mềm sản phẩm thành công!")
                         .build());
     }
-}
 
+    @PutMapping("/{id}/restore")
+    public ResponseEntity<ApiResponse<ProductResponse>> restoreProduct(@PathVariable Long id) {
+        ProductResponse response = productService.restoreProduct(id);
+
+        return ResponseEntity.ok(
+                ApiResponse.<ProductResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Khôi phục sản phẩm thành công!")
+                        .data(response)
+                        .build());
+    }
+
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<ApiResponse<ProductResponse>> restoreProductPatch(@PathVariable Long id) {
+        return restoreProduct(id);
+    }
+}

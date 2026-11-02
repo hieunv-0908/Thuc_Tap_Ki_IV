@@ -42,6 +42,14 @@ export const adminApi = {
     return res?.data !== undefined ? res.data : res;
   },
 
+  restoreProduct: async (id) => {
+    if (isMock) {
+      return await mockEngine.adminRestoreProduct?.(id);
+    }
+    const res = await apiClient.put(`/api/v1/admin/products/${id}/restore`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
   getAllOrders: async () => {
     if (isMock) {
       return await mockEngine.adminGetAllOrders();

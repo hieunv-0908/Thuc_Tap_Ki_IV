@@ -109,7 +109,7 @@ public class ProductServiceImpl implements ProductService {
                 .stockQuantity(request.getStockQuantity())
                 .category(category)
                 .imageUrl(request.getImageUrl())
-                .isDeleted(false)
+                .isDeleted(request.getIsDeleted() != null ? request.getIsDeleted() : false)
                 .build();
 
         Product savedProduct = productRepository.save(product);
@@ -119,7 +119,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse updateProduct(Long id, ProductUpdateRequest request) {
-        Product product = productRepository.findByIdAndIsDeletedFalse(id)
+        Product product = productRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Không tìm thấy sản phẩm với ID: " + id
@@ -140,6 +140,10 @@ public class ProductServiceImpl implements ProductService {
         product.setCategory(category);
         product.setImageUrl(request.getImageUrl());
 
+        if (request.getIsDeleted() != null) {
+            product.setIsDeleted(request.getIsDeleted());
+        }
+
         Product updatedProduct = productRepository.save(product);
         return ProductResponse.fromEntity(updatedProduct);
     }
@@ -156,5 +160,20 @@ public class ProductServiceImpl implements ProductService {
 
         product.setIsDeleted(true);
         productRepository.save(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse restoreProduct(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Không tìm thấy sản phẩm với ID: " + id
+                        )
+                );
+
+        product.setIsDeleted(false);
+        Product restoredProduct = productRepository.save(product);
+        return ProductResponse.fromEntity(restoredProduct);
     }
 }
