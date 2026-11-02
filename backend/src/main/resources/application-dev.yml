@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/funnyshop?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:123456$}
+    url: jdbc:mysql://localhost:3306/funnyshop?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
   
   jpa:
@@ -19,3 +19,24 @@ spring:
   devtools:
     restart:
       enabled: true
+
+# Bổ sung cấu hình cho email
+  spring:
+    mail:
+      host: smtp.gmail.com
+      port: 587
+      username: ${MAIL_USERNAME}
+      password: ${MAIL_PASSWORD}
+      properties:
+        mail:
+          smtp:
+            auth: true
+            starttls:
+              enable: true
+
+  app:
+    password-reset:
+      otp-expiration-minutes: 5
+      token-expiration-minutes: 10
+      max-attempts: 5
+      resend-cooldown-seconds: 60
