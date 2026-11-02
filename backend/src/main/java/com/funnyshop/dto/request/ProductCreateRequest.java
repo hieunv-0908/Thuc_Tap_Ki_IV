@@ -1,5 +1,6 @@
 package com.funnyshop.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -37,5 +38,8 @@ public class ProductCreateRequest {
 
     @Size(max = 500, message = "Đường dẫn ảnh tối đa 500 ký tự")
     private String imageUrl;
-}
 
+    @Builder.Default
+    @JsonAlias({"is_deleted", "deleted"})
+    private Boolean isDeleted = false;
+}
