@@ -66,6 +66,13 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Sync search input with URL query param `q`
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q') || '';
+    setSearchQuery(q);
+  }, [location.search]);
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     const query = searchQuery.trim();
@@ -75,7 +82,11 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
     if (onSearch) {
       onSearch(query);
     } else {
-      navigate(`/?q=${encodeURIComponent(query)}`);
+      if (query) {
+        navigate(`/?q=${encodeURIComponent(query)}`);
+      } else {
+        navigate('/');
+      }
     }
   };
 
@@ -162,7 +173,11 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                   type="button"
                   onClick={() => {
                     setSearchQuery('');
-                    if (onSearch) onSearch('');
+                    if (onSearch) {
+                      onSearch('');
+                    } else if (location.search.includes('q=')) {
+                      navigate('/');
+                    }
                   }}
                   className="absolute right-20 text-ink-subtle hover:text-ink p-1 cursor-pointer"
                   aria-label="Xóa từ khóa tìm kiếm"
@@ -268,7 +283,7 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                       >
                         <User className="size-4 text-ink-subtle" />
                         <span>Hồ sơ cá nhân</span>
-                      </Link>
+                      </Link>
 
                       <Link
                         to="/orders"

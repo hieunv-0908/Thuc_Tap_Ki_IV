@@ -22,7 +22,7 @@ export const normalizeProduct = (p) => {
 };
 
 export const productApi = {
-  getProducts: async ({ q = '', categoryId = '', sort = '', page = 1, size = 8 } = {}) => {
+  getProducts: async ({ q = '', categoryId = '', sort = '', page = 0, size = 8 } = {}) => {
     if (isMock) {
       const mockRes = await mockEngine.getProducts({ q, categoryId, sort, page, size });
       return {
@@ -34,7 +34,7 @@ export const productApi = {
     if (q) params.append('q', q);
     if (categoryId) params.append('categoryId', categoryId);
     if (sort) params.append('sort', sort);
-    if (page) params.append('page', page);
+    params.append('page', page);
     if (size) params.append('size', size);
 
     const res = await apiClient.get(`/api/v1/products?${params.toString()}`);

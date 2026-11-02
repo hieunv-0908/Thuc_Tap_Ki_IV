@@ -47,18 +47,27 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState(queryQ);
   const productSectionRef = useRef(null);
 
+  // Sync local searchTerm when URL search query changes
+  useEffect(() => {
+    setSearchTerm(queryQ);
+  }, [queryQ]);
+
   // Helper to update filter params
   const updateFilter = useCallback(
     (newParams) => {
       setSearchParams((prevParams) => {
         const updated = new URLSearchParams(prevParams);
         Object.entries(newParams).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== '' && value !== '1') {
-            updated.set(key, value);
-          } else if (key === 'page' && (value === 1 || value === '1')) {
-            updated.delete('page');
-          } else if (value === '' || value === null || value === undefined) {
+          if (value === '' || value === null || value === undefined) {
             updated.delete(key);
+          } else if (key === 'page') {
+            if (value === 1 || value === '1' || value === 0 || value === '0') {
+              updated.delete('page');
+            } else {
+              updated.set('page', value);
+            }
+          } else {
+            updated.set(key, value);
           }
         });
         return updated;
@@ -98,7 +107,7 @@ export default function Home() {
           q: queryQ,
           categoryId: queryCategory,
           sort: querySort,
-          page: queryPage,
+          page: Math.max(0, queryPage - 1),
           size: 8,
         });
 

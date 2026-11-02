@@ -53,7 +53,7 @@ export default function AdminProducts() {
       setLoading(true);
       setError(null);
       const [prodRes, catRes] = await Promise.all([
-        adminApi.getProducts({ size: 1000 }),
+        adminApi.getProducts({ page: 0, size: 100 }),
         categoryApi.getCategories(),
       ]);
       const productList = prodRes?.content || (Array.isArray(prodRes?.data) ? prodRes.data : (Array.isArray(prodRes) ? prodRes : []));

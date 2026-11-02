@@ -13,6 +13,7 @@ import Forbidden from './pages/Forbidden';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminProductForm from './pages/admin/AdminProductForm';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminCategories from './pages/admin/AdminCategories';
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="products/new" element={<AdminProductForm />} />
           <Route path="products/:id" element={<AdminProductForm />} />
           <Route path="orders" element={<AdminOrders />} />
+          <Route path="categories" element={<AdminCategories />} />
         </Route>
       </Routes>
     </BrowserRouter>
