@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping({"/api/products", "/api/v1/products"})
+@RequestMapping({ "/api/products", "/api/v1/products" })
 @RequiredArgsConstructor
 public class ProductController {
 
@@ -40,14 +40,14 @@ public class ProductController {
             @RequestParam(defaultValue = "asc") String sortDir,
             @RequestParam(required = false) String sort,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
+            @RequestParam(defaultValue = "10") int size) {
         String effectiveKeyword = (keyword != null && !keyword.isBlank()) ? keyword : q;
 
         String effectiveSortBy = sortBy;
         String effectiveSortDir = sortDir;
 
-        // Hỗ trợ tham số sort tổng hợp nếu client truyền dạng "price_asc", "stock_desc", "asc", "price,asc"
+        // Hỗ trợ tham số sort tổng hợp nếu client truyền dạng "price_asc",
+        // "stock_desc", "asc", "price,asc"
         if (sort != null && !sort.isBlank()) {
             String s = sort.trim().toLowerCase();
             if (s.contains("_")) {
@@ -65,15 +65,13 @@ public class ProductController {
         }
 
         Page<ProductResponse> products = productService.getProducts(
-                effectiveKeyword, categoryId, effectiveSortBy, effectiveSortDir, page, size
-        );
+                effectiveKeyword, categoryId, effectiveSortBy, effectiveSortDir, page, size);
 
         return ResponseEntity.ok(
                 ApiResponse.<Page<ProductResponse>>builder()
                         .code(HttpStatus.OK.value())
                         .message("Lấy danh sách sản phẩm thành công!")
                         .data(products)
-                        .build()
-        );
+                        .build());
     }
 }

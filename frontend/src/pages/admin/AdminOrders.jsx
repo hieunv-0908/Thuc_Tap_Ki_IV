@@ -50,9 +50,10 @@ export default function AdminOrders() {
     try {
       setLoading(true);
       setError(null);
-      const res = await adminApi.getAllOrders();
-      // Newest orders first
-      const sorted = (res || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+      const res = await adminApi.getAllOrders({ page: 0, size: 100 });
+      // BE trả về Page<OrderResponse>, unwrap .content
+      const list = Array.isArray(res) ? res : (res?.content || []);
+      const sorted = list.sort((a, b) => (b.id || 0) - (a.id || 0));
       setOrders(sorted);
     } catch (err) {
       console.error('Lỗi tải danh sách đơn hàng:', err);
@@ -68,9 +69,10 @@ export default function AdminOrders() {
       try {
         setLoading(true);
         setError(null);
-        const res = await adminApi.getAllOrders();
+        const res = await adminApi.getAllOrders({ page: 0, size: 100 });
         if (!ignore) {
-          const sorted = (res || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+          const list = Array.isArray(res) ? res : (res?.content || []);
+          const sorted = list.sort((a, b) => (b.id || 0) - (a.id || 0));
           setOrders(sorted);
         }
       } catch (err) {
