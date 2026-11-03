@@ -53,4 +53,25 @@ export const authApi = {
     });
     return res?.data || res;
   },
+
+  /**
+   * Quên mật khẩu - gửi mã xác thực OTP (Hiện tại dùng MockData theo yêu cầu)
+   */
+  forgotPassword: async ({ emailOrUsername }) => {
+    return await mockEngine.requestPasswordReset({ emailOrUsername });
+  },
+
+  /**
+   * Xác thực mã OTP (MockData)
+   */
+  verifyResetOtp: async ({ emailOrUsername, otp }) => {
+    return await mockEngine.verifyResetOtp({ emailOrUsername, otp });
+  },
+
+  /**
+   * Đặt lại mật khẩu mới (MockData)
+   */
+  resetPassword: async ({ emailOrUsername, otp, newPassword }) => {
+    return await mockEngine.resetPassword({ emailOrUsername, otp, newPassword });
+  },
 };
