@@ -1,13 +1,24 @@
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Package, ClipboardList, Layers, Users, Store, LogOut, X } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
+import ConfirmDialog from '../ui/ConfirmDialog';
 
 export default function SidebarAdmin({ onCloseMobile }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const handleLogout = () => {
+  const handleOpenLogoutConfirm = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutConfirm(false);
+    if (onCloseMobile) {
+      onCloseMobile();
+    }
     logout();
     toast.success('Đã đăng xuất thành công.');
     navigate('/login');
@@ -131,7 +142,7 @@ export default function SidebarAdmin({ onCloseMobile }) {
 
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={handleOpenLogoutConfirm}
             title="Đăng xuất"
             className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-gray-700/60 transition-colors cursor-pointer shrink-0"
             aria-label="Đăng xuất khỏi trang quản trị"
@@ -140,6 +151,18 @@ export default function SidebarAdmin({ onCloseMobile }) {
           </button>
         </div>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleConfirmLogout}
+        title="Xác nhận đăng xuất"
+        description="Bạn có chắc chắn muốn đăng xuất khỏi trang quản trị không?"
+        confirmText="Đăng xuất"
+        cancelText="Hủy"
+        variant="danger"
+      />
     </aside>
   );
 }
