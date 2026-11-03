@@ -63,19 +63,11 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         // Không tiết lộ email có tồn tại hay không
         if (user == null) {
+            log.info("Password reset requested for an unregistered email");
             return;
         }
 
-        // Giới hạn gửi lại OTP
-        tokenRepository.findTopByUser_EmailOrderByCreatedAtDesc(email)
-                .ifPresent(existing -> {
-                    if (existing.getCreatedAt()
-                            .plusSeconds(resendCooldownSeconds)
-                            .isAfter(LocalDateTime.now())) {
-                        return;
-                    }
-                });
-
+        // Kiểm tra thời gian chờ gửi lại OTP
         var latest = tokenRepository
                 .findTopByUser_EmailOrderByCreatedAtDesc(email);
 
@@ -83,13 +75,15 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                 && latest.get().getCreatedAt()
                 .plusSeconds(resendCooldownSeconds)
                 .isAfter(LocalDateTime.now())) {
+
+            log.info("Password reset OTP resend cooldown is active");
             return;
         }
 
         // Xóa OTP cũ
         tokenRepository.deleteAllByUser_Id(user.getId());
 
-        // Sinh OTP 6 chữ số
+        // Sinh OTP gồm 6 chữ số
         String otp = String.format(
                 "%06d",
                 RANDOM.nextInt(1_000_000)
@@ -106,7 +100,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         tokenRepository.save(token);
 
-        // Gửi email
+        // Gửi email OTP
         try {
             SimpleMailMessage message = new SimpleMailMessage();
 
@@ -126,8 +120,12 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
             mailSender.send(message);
 
+            log.info("Password reset email sent successfully");
+
         } catch (MailException e) {
+
             log.error("Cannot send password reset email", e);
+
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "Không thể gửi email lúc này. Vui lòng thử lại sau."
@@ -137,6 +135,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
     // 2. Xác thực OTP
     @Override
+    @Transactional
     public String verifyOtp(String email, String otp) {
 
         PasswordResetToken token = tokenRepository
@@ -227,7 +226,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         User user = token.getUser();
 
-        // Hash mật khẩu mới bằng BCrypt
+        // Mã hóa mật khẩu mới bằng BCrypt
         user.setPassword(passwordEncoder.encode(newPassword));
 
         userRepository.save(user);
