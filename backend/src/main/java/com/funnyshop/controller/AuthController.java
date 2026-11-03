@@ -14,6 +14,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+// bổ sung các import forgot password và verify otp
+import com.funnyshop.dto.request.ForgotPasswordRequest;
+import com.funnyshop.dto.request.VerifyOtpRequest;
+import com.funnyshop.dto.request.ResetPasswordRequest;
+import com.funnyshop.dto.response.VerifyOtpResponse;
+import com.funnyshop.service.PasswordResetService;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -21,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService; // bổ sung service cho forgot password và verify otp
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterRequest registerRequest) {
@@ -44,6 +51,52 @@ public class AuthController {
                         .build());
     }
 
+
+    // Endpoint for forgot password
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+
+        passwordResetService.forgotPassword(request.getEmail());
+
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Nếu email tồn tại, mã OTP sẽ được gửi.")
+                        .data(null)
+                        .build()
+        );
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<VerifyOtpResponse>> verifyOtp(
+            @Valid @RequestBody VerifyOtpRequest request) {
+
+        String resetToken = passwordResetService.verifyOtp(
+                request.getEmail(),
+                request.getOtp()
+        );
+
+        return ResponseEntity.ok(
+                ApiResponse.<VerifyOtpResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Xác thực OTP thành công!")
+                        .data(VerifyOtpResponse.builder()
+                                .resetToken(resetToken)
+                                .build())
+                        .build()
+        );
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+
+        passwordResetService.resetPassword(
+                request.getResetToken(),
+                request.getNewPassword(),
+                request.getConfirmPassword()
+        );
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         AuthResponse authResponse = authService.refreshToken(request);
@@ -72,7 +125,10 @@ public class AuthController {
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
                         .code(HttpStatus.OK.value())
-                        .message("Đăng xuất thành công, token đã bị thu hồi!")
-                        .build());
+                        .message("Đặt lại mật khẩu thành công!")
+                        .data(null)
+                        .build()
+        );
     }
+
 }
