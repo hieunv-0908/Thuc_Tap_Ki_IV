@@ -254,6 +254,15 @@ export default function Login() {
               disabled={isSubmitting}
             />
 
+            <div className="flex items-center justify-end -mt-1">
+              <Link
+                to="/forgot-password"
+                className="text-xs font-semibold text-primary-700 hover:text-primary-800 hover:underline transition-colors"
+              >
+                Quên mật khẩu?
+              </Link>
+            </div>
+
             <div className="pt-2">
               <Button
                 type="submit"
