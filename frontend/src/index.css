@@ -125,6 +125,83 @@
   background-image: repeating-linear-gradient(45deg, var(--color-primary-100) 0 8px, transparent 8px 16px);
 }
 
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --color-page: #111827;
+  --color-ink: #F3F4F6;
+  --color-ink-muted: #D1D5DB;
+  --color-ink-subtle: #9CA3AF;
+  --color-line: #374151;
+
+  --color-primary-50: #2B1F1C;
+  --color-primary-100: #3B2621;
+  --color-primary-200: #59372F;
+  --color-primary-300: #8C4C3A;
+
+  --color-secondary-50: #25223A;
+  --color-secondary-100: #322D51;
+  --color-secondary-200: #49416F;
+  --color-secondary-300: #62578F;
+
+  --shadow-soft: 0 2px 8px rgb(0 0 0 / 0.24);
+  --shadow-brand: 0 8px 24px rgb(255 107 74 / 0.16);
+  --shadow-violet: 0 8px 24px rgb(108 92 231 / 0.16);
+}
+
+html[data-theme="dark"] [class~="bg-white"] {
+  background-color: #1F2937;
+}
+
+html[data-theme="dark"] [class~="bg-white/95"] {
+  background-color: rgb(31 41 55 / 0.95);
+}
+
+html[data-theme="dark"] [class~="bg-gray-50"],
+html[data-theme="dark"] [class~="bg-gray-50/50"] {
+  background-color: #1F2937;
+}
+
+html[data-theme="dark"] [class~="bg-gray-100"] {
+  background-color: #374151;
+}
+
+html[data-theme="dark"] [class~="bg-gray-200"] {
+  background-color: #4B5563;
+}
+
+html[data-theme="dark"] [class~="text-gray-400"] {
+  color: #9CA3AF;
+}
+
+html[data-theme="dark"] [class~="text-gray-500"] {
+  color: #D1D5DB;
+}
+
+html[data-theme="dark"] [class~="text-gray-600"] {
+  color: #E5E7EB;
+}
+
+html[data-theme="dark"] [class~="text-gray-700"],
+html[data-theme="dark"] [class~="text-gray-800"],
+html[data-theme="dark"] [class~="text-gray-900"] {
+  color: #F3F4F6;
+}
+
+html[data-theme="dark"] [class~="border-gray-100"],
+html[data-theme="dark"] [class~="border-gray-200"],
+html[data-theme="dark"] [class~="border-gray-300"],
+html[data-theme="dark"] [class~="border-gray-400"] {
+  border-color: #4B5563;
+}
+
+html[data-theme="dark"] [class~="hover:bg-gray-50"]:hover {
+  background-color: #374151;
+}
+
+html[data-theme="dark"] [class~="hover:bg-gray-100"]:hover {
+  background-color: #4B5563;
+}
+
 /* Giảm chuyển động toàn cục */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
