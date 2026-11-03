@@ -91,8 +91,12 @@ class MockEngine {
 
   async login({ email, password }) {
     await this.delay();
+    const query = (email || '').toLowerCase();
     const user = this.users.find(
-      (u) => u.email.toLowerCase() === (email || '').toLowerCase() && u.password === password
+      (u) =>
+        ((u.email && u.email.toLowerCase() === query) ||
+          (u.username && u.username.toLowerCase() === query)) &&
+        u.password === password
     );
 
     if (!user) {
@@ -106,8 +110,86 @@ class MockEngine {
         id: user.id,
         fullName: user.fullName,
         email: user.email,
+        username: user.username,
         role: user.role,
       },
+    };
+  }
+
+  // --- FORGOT & RESET PASSWORD ---
+  async requestPasswordReset({ emailOrUsername }) {
+    await this.delay(300, 600);
+    const identifier = (emailOrUsername || '').trim().toLowerCase();
+    if (!identifier) {
+      throw { status: 400, message: 'Vui lòng nhập email hoặc tên đăng nhập.' };
+    }
+
+    const user = this.users.find(
+      (u) =>
+        (u.email && u.email.toLowerCase() === identifier) ||
+        (u.username && u.username.toLowerCase() === identifier)
+    );
+
+    if (!user) {
+      throw { status: 404, message: 'Không tìm thấy tài khoản với thông tin đã cung cấp.' };
+    }
+
+    return {
+      success: true,
+      email: user.email,
+      username: user.username,
+      fullName: user.fullName,
+      mockOtp: '123456',
+      message: `Mã OTP xác thực đã được gửi đến email ${user.email}`,
+    };
+  }
+
+  async verifyResetOtp({ emailOrUsername, otp }) {
+    await this.delay(200, 400);
+    if (!otp || otp.trim() !== '123456') {
+      throw { status: 400, message: 'Mã OTP không chính xác hoặc đã hết hạn (Mã thử nghiệm: 123456).' };
+    }
+    const identifier = (emailOrUsername || '').trim().toLowerCase();
+    if (identifier) {
+      const user = this.users.find(
+        (u) =>
+          (u.email && u.email.toLowerCase() === identifier) ||
+          (u.username && u.username.toLowerCase() === identifier)
+      );
+      if (!user) {
+        throw { status: 404, message: 'Không tìm thấy tài khoản.' };
+      }
+    }
+    return { success: true, message: 'Mã xác thực hợp lệ.' };
+  }
+
+  async resetPassword({ emailOrUsername, otp, newPassword }) {
+    await this.delay(300, 600);
+    if (!otp || otp.trim() !== '123456') {
+      throw { status: 400, message: 'Mã OTP không hợp lệ hoặc đã hết hạn.' };
+    }
+    if (!newPassword || newPassword.length < 6) {
+      throw { status: 400, message: 'Mật khẩu mới tối thiểu 6 ký tự.' };
+    }
+
+    const identifier = (emailOrUsername || '').trim().toLowerCase();
+    const userIndex = this.users.findIndex(
+      (u) =>
+        (u.email && u.email.toLowerCase() === identifier) ||
+        (u.username && u.username.toLowerCase() === identifier)
+    );
+
+    if (userIndex === -1) {
+      throw { status: 404, message: 'Không tìm thấy tài khoản để đổi mật khẩu.' };
+    }
+
+    // Update password in mock database
+    this.users[userIndex].password = newPassword;
+    this.saveDatabase();
+
+    return {
+      success: true,
+      message: 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay.',
     };
   }
 
