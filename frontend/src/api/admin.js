@@ -1,6 +1,6 @@
 import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
-import { productApi, normalizeProduct } from './product';
+import { productApi } from './product';
 
 const isMock = false;
 

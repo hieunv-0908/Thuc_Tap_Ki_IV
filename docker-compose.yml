@@ -6,10 +6,10 @@ services:
     image: mysql:8.0
     container_name: funnyshop-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: funnyshop
-      MYSQL_USER: funnyshop
-      MYSQL_PASSWORD: funnyshop123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-funnyshop}
+      MYSQL_USER: ${MYSQL_USER:-funnyshop}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
     ports:
       - "3306:3306"
     volumes:
@@ -19,7 +19,7 @@ services:
     networks:
       - funnyshop-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p\"$${MYSQL_ROOT_PASSWORD}\""]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -49,13 +49,13 @@ services:
     container_name: funnyshop-backend
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/funnyshop
-      SPRING_DATASOURCE_USERNAME: funnyshop
-      SPRING_DATASOURCE_PASSWORD: funnyshop123
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-funnyshop}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       APP_SECURITY_TOKEN_BLACKLIST_PROVIDER: redis
-      JWT_SECRET: your-secret-key-change-in-production
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       JWT_EXPIRATION: 1800000
     ports:
       - "8080:8080"

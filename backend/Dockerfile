@@ -1,6 +1,6 @@
 
 # Build stage
-FROM gradle:8.5-jdk17 AS build
+FROM gradle:9.0-jdk21 AS build
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ COPY src ./src
 RUN gradle build --no-daemon
 
 # Run stage
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 

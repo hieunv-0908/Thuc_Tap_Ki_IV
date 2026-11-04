@@ -26,9 +26,8 @@ export default function AdminCategories() {
 
   const fetchCategories = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
       const res = await categoryApi.getCategories();
+      setError(null);
       setCategories(Array.isArray(res) ? res : (res?.content || []));
     } catch (err) {
       console.error('Lỗi tải danh mục:', err);
@@ -38,9 +37,34 @@ export default function AdminCategories() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchCategories();
+  const refreshCategories = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    await fetchCategories();
   }, [fetchCategories]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    categoryApi
+      .getCategories()
+      .then((res) => {
+        if (isCancelled) return;
+        setError(null);
+        setCategories(Array.isArray(res) ? res : (res?.content || []));
+      })
+      .catch((err) => {
+        if (isCancelled) return;
+        console.error('Lỗi tải danh mục:', err);
+        setError(err.message || 'Không thể tải danh sách danh mục.');
+      })
+      .finally(() => {
+        if (!isCancelled) setLoading(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   const openCreate = () => {
     setEditTarget(null);
@@ -80,7 +104,7 @@ export default function AdminCategories() {
         toast.success(`Đã thêm danh mục "${formName.trim()}".`);
       }
       setIsFormOpen(false);
-      await fetchCategories();
+      await refreshCategories();
     } catch (err) {
       console.error('Lỗi lưu danh mục:', err);
       setFormError(err.message || 'Không thể lưu danh mục. Vui lòng thử lại.');
@@ -96,7 +120,7 @@ export default function AdminCategories() {
       await adminApi.deleteCategory(deleteTarget.id);
       toast.success(`Đã xóa danh mục "${deleteTarget.name}".`);
       setDeleteTarget(null);
-      await fetchCategories();
+      await refreshCategories();
     } catch (err) {
       console.error('Lỗi xóa danh mục:', err);
       toast.error(err.message || 'Không thể xóa danh mục. Vui lòng thử lại.');
@@ -189,7 +213,7 @@ export default function AdminCategories() {
         data={categories}
         loading={loading}
         error={error}
-        onRetry={fetchCategories}
+        onRetry={refreshCategories}
         emptyTitle="Chưa có danh mục nào"
         emptyDescription="Nhấn 'Thêm danh mục' để tạo danh mục đầu tiên."
       />
