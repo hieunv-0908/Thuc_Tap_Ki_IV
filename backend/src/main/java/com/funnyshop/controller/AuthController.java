@@ -97,6 +97,16 @@ public class AuthController {
                 request.getNewPassword(),
                 request.getConfirmPassword()
         );
+
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Đặt lại mật khẩu thành công!")
+                        .data(null)
+                        .build()
+        );
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         AuthResponse authResponse = authService.refreshToken(request);
