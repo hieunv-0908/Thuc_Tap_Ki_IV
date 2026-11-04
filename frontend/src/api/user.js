@@ -10,35 +10,21 @@ export const userApi = {
       const user = useAuthStore.getState().user;
       return await mockEngine.getMe(user?.id);
     }
-    try {
-      const res = await apiClient.get('/api/v1/users/me');
-      return res?.data !== undefined ? res.data : res;
-    } catch (err) {
-      console.warn('[userApi.getMe] BE request failed, fallback to mock/store:', err);
-      const user = useAuthStore.getState().user;
-      if (user?.id) {
-        return await mockEngine.getMe(user.id);
-      }
-      return user;
-    }
+    const res = await apiClient.get('/api/v1/users/me');
+    return res?.data !== undefined ? res.data : res;
   },
 
-  updateMe: async ({ fullName, phone, email }) => {
+  updateMe: async ({ fullName, phone }) => {
     if (isMock) {
       const user = useAuthStore.getState().user;
-      return await mockEngine.updateMe(user?.id, { fullName, phone, email });
+      return await mockEngine.updateMe(user?.id, { fullName, phone });
     }
-    try {
-      const res = await apiClient.put('/api/v1/users/me', { fullName, phone });
-      return res?.data !== undefined ? res.data : res;
-    } catch (err) {
-      console.warn('[userApi.updateMe] BE request failed, fallback to mock:', err);
-      const user = useAuthStore.getState().user;
-      if (user?.id) {
-        return await mockEngine.updateMe(user.id, { fullName, phone, email });
-      }
-      throw err;
-    }
+    const payload = {
+      fullName,
+      phone: phone ? phone.trim() : null,
+    };
+    const res = await apiClient.put('/api/v1/users/me', payload);
+    return res?.data !== undefined ? res.data : res;
   },
 
   changePassword: async ({ currentPassword, newPassword }) => {
