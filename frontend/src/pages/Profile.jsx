@@ -16,8 +16,9 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { userApi } from '../api/user';
+import { orderApi } from '../api/order';
 import { toast } from '../store/toastStore';
-import { isValidEmail, isValidPassword, isValidPhone } from '../utils/validators';
+import { isValidPassword, isValidPhone } from '../utils/validators';
 import { formatDate } from '../utils/formatDate';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -27,7 +28,7 @@ import Skeleton from '../components/ui/Skeleton';
 /**
  * User Profile page complying with Design.md section 7.7 (v2.0)
  * Includes cover banner with floating emojis, initial-letter avatar,
- * stats row, and 2 separate forms for Personal Info and Password Change.
+ * stats row (showing real orders placed count), and forms for Personal Info and Password Change.
  */
 export default function Profile() {
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ export default function Profile() {
 
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState(null);
+  const [orderCount, setOrderCount] = useState(0);
 
   // Form 1: Personal Info
   const [infoForm, setInfoForm] = useState({
@@ -69,20 +71,42 @@ export default function Profile() {
     }
   }, [_hasHydrated, isAuthenticated, navigate]);
 
-  // Fetch current user details
+  // Fetch current user details & order history count from backend
   useEffect(() => {
     if (!isAuthenticated) return;
 
     let isMounted = true;
-    const fetchProfile = async () => {
+    const fetchProfileAndStats = async () => {
       setLoading(true);
       try {
-        const data = await userApi.getMe();
+        const [userResult, ordersResult] = await Promise.allSettled([
+          userApi.getMe(),
+          orderApi.getMyOrders(),
+        ]);
+
         if (!isMounted) return;
+
+        let userData = {};
+        if (userResult.status === 'fulfilled' && userResult.value) {
+          userData = userResult.value;
+        } else if (userResult.status === 'rejected') {
+          console.warn('[Profile] Lỗi tải thông tin user từ backend:', userResult.reason);
+        }
+
+        let totalOrders = 0;
+        if (ordersResult.status === 'fulfilled' && ordersResult.value) {
+          const list = ordersResult.value;
+          totalOrders = Array.isArray(list) ? list.length : (list?.content?.length || 0);
+        } else if (ordersResult.status === 'rejected') {
+          console.warn('[Profile] Lỗi tải danh sách đơn hàng:', ordersResult.reason);
+        }
+
+        setOrderCount(totalOrders);
 
         const merged = {
           ...storeUser,
-          ...data,
+          ...userData,
+          orderCount: totalOrders,
         };
 
         setProfileData(merged);
@@ -113,7 +137,7 @@ export default function Profile() {
       }
     };
 
-    fetchProfile();
+    fetchProfileAndStats();
     return () => {
       isMounted = false;
     };
@@ -149,14 +173,13 @@ export default function Profile() {
     Boolean(passwordForm.confirmPassword) &&
     passwordForm.confirmPassword === passwordForm.newPassword;
 
-  // Check if Form 1 is changed
+  // Check if Form 1 is changed (email is fixed and cannot be modified)
   const isInfoChanged = useMemo(() => {
     return (
       infoForm.fullName.trim() !== initialInfo.fullName.trim() ||
-      infoForm.email.trim() !== initialInfo.email.trim() ||
-      infoForm.phone.trim() !== initialInfo.phone.trim()
+      (infoForm.phone || '').trim() !== (initialInfo.phone || '').trim()
     );
-  }, [infoForm, initialInfo]);
+  }, [infoForm.fullName, infoForm.phone, initialInfo.fullName, initialInfo.phone]);
 
   // Check if Form 2 is changed
   const isPasswordChanged = useMemo(() => {
@@ -186,10 +209,6 @@ export default function Profile() {
       newErrors.fullName = 'Họ tên phải từ 2 ký tự trở lên';
     }
 
-    if (infoForm.email.trim() && !isValidEmail(infoForm.email.trim())) {
-      newErrors.email = 'Địa chỉ email không đúng định dạng';
-    }
-
     if (infoForm.phone.trim() && !isValidPhone(infoForm.phone.trim())) {
       newErrors.phone = 'Số điện thoại không hợp lệ (10 chữ số, ví dụ 0901234567)';
     }
@@ -203,26 +222,25 @@ export default function Profile() {
     try {
       const updated = await userApi.updateMe({
         fullName: infoForm.fullName.trim(),
-        phone: infoForm.phone.trim(),
-        email: infoForm.email.trim(),
+        phone: infoForm.phone.trim() || null,
       });
 
       // Update local storage / Zustand auth store
       updateUser({
         fullName: updated.fullName || infoForm.fullName.trim(),
-        phone: updated.phone || infoForm.phone.trim(),
-        email: updated.email || infoForm.email.trim(),
+        phone: updated.phone !== undefined ? updated.phone : (infoForm.phone.trim() || null),
       });
 
       setProfileData((prev) => ({
         ...prev,
-        ...updated,
+        fullName: updated.fullName || infoForm.fullName.trim(),
+        phone: updated.phone !== undefined ? updated.phone : (infoForm.phone.trim() || null),
       }));
 
       const newInit = {
         fullName: updated.fullName || infoForm.fullName.trim(),
-        email: updated.email || infoForm.email.trim(),
-        phone: updated.phone || infoForm.phone.trim(),
+        email: profileData?.email || initialInfo.email,
+        phone: updated.phone !== undefined ? (updated.phone || '') : infoForm.phone.trim(),
         username: infoForm.username,
       };
       setInitialInfo(newInit);
@@ -409,15 +427,19 @@ export default function Profile() {
             {/* Metrics Row (Design.md 7.7) */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-5 mt-5 border-t border-line">
               {/* Stat 1: Total Orders */}
-              <div className="rounded-xl bg-gray-50/80 border border-gray-100 p-3 text-center transition-colors hover:bg-gray-100/60">
-                <div className="inline-flex p-1.5 rounded-lg bg-primary-50 text-primary-700 mb-1">
+              <Link
+                to="/orders"
+                className="rounded-xl bg-gray-50/80 border border-gray-100 p-3 text-center transition-all hover:bg-primary-50/50 hover:border-primary-200 block group cursor-pointer"
+                title="Bấm để xem lịch sử các đơn hàng đã đặt"
+              >
+                <div className="inline-flex p-1.5 rounded-lg bg-primary-50 text-primary-700 mb-1 group-hover:bg-primary-100 transition-colors">
                   <Package className="size-4" />
                 </div>
-                <div className="text-base sm:text-lg font-bold text-ink">
-                  {profileData?.orderCount ?? 0}
+                <div className="text-base sm:text-lg font-bold text-ink group-hover:text-primary-700 transition-colors">
+                  {orderCount}
                 </div>
                 <div className="text-[11px] text-ink-subtle font-medium">Đơn hàng đã đặt</div>
-              </div>
+              </Link>
 
               {/* Stat 2: Member Since */}
               <div className="rounded-xl bg-gray-50/80 border border-gray-100 p-3 text-center transition-colors hover:bg-gray-100/60">
@@ -483,11 +505,9 @@ export default function Profile() {
                 name="email"
                 type="email"
                 value={infoForm.email}
-                onChange={handleInfoChange}
-                placeholder="example@gmail.com"
-                error={infoErrors.email}
+                disabled
                 leftIcon={Mail}
-                disabled={infoSubmitting}
+                helperText="Email cố định, không thể thay đổi"
               />
 
               <Input
@@ -681,4 +701,3 @@ export default function Profile() {
     </div>
   );
 }
-
