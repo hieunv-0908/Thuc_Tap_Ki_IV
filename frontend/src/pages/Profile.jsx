@@ -5,14 +5,13 @@ import {
   Mail,
   Lock,
   Phone,
-  Calendar,
   Package,
-  ShieldCheck,
   CheckCircle2,
-  AlertCircle,
-  Check,
+  Calendar,
   Save,
   ArrowRight,
+  AlertCircle,
+  Check,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { userApi } from '../api/user';
@@ -26,9 +25,18 @@ import Badge from '../components/ui/Badge';
 import Skeleton from '../components/ui/Skeleton';
 
 /**
- * User Profile page complying with Design.md section 7.7 (v2.0)
- * Includes cover banner with floating emojis, initial-letter avatar,
- * stats row (showing real orders placed count), and forms for Personal Info and Password Change.
+ * Hồ sơ cá nhân — /profile (Design.md 7.7 v2.0)
+ *
+ * - Thẻ `max-w-2xl` có cover: dải `h-24 rounded-t-2xl bg-gradient-to-r from-primary-100 to-secondary-100`
+ *   (kèm 3–4 chấm/emoji mờ); avatar chữ cái đầu `size-16 rounded-full bg-primary-100 text-primary-700
+ *   ring-4 ring-white -mt-8` đè lên mép cover; bên cạnh là họ tên (H2), email `text-ink-muted` và `Badge`
+ *   vai trò ("Khách hàng"/"Quản trị").
+ * - Hàng số liệu nhỏ 🔹 (Đơn hàng đã đặt, Thành viên từ ngày…) chỉ hiện khi lấy được từ API;
+ *   mỗi ô `rounded-xl bg-gray-50 p-3 text-center`.
+ * - 2 khối form tách thành hai thẻ có header sticker: Thông tin (icon User: Họ tên, Email)
+ *   và Đổi mật khẩu (icon Lock: Mật khẩu hiện tại, Mật khẩu mới có thanh độ mạnh, Xác nhận).
+ * - Mỗi khối có nút lưu riêng; thành công thì toast "Cập nhật thành công"; lỗi hiện dưới ô tương ứng.
+ *   Nút lưu chỉ bật khi form có thay đổi.
  */
 export default function Profile() {
   const navigate = useNavigate();
@@ -36,9 +44,9 @@ export default function Profile() {
 
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState(null);
-  const [orderCount, setOrderCount] = useState(0);
+  const [orderCount, setOrderCount] = useState(null);
 
-  // Form 1: Personal Info
+  // Form 1: Thông tin
   const [infoForm, setInfoForm] = useState({
     fullName: '',
     email: '',
@@ -54,7 +62,7 @@ export default function Profile() {
   const [infoErrors, setInfoErrors] = useState({});
   const [infoSubmitting, setInfoSubmitting] = useState(false);
 
-  // Form 2: Change Password
+  // Form 2: Đổi mật khẩu
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -64,14 +72,14 @@ export default function Profile() {
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [passwordServerError, setPasswordServerError] = useState('');
 
-  // Check auth
+  // Kiểm tra đăng nhập
   useEffect(() => {
     if (_hasHydrated && !isAuthenticated) {
       navigate('/login', { state: { from: '/profile' } });
     }
   }, [_hasHydrated, isAuthenticated, navigate]);
 
-  // Fetch current user details & order history count from backend
+  // Lấy thông tin user và số đơn hàng từ API backend
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -93,12 +101,12 @@ export default function Profile() {
           console.warn('[Profile] Lỗi tải thông tin user từ backend:', userResult.reason);
         }
 
-        let totalOrders = 0;
+        let totalOrders = null;
         if (ordersResult.status === 'fulfilled' && ordersResult.value) {
           const list = ordersResult.value;
-          totalOrders = Array.isArray(list) ? list.length : (list?.content?.length || 0);
+          totalOrders = Array.isArray(list) ? list.length : (list?.content?.length ?? 0);
         } else if (ordersResult.status === 'rejected') {
-          console.warn('[Profile] Lỗi tải danh sách đơn hàng:', ordersResult.reason);
+          console.warn('[Profile] Lỗi tải đơn hàng của user:', ordersResult.reason);
         }
 
         setOrderCount(totalOrders);
@@ -106,7 +114,7 @@ export default function Profile() {
         const merged = {
           ...storeUser,
           ...userData,
-          orderCount: totalOrders,
+          ...(totalOrders !== null ? { orderCount: totalOrders } : {}),
         };
 
         setProfileData(merged);
@@ -143,7 +151,7 @@ export default function Profile() {
     };
   }, [isAuthenticated, storeUser]);
 
-  // Avatar Initials
+  // Chữ cái đầu cho Avatar
   const getInitials = (name) => {
     if (!name) return 'U';
     const parts = name.trim().split(' ');
@@ -151,7 +159,7 @@ export default function Profile() {
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   };
 
-  // Password strength calculation
+  // Tính độ mạnh mật khẩu (Design.md 7.7)
   const getPasswordStrength = (pwd) => {
     if (!pwd) return { level: 0, label: '' };
     if (pwd.length < 6) return { level: 1, label: 'Yếu' };
@@ -173,7 +181,7 @@ export default function Profile() {
     Boolean(passwordForm.confirmPassword) &&
     passwordForm.confirmPassword === passwordForm.newPassword;
 
-  // Check if Form 1 is changed (email is fixed and cannot be modified)
+  // Kiểm tra Form 1 thay đổi (email cố định không sửa được)
   const isInfoChanged = useMemo(() => {
     return (
       infoForm.fullName.trim() !== initialInfo.fullName.trim() ||
@@ -181,7 +189,7 @@ export default function Profile() {
     );
   }, [infoForm.fullName, infoForm.phone, initialInfo.fullName, initialInfo.phone]);
 
-  // Check if Form 2 is changed
+  // Kiểm tra Form 2 thay đổi
   const isPasswordChanged = useMemo(() => {
     return Boolean(
       passwordForm.currentPassword ||
@@ -190,7 +198,7 @@ export default function Profile() {
     );
   }, [passwordForm]);
 
-  // --- Handlers for Form 1: Info ---
+  // --- Form 1 Handlers ---
   const handleInfoChange = (e) => {
     const { name, value } = e.target;
     setInfoForm((prev) => ({ ...prev, [name]: value }));
@@ -204,7 +212,7 @@ export default function Profile() {
     const newErrors = {};
 
     if (!infoForm.fullName.trim()) {
-      newErrors.fullName = 'Vui lòng nhập họ và tên';
+      newErrors.fullName = 'Vui lòng nhập họ tên';
     } else if (infoForm.fullName.trim().length < 2) {
       newErrors.fullName = 'Họ tên phải từ 2 ký tự trở lên';
     }
@@ -225,7 +233,6 @@ export default function Profile() {
         phone: infoForm.phone.trim() || null,
       });
 
-      // Update local storage / Zustand auth store
       updateUser({
         fullName: updated.fullName || infoForm.fullName.trim(),
         phone: updated.phone !== undefined ? updated.phone : (infoForm.phone.trim() || null),
@@ -246,15 +253,15 @@ export default function Profile() {
       setInitialInfo(newInit);
       setInfoForm(newInit);
 
-      toast.success('Cập nhật thông tin thành công!');
+      toast.success('Cập nhật thành công');
     } catch (err) {
-      toast.error(err.message || 'Cập nhật thông tin thất bại. Vui lòng thử lại.');
+      toast.error(err.message || 'Cập nhật thất bại. Vui lòng thử lại.');
     } finally {
       setInfoSubmitting(false);
     }
   };
 
-  // --- Handlers for Form 2: Password ---
+  // --- Form 2 Handlers ---
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordForm((prev) => ({ ...prev, [name]: value }));
@@ -303,7 +310,7 @@ export default function Profile() {
         confirmPassword: '',
       });
 
-      toast.success('Cập nhật mật khẩu thành công!');
+      toast.success('Cập nhật thành công');
     } catch (err) {
       setPasswordServerError(err.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại.');
     } finally {
@@ -313,33 +320,23 @@ export default function Profile() {
 
   if (!_hasHydrated || (loading && !profileData)) {
     return (
-      <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-primary-50/50 via-white to-secondary-50/50 py-8 px-4 sm:px-6">
+      <div className="min-h-[calc(100vh-8rem)] bg-page py-8 px-4 sm:px-6">
         <div className="max-w-2xl mx-auto space-y-6">
+          <Skeleton className="h-48 w-full rounded-2xl" />
           <Skeleton className="h-64 w-full rounded-2xl" />
-          <Skeleton className="h-72 w-full rounded-2xl" />
-          <Skeleton className="h-72 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
       </div>
     );
   }
 
-  const roleLabel = profileData?.role === 'ADMIN' ? 'Quản trị viên' : 'Khách hàng';
+  const roleLabel = profileData?.role === 'ADMIN' ? 'Quản trị' : 'Khách hàng';
   const roleVariant = profileData?.role === 'ADMIN' ? 'secondary' : 'primary';
 
   return (
-    <div className="relative min-h-[calc(100vh-8rem)] bg-gradient-to-br from-primary-50/40 via-white to-secondary-50/40 py-8 px-4 sm:px-6 overflow-hidden">
-      {/* Decorative background blobs */}
-      <div
-        className="absolute top-12 left-10 size-72 rounded-full bg-primary-200/30 blur-3xl pointer-events-none select-none"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute bottom-16 right-10 size-80 rounded-full bg-secondary-200/30 blur-3xl pointer-events-none select-none"
-        aria-hidden="true"
-      />
-
-      <div className="relative z-10 max-w-2xl mx-auto">
-        {/* Breadcrumb / Top Back navigation */}
+    <div className="min-h-[calc(100vh-8rem)] bg-page py-8 px-4 sm:px-6">
+      <div className="max-w-2xl mx-auto">
+        {/* Breadcrumb / Top Action Button */}
         <div className="mb-4 flex items-center justify-between text-xs text-ink-subtle">
           <div className="flex items-center gap-1.5">
             <Link to="/" className="hover:text-primary-700 transition-colors">
@@ -349,111 +346,105 @@ export default function Profile() {
             <span className="text-ink font-semibold">Hồ sơ cá nhân</span>
           </div>
 
-          <Link
-            to="/orders"
-            className="inline-flex items-center gap-1 text-primary-700 hover:underline font-semibold"
+          <Button
+            variant="outline"
+            size="sm"
+            rightIcon={ArrowRight}
+            onClick={() => navigate('/orders')}
+            className="font-semibold text-xs"
           >
-            <span>Xem đơn hàng</span>
-            <ArrowRight className="size-3.5" />
-          </Link>
+            Xem đơn hàng
+          </Button>
         </div>
 
-        {/* --- SECTION 1: Profile Top Card with Cover & Metrics --- */}
-        <div className="rounded-2xl border border-line bg-white shadow-soft overflow-hidden mb-6 animate-in fade-in duration-200">
-          {/* Cover Header with subtle floating emojis (Design.md 7.7) */}
-          <div className="h-24 sm:h-28 rounded-t-2xl bg-gradient-to-r from-primary-200 via-primary-100 to-secondary-200 relative overflow-hidden select-none">
+        {/* --- Card 1: Thẻ có cover & avatar theo Design.md 7.7 --- */}
+        <div className="rounded-2xl border border-line bg-white shadow-soft overflow-hidden mb-6">
+          {/* Cover: dải h-24 rounded-t-2xl bg-gradient-to-r from-primary-100 to-secondary-100 kèm 3-4 chấm/emoji mờ */}
+          <div className="h-24 rounded-t-2xl bg-gradient-to-r from-primary-100 to-secondary-100 relative overflow-hidden select-none">
             <span
-              className="absolute top-3 left-8 text-2xl opacity-30 animate-[float_6s_ease-in-out_infinite]"
+              className="absolute top-3 left-8 text-2xl opacity-30 select-none pointer-events-none"
               aria-hidden="true"
             >
               🎈
             </span>
             <span
-              className="absolute top-5 right-12 text-2xl opacity-25 animate-[float-slow_8s_ease-in-out_infinite]"
+              className="absolute top-4 right-12 text-2xl opacity-25 select-none pointer-events-none"
               aria-hidden="true"
             >
               ⭐
             </span>
             <span
-              className="absolute bottom-2 left-1/3 text-xl opacity-25"
+              className="absolute bottom-2 left-1/3 text-xl opacity-25 select-none pointer-events-none"
               aria-hidden="true"
             >
               🎁
             </span>
             <span
-              className="absolute top-4 right-1/3 text-xl opacity-20"
+              className="absolute top-3 right-1/3 text-xl opacity-20 select-none pointer-events-none"
               aria-hidden="true"
             >
               🧸
             </span>
           </div>
 
-          {/* Identity: Avatar, Name, Email, Role */}
-          <div className="px-6 pb-6 pt-0">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-              <div className="flex items-end gap-4">
-                {/* Initial-letter avatar overlapping cover boundary */}
-                <div
-                  className="size-16 sm:size-20 rounded-full bg-primary-100 text-primary-700 ring-4 ring-white -mt-8 sm:-mt-10 font-bold text-xl sm:text-2xl flex items-center justify-center shadow-md select-none shrink-0"
-                  aria-hidden="true"
-                >
-                  {getInitials(profileData?.fullName)}
-                </div>
-
-                <div className="min-w-0 pb-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-xl sm:text-2xl font-bold text-ink truncate">
-                      {profileData?.fullName || 'Người dùng FunnyShop'}
-                    </h1>
-                    <Badge variant={roleVariant} className="font-semibold text-[11px]">
-                      {roleLabel}
-                    </Badge>
-                  </div>
-                  <p className="text-xs sm:text-sm text-ink-muted truncate mt-0.5">
-                    {profileData?.email || 'Chưa liên kết email'}
-                  </p>
-                </div>
+          {/* Identity info */}
+          <div className="relative z-10 px-6 pb-6 pt-0">
+            <div className="flex items-end gap-4">
+              {/* Avatar chữ cái đầu size-16 rounded-full có viền đè lên mép cover, relative z-10 để không bị lấp bởi background */}
+              <div
+                className={`relative z-10 size-16 rounded-full ${
+                  profileData?.role === 'ADMIN'
+                    ? 'bg-secondary-100 text-secondary-700 border-2 border-secondary-400'
+                    : 'bg-primary-100 text-primary-700 border-2 border-primary-400'
+                } ring-4 ring-white -mt-8 font-bold text-xl flex items-center justify-center shrink-0 shadow-md select-none overflow-hidden`}
+                aria-hidden="true"
+              >
+                {profileData?.avatarUrl || profileData?.avatar || profileData?.imageUrl ? (
+                  <img
+                    src={profileData.avatarUrl || profileData.avatar || profileData.imageUrl}
+                    alt={profileData?.fullName || 'Avatar'}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  getInitials(profileData?.fullName)
+                )}
               </div>
 
-              {profileData?.username && (
-                <div className="sm:self-center">
-                  <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-gray-100 text-ink-subtle">
-                    @{profileData.username}
-                  </span>
+              {/* Bên cạnh là họ tên (H2), email text-ink-muted và Badge vai trò ("Khách hàng"/"Quản trị") */}
+              <div className="min-w-0 pb-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl font-bold text-ink truncate">
+                    {profileData?.fullName || 'Người dùng FunnyShop'}
+                  </h2>
+                  <Badge variant={roleVariant} className="font-semibold text-xs">
+                    {roleLabel}
+                  </Badge>
                 </div>
-              )}
+                <p className="text-sm text-ink-muted truncate mt-0.5">
+                  {profileData?.email || 'Chưa liên kết email'}
+                </p>
+              </div>
             </div>
 
-            {/* Metrics Row (Design.md 7.7) */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-5 mt-5 border-t border-line">
-              {/* Stat 1: Total Orders */}
+            {/* Hàng số liệu: Đơn hàng đã đặt & Trạng thái tài khoản */}
+            <div className={`grid ${profileData?.createdAt ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'} gap-3 pt-5 mt-5 border-t border-line`}>
+              {/* Ô 1: Đơn hàng đã đặt */}
               <Link
                 to="/orders"
                 className="rounded-xl bg-gray-50/80 border border-gray-100 p-3 text-center transition-all hover:bg-primary-50/50 hover:border-primary-200 block group cursor-pointer"
-                title="Bấm để xem lịch sử các đơn hàng đã đặt"
+                title="Bấm để xem danh sách đơn hàng đã đặt"
               >
                 <div className="inline-flex p-1.5 rounded-lg bg-primary-50 text-primary-700 mb-1 group-hover:bg-primary-100 transition-colors">
                   <Package className="size-4" />
                 </div>
                 <div className="text-base sm:text-lg font-bold text-ink group-hover:text-primary-700 transition-colors">
-                  {orderCount}
+                  {orderCount ?? 0}
                 </div>
                 <div className="text-[11px] text-ink-subtle font-medium">Đơn hàng đã đặt</div>
               </Link>
 
-              {/* Stat 2: Member Since */}
+              {/* Ô 2: Trạng thái tài khoản */}
               <div className="rounded-xl bg-gray-50/80 border border-gray-100 p-3 text-center transition-colors hover:bg-gray-100/60">
-                <div className="inline-flex p-1.5 rounded-lg bg-secondary-50 text-secondary-700 mb-1">
-                  <Calendar className="size-4" />
-                </div>
-                <div className="text-base sm:text-lg font-bold text-ink truncate">
-                  {profileData?.createdAt ? formatDate(profileData.createdAt).split(' ')[0] : 'Gần đây'}
-                </div>
-                <div className="text-[11px] text-ink-subtle font-medium">Thành viên từ ngày</div>
-              </div>
-
-              {/* Stat 3: Account Status */}
-              <div className="col-span-2 sm:col-span-1 rounded-xl bg-gray-50/80 border border-gray-100 p-3 text-center transition-colors hover:bg-gray-100/60">
                 <div className="inline-flex p-1.5 rounded-lg bg-green-50 text-green-700 mb-1">
                   <CheckCircle2 className="size-4" />
                 </div>
@@ -464,34 +455,44 @@ export default function Profile() {
                 </div>
                 <div className="text-[11px] text-ink-subtle font-medium">Trạng thái tài khoản</div>
               </div>
+
+              {/* Ô 3: Thành viên từ ngày (nếu có từ API) */}
+              {profileData?.createdAt && (
+                <div className="col-span-2 sm:col-span-1 rounded-xl bg-gray-50/80 border border-gray-100 p-3 text-center transition-colors hover:bg-gray-100/60">
+                  <div className="inline-flex p-1.5 rounded-lg bg-secondary-50 text-secondary-700 mb-1">
+                    <Calendar className="size-4" />
+                  </div>
+                  <div className="text-base sm:text-lg font-bold text-ink truncate">
+                    {formatDate(profileData.createdAt).split(' ')[0]}
+                  </div>
+                  <div className="text-[11px] text-ink-subtle font-medium">Thành viên từ ngày</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* --- SECTION 2: Form Thông tin cá nhân (Design.md 7.7) --- */}
-        <div className="rounded-2xl border border-line bg-white shadow-soft p-5 sm:p-6 mb-6 animate-in fade-in duration-200">
-          {/* Header Sticker */}
+        {/* --- Card 2: Form Thông tin (Design.md 7.7) --- */}
+        <div className="rounded-2xl border border-line bg-white shadow-soft p-5 sm:p-6 mb-6">
+          {/* Header sticker icon User */}
           <div className="flex items-center gap-3 mb-5 pb-4 border-b border-line">
-            <div className="size-9 rounded-xl bg-primary-100 text-primary-700 flex items-center justify-center shrink-0">
+            <div className="grid size-10 place-items-center rounded-xl bg-primary-100 text-primary-700 -rotate-3 shrink-0">
               <User className="size-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-ink">Thông tin cá nhân</h2>
-              <p className="text-xs text-ink-muted">
-                Quản lý họ tên, số điện thoại và thông tin liên hệ của bạn
-              </p>
+              <h3 className="text-lg font-bold text-ink">Thông tin</h3>
             </div>
           </div>
 
           <form onSubmit={handleInfoSubmit} className="space-y-4" noValidate>
             <Input
-              label="Họ và tên"
+              label="Họ tên"
               id="profile-fullName"
               name="fullName"
               type="text"
               value={infoForm.fullName}
               onChange={handleInfoChange}
-              placeholder="Nhập họ và tên của bạn"
+              placeholder="Nhập họ và tên"
               error={infoErrors.fullName}
               leftIcon={User}
               required
@@ -524,52 +525,35 @@ export default function Profile() {
               />
             </div>
 
-            {infoForm.username && (
-              <Input
-                label="Tên đăng nhập"
-                id="profile-username"
-                name="username"
-                type="text"
-                value={infoForm.username}
-                disabled
-                leftIcon={ShieldCheck}
-                helperText="Tên đăng nhập cố định, không thể thay đổi"
-              />
-            )}
-
-            {/* Save Button: only enabled if form has changes per Design.md */}
-            <div className="pt-2 flex items-center justify-end">
+            {/* Nút lưu chỉ bật khi form có thay đổi (Design.md 7.7) */}
+            <div className="pt-3 flex items-center justify-end border-t border-line">
               <Button
                 type="submit"
                 variant="primary"
                 size="md"
+                leftIcon={Save}
                 loading={infoSubmitting}
                 disabled={!isInfoChanged || infoSubmitting}
-                className="font-bold shadow-xs px-6"
+                className="w-full sm:w-auto font-semibold shadow-brand px-6"
               >
-                <Save className="size-4 mr-2" />
-                <span>Lưu thay đổi</span>
+                Lưu thay đổi
               </Button>
             </div>
           </form>
         </div>
 
-        {/* --- SECTION 3: Form Đổi mật khẩu (Design.md 7.7) --- */}
-        <div className="rounded-2xl border border-line bg-white shadow-soft p-5 sm:p-6 animate-in fade-in duration-200">
-          {/* Header Sticker */}
+        {/* --- Card 3: Form Đổi mật khẩu (Design.md 7.7) --- */}
+        <div className="rounded-2xl border border-line bg-white shadow-soft p-5 sm:p-6">
+          {/* Header sticker icon Lock */}
           <div className="flex items-center gap-3 mb-5 pb-4 border-b border-line">
-            <div className="size-9 rounded-xl bg-secondary-100 text-secondary-700 flex items-center justify-center shrink-0">
+            <div className="grid size-10 place-items-center rounded-xl bg-secondary-100 text-secondary-700 rotate-3 shrink-0">
               <Lock className="size-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-ink">Đổi mật khẩu</h2>
-              <p className="text-xs text-ink-muted">
-                Đổi mật khẩu định kỳ để bảo vệ tài khoản FunnyShop của bạn
-              </p>
+              <h3 className="text-lg font-bold text-ink">Đổi mật khẩu</h3>
             </div>
           </div>
 
-          {/* Server Error Alert */}
           {passwordServerError && (
             <div
               role="alert"
@@ -588,7 +572,7 @@ export default function Profile() {
               type="password"
               value={passwordForm.currentPassword}
               onChange={handlePasswordChange}
-              placeholder="Nhập mật khẩu bạn đang dùng"
+              placeholder="Nhập mật khẩu hiện tại"
               error={passwordErrors.currentPassword}
               leftIcon={Lock}
               required
@@ -610,7 +594,7 @@ export default function Profile() {
                 disabled={passwordSubmitting}
               />
 
-              {/* Password Strength Meter */}
+              {/* Thanh độ mạnh mật khẩu (Design.md 7.7) */}
               {passwordForm.newPassword && (
                 <div className="mt-2 space-y-1">
                   <div className="flex items-center justify-between text-xs">
@@ -660,7 +644,7 @@ export default function Profile() {
 
             <div>
               <Input
-                label="Xác nhận mật khẩu mới"
+                label="Xác nhận mật khẩu"
                 id="profile-confirmPassword"
                 name="confirmPassword"
                 type="password"
@@ -681,18 +665,18 @@ export default function Profile() {
               )}
             </div>
 
-            {/* Save Button: only enabled if form has changes per Design.md */}
-            <div className="pt-2 flex items-center justify-end">
+            {/* Nút lưu chỉ bật khi form có thay đổi (Design.md 7.7) */}
+            <div className="pt-3 flex items-center justify-end border-t border-line">
               <Button
                 type="submit"
-                variant="primary"
+                variant="secondary"
                 size="md"
+                leftIcon={Lock}
                 loading={passwordSubmitting}
                 disabled={!isPasswordChanged || passwordSubmitting}
-                className="font-bold shadow-xs px-6"
+                className="w-full sm:w-auto font-semibold shadow-violet px-6"
               >
-                <Save className="size-4 mr-2" />
-                <span>Cập nhật mật khẩu</span>
+                Cập nhật mật khẩu
               </Button>
             </div>
           </form>
