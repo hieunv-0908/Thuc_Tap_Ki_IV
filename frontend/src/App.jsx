@@ -9,6 +9,7 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
+import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 import Forbidden from './pages/Forbidden';
 import AdminProducts from './pages/admin/AdminProducts';
@@ -31,7 +32,7 @@ export default function App() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
-          <Route path="/profile" element={<Navigate to="/" replace />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/forbidden" element={<Forbidden />} />
           <Route path="*" element={<NotFound />} />
         </Route>

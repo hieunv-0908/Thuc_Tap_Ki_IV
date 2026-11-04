@@ -14,12 +14,21 @@ export const userApi = {
     return res?.data !== undefined ? res.data : res;
   },
 
-  updateMe: async ({ fullName, email, password }) => {
+  updateMe: async ({ fullName, phone }) => {
     if (isMock) {
       const user = useAuthStore.getState().user;
-      return await mockEngine.updateMe(user?.id, { fullName, email, password });
+      return await mockEngine.updateMe(user?.id, { fullName, phone });
     }
-    const res = await apiClient.put('/api/v1/users/me', { fullName, email, password });
+    const payload = {
+      fullName,
+      phone: phone ? phone.trim() : null,
+    };
+    const res = await apiClient.put('/api/v1/users/me', payload);
     return res?.data !== undefined ? res.data : res;
+  },
+
+  changePassword: async ({ currentPassword, newPassword }) => {
+    const user = useAuthStore.getState().user;
+    return await mockEngine.changePassword(user?.id, { currentPassword, newPassword });
   },
 };
