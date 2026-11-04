@@ -1,3 +1,4 @@
+
 package com.funnyshop.entity;
 
 import jakarta.persistence.*;
@@ -14,7 +15,13 @@ import java.util.Collection;
 import java.util.List;
 
 @Entity
-@Table(name = "users")
+@Table(
+        name = "users",
+        indexes = {
+                @Index(name = "username", columnList = "username", unique = true),
+                @Index(name = "email", columnList = "email", unique = true)
+        }
+)
 @Data
 @Builder
 @NoArgsConstructor

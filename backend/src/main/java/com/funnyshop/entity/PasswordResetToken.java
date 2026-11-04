@@ -6,7 +6,27 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "password_reset_tokens")
+@Table(
+        name = "password_reset_tokens",
+        indexes = {
+                @Index(
+                        name = "idx_reset_user_created",
+                        columnList = "user_id, created_at"
+                ),
+                @Index(
+                        name = "idx_reset_token_hash",
+                        columnList = "reset_token_hash"
+                ),
+                @Index(
+                        name = "idx_password_reset_user_otp",
+                        columnList = "user_id, otp_hash"
+                ),
+                @Index(
+                        name = "idx_password_reset_expires",
+                        columnList = "expires_at"
+                )
+        }
+)
 @Getter
 @Setter
 @Builder
