@@ -35,6 +35,7 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
   const totalCartCount = useCartStore((s) => s.getTotalCount());
 
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+  const [previousLocationSearch, setPreviousLocationSearch] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
@@ -68,12 +69,11 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Sync search input with URL query param `q`
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const q = params.get('q') || '';
-    setSearchQuery(q);
-  }, [location.search]);
+  // Keep the uncontrolled search draft in sync when browser navigation changes the URL.
+  if (previousLocationSearch !== location.search) {
+    setPreviousLocationSearch(location.search);
+    setSearchQuery(new URLSearchParams(location.search).get('q') || '');
+  }
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
