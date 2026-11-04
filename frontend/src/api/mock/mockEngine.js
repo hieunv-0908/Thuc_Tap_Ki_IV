@@ -195,47 +195,100 @@ class MockEngine {
 
   // --- USERS / PROFILE ---
   async getMe(userId) {
-    await this.delay();
-    const user = this.users.find((u) => u.id === userId);
+    await this.delay(200, 400);
+    const user = this.users.find(
+      (u) => u.id === userId || String(u.id) === String(userId)
+    );
     if (!user) {
       throw { status: 404, message: 'Người dùng không tồn tại.' };
     }
+    const orderCount = this.orders.filter(
+      (o) => o.userId === user.id || o.user?.id === user.id || String(o.userId) === String(user.id)
+    ).length;
     return {
       id: user.id,
       fullName: user.fullName,
+      username: user.username,
       email: user.email,
+      phone: user.phone || '',
       role: user.role,
+      status: user.status || 'ACTIVE',
+      createdAt: user.createdAt || new Date().toISOString(),
+      orderCount,
     };
   }
 
-  async updateMe(userId, { fullName, email, password }) {
-    await this.delay();
-    const index = this.users.findIndex((u) => u.id === userId);
+  async updateMe(userId, { fullName, phone, email }) {
+    await this.delay(200, 400);
+    const index = this.users.findIndex(
+      (u) => u.id === userId || String(u.id) === String(userId)
+    );
     if (index === -1) {
       throw { status: 404, message: 'Người dùng không tồn tại.' };
     }
 
-    // Check duplicate email
-    if (email && email.toLowerCase() !== this.users[index].email.toLowerCase()) {
+    // Check duplicate email if changed
+    if (email && email.toLowerCase() !== (this.users[index].email || '').toLowerCase()) {
       const duplicate = this.users.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase() && u.id !== userId
+        (u) =>
+          u.email &&
+          u.email.toLowerCase() === email.toLowerCase() &&
+          String(u.id) !== String(userId)
       );
       if (duplicate) {
         throw { status: 409, message: 'Email mới đã được sử dụng bởi tài khoản khác.' };
       }
+      this.users[index].email = email.toLowerCase().trim();
     }
 
-    this.users[index].fullName = fullName || this.users[index].fullName;
-    if (email) this.users[index].email = email.toLowerCase();
-    if (password) this.users[index].password = password;
+    if (fullName) this.users[index].fullName = fullName.trim();
+    if (phone !== undefined) this.users[index].phone = phone.trim();
 
     this.saveDatabase();
+
+    const orderCount = this.orders.filter(
+      (o) =>
+        o.userId === this.users[index].id ||
+        o.user?.id === this.users[index].id ||
+        String(o.userId) === String(this.users[index].id)
+    ).length;
 
     return {
       id: this.users[index].id,
       fullName: this.users[index].fullName,
+      username: this.users[index].username,
       email: this.users[index].email,
+      phone: this.users[index].phone || '',
       role: this.users[index].role,
+      status: this.users[index].status || 'ACTIVE',
+      createdAt: this.users[index].createdAt || new Date().toISOString(),
+      orderCount,
+    };
+  }
+
+  async changePassword(userId, { currentPassword, newPassword }) {
+    await this.delay(300, 500);
+    const index = this.users.findIndex(
+      (u) => u.id === userId || String(u.id) === String(userId)
+    );
+    if (index === -1) {
+      throw { status: 404, message: 'Người dùng không tồn tại.' };
+    }
+
+    if (this.users[index].password && this.users[index].password !== currentPassword) {
+      throw { status: 400, message: 'Mật khẩu hiện tại không chính xác.' };
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      throw { status: 400, message: 'Mật khẩu mới tối thiểu 6 ký tự.' };
+    }
+
+    this.users[index].password = newPassword;
+    this.saveDatabase();
+
+    return {
+      success: true,
+      message: 'Đổi mật khẩu thành công!',
     };
   }
 
