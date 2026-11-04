@@ -45,12 +45,13 @@ export default function Home() {
 
   // Search input state
   const [searchTerm, setSearchTerm] = useState(queryQ);
+  const [previousQueryQ, setPreviousQueryQ] = useState(queryQ);
   const productSectionRef = useRef(null);
 
-  // Sync local searchTerm when URL search query changes
-  useEffect(() => {
+  if (previousQueryQ !== queryQ) {
+    setPreviousQueryQ(queryQ);
     setSearchTerm(queryQ);
-  }, [queryQ]);
+  }
 
   // Helper to update filter params
   const updateFilter = useCallback(
