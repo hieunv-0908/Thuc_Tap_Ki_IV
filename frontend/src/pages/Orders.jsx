@@ -25,6 +25,7 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // fetchOrders được tách ra để dùng lại ở ErrorState onRetry
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -46,9 +47,9 @@ export default function Orders() {
       navigate('/login', { state: { from: '/orders' } });
       return;
     }
-
     fetchOrders();
-  }, [isAuthenticated, navigate, fetchOrders]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, navigate]);
 
   // Status counts
   const statusCounts = useMemo(() => {
