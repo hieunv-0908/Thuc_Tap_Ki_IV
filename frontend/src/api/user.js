@@ -28,7 +28,11 @@ export const userApi = {
   },
 
   changePassword: async ({ currentPassword, newPassword }) => {
-    const user = useAuthStore.getState().user;
-    return await mockEngine.changePassword(user?.id, { currentPassword, newPassword });
+    if (isMock) {
+      const user = useAuthStore.getState().user;
+      return await mockEngine.changePassword(user?.id, { currentPassword, newPassword });
+    }
+    const res = await apiClient.put('/api/v1/users/me/password', { currentPassword, newPassword });
+    return res?.data !== undefined ? res.data : res;
   },
 };

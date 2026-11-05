@@ -7,7 +7,7 @@ WORKDIR /app
 COPY build.gradle ./
 COPY src ./src
 
-RUN gradle build --no-daemon
+RUN gradle bootJar --no-daemon
 
 # Run stage
 FROM eclipse-temurin:21-jre

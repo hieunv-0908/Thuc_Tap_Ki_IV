@@ -55,23 +55,35 @@ export const authApi = {
   },
 
   /**
-   * Quên mật khẩu - gửi mã xác thực OTP (Hiện tại dùng MockData theo yêu cầu)
+   * Quên mật khẩu - gửi mã xác thực OTP
    */
   forgotPassword: async ({ emailOrUsername }) => {
-    return await mockEngine.requestPasswordReset({ emailOrUsername });
+    if (isMock) {
+      return await mockEngine.requestPasswordReset({ emailOrUsername });
+    }
+    const res = await apiClient.post('/api/v1/auth/forgot-password', { emailOrUsername });
+    return res?.data !== undefined ? res.data : res;
   },
 
   /**
-   * Xác thực mã OTP (MockData)
+   * Xác thực mã OTP
    */
   verifyResetOtp: async ({ emailOrUsername, otp }) => {
-    return await mockEngine.verifyResetOtp({ emailOrUsername, otp });
+    if (isMock) {
+      return await mockEngine.verifyResetOtp({ emailOrUsername, otp });
+    }
+    const res = await apiClient.post('/api/v1/auth/verify-otp', { emailOrUsername, otp });
+    return res?.data !== undefined ? res.data : res;
   },
 
   /**
-   * Đặt lại mật khẩu mới (MockData)
+   * Đặt lại mật khẩu mới
    */
   resetPassword: async ({ emailOrUsername, otp, newPassword }) => {
-    return await mockEngine.resetPassword({ emailOrUsername, otp, newPassword });
+    if (isMock) {
+      return await mockEngine.resetPassword({ emailOrUsername, otp, newPassword });
+    }
+    const res = await apiClient.post('/api/v1/auth/reset-password', { emailOrUsername, otp, newPassword });
+    return res?.data !== undefined ? res.data : res;
   },
 };

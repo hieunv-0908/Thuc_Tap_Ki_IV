@@ -47,27 +47,8 @@ export default function Orders() {
       return;
     }
 
-    let isMounted = true;
-    orderApi
-      .getMyOrders()
-      .then((data) => {
-        if (!isMounted) return;
-        const sorted = (data || []).sort(
-          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
-        );
-        setOrders(sorted);
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setError(err.message || 'Không thể tải danh sách đơn hàng.');
-        setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isAuthenticated, navigate]);
+    fetchOrders();
+  }, [isAuthenticated, navigate, fetchOrders]);
 
   // Status counts
   const statusCounts = useMemo(() => {
