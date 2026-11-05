@@ -25,10 +25,9 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // fetchOrders được tách ra để dùng lại ở ErrorState onRetry
+  // fetchOrders: không gọi setState đồng bộ ở đầu (tránh vi phạm react-hooks/no-set-state-in-effect)
+  // loading=true đã được khởi tạo sẵn ở useState(true), nên lần load đầu không cần set lại
   const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    setError(null);
     try {
       const data = await orderApi.getMyOrders();
       const sorted = (data || []).sort(
@@ -42,11 +41,20 @@ export default function Orders() {
     }
   }, []);
 
+  // handleRetry: gọi từ nút Retry của ErrorState
+  // setState được gọi từ event handler (không phải trực tiếp trong effect) → hợp lệ
+  const handleRetry = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    fetchOrders();
+  }, [fetchOrders]);
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login', { state: { from: '/orders' } });
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, navigate]);
@@ -239,7 +247,7 @@ export default function Orders() {
         <ErrorState
           title="Không tải được lịch sử đơn hàng"
           message={error}
-          onRetry={fetchOrders}
+          onRetry={handleRetry}
         />
       ) : filteredOrders.length === 0 ? (
         <div className="bg-white rounded-2xl border border-line p-8 sm:p-12 shadow-soft text-center">
