@@ -22,6 +22,7 @@ import ErrorState from '../components/ui/ErrorState';
 import Pagination from '../components/ui/Pagination';
 import Button from '../components/ui/Button';
 import SectionHeader from '../components/ui/SectionHeader';
+import { toast } from '../store/toastStore';
 import { SORT_OPTIONS, getCategoryMeta } from '../utils/constants';
 
 /**
@@ -88,7 +89,11 @@ export default function Home() {
         }
       })
       .catch((err) => {
-        console.error('Failed to load categories', err);
+        if (!isCancelled) {
+          console.error('Failed to load categories', err);
+          // Không block UI — categories chỉ dùng để lọc, lỗi load vẫn hiển thị sản phẩm bình thường
+          toast.error('Không thể tải danh mục sản phẩm. Một số tính năng lọc có thể bị hạn chế.');
+        }
       });
 
     return () => {

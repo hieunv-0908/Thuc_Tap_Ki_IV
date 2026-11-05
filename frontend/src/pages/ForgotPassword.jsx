@@ -22,6 +22,7 @@ import Button from '../components/ui/Button';
 import StepIndicator from '../components/ui/StepIndicator';
 
 const RESET_STEPS = ['Xác nhận tài khoản', 'Mã OTP & Mật khẩu', 'Hoàn tất'];
+const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 /**
  * ForgotPassword page complying with FunnyShop Design System
@@ -105,7 +106,8 @@ export default function ForgotPassword() {
     try {
       const res = await authApi.forgotPassword({ emailOrUsername: trimmed });
       setUserEmail(res.email || trimmed);
-      setMockOtpHint(res.mockOtp || '123456');
+      // Chỉ hiển thị OTP gợi ý khi ở chế độ Mock
+      setMockOtpHint(isMock ? (res.mockOtp || '123456') : '');
       setResendCountdown(60);
       setCanResend(false);
       setCurrentStep(1);
@@ -124,7 +126,8 @@ export default function ForgotPassword() {
     setServerError('');
     try {
       const res = await authApi.forgotPassword({ emailOrUsername: identifier.trim() });
-      setMockOtpHint(res.mockOtp || '123456');
+      // Chỉ cập nhật OTP gợi ý khi ở chế độ Mock
+      setMockOtpHint(isMock ? (res.mockOtp || '123456') : '');
       setResendCountdown(60);
       setCanResend(false);
       toast.success('Đã gửi lại mã OTP mới!');
@@ -345,7 +348,8 @@ export default function ForgotPassword() {
                 </Button>
               </div>
 
-              {/* Mock accounts quick-fill */}
+              {/* Mock accounts quick-fill - chỉ hiện khi ở chế độ Mock */}
+              {isMock && (
               <div className="mt-6 pt-5 border-t border-line">
                 <p className="text-xs text-ink-subtle font-medium text-center mb-2.5 flex items-center justify-center gap-1.5">
                   <Sparkles className="size-3.5 text-secondary-500" />
@@ -374,6 +378,7 @@ export default function ForgotPassword() {
                   </button>
                 </div>
               </div>
+              )}
 
               {/* Back to Login link */}
               <div className="mt-6 text-center text-sm">
@@ -410,7 +415,8 @@ export default function ForgotPassword() {
                   </button>
                 </div>
 
-                {/* Mock OTP Badge */}
+                {/* Mock OTP Badge - chỉ hiện khi ở chế độ Mock */}
+                {isMock && mockOtpHint && (
                 <div className="mt-1 pt-1.5 border-t border-primary-200/60 flex items-center justify-between">
                   <span className="flex items-center gap-1 text-primary-800 font-medium">
                     <Sparkles className="size-3 text-secondary-600" />
@@ -424,6 +430,7 @@ export default function ForgotPassword() {
                     Điền nhanh
                   </button>
                 </div>
+                )}
               </div>
 
               {/* OTP Input */}

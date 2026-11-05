@@ -293,7 +293,7 @@ export default function Login() {
                   <ShieldCheck className="size-3" />
                   Admin
                 </div>
-                <div className="text-[11px] text-secondary-800 truncate">admin / password</div>
+                <div className="text-[11px] text-secondary-800 truncate">admin / admin123</div>
               </button>
 
               <button
