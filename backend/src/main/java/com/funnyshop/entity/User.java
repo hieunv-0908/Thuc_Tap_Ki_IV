@@ -86,8 +86,8 @@ public class User implements UserDetails {
     }
 
     @Override
-    public String getUsername() {
-        return username;
+    public boolean isEnabled() {
+        return status == Status.ACTIVE;
     }
 
     public enum Role {
