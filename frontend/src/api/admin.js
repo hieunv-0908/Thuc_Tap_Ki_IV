@@ -2,7 +2,7 @@ import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
 import { productApi } from './product';
 
-const isMock = false;
+const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const adminApi = {
   getProducts: async ({ q = '', categoryId = '', sort = '', page = 1, size = 100 } = {}) => {
@@ -95,50 +95,45 @@ export const adminApi = {
 
   // ── Users ───────────────────────────────────────────────────────────────
   getUsers: async () => {
-    try {
-      const res = await apiClient.get('/api/v1/admin/users');
-      const data = res?.data !== undefined ? res.data : res;
-      if (Array.isArray(data)) return data;
-      if (Array.isArray(data?.content)) return data.content;
-    } catch {
-      // Fallback to mockEngine in frontend
+    if (isMock) {
+      return await mockEngine.adminGetUsers();
     }
-    return await mockEngine.adminGetUsers();
+    const res = await apiClient.get('/api/v1/admin/users');
+    const data = res?.data !== undefined ? res.data : res;
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.content)) return data.content;
+    return [];
   },
 
   updateUserStatus: async (id, status) => {
-    try {
-      const res = await apiClient.put(`/api/v1/admin/users/${id}/status`, { status });
-      return res?.data !== undefined ? res.data : res;
-    } catch {
+    if (isMock) {
       return await mockEngine.adminUpdateUserStatus(id, status);
     }
+    const res = await apiClient.put(`/api/v1/admin/users/${id}/status`, { status });
+    return res?.data !== undefined ? res.data : res;
   },
 
   updateUserRole: async (id, role) => {
-    try {
-      const res = await apiClient.put(`/api/v1/admin/users/${id}/role`, { role });
-      return res?.data !== undefined ? res.data : res;
-    } catch {
+    if (isMock) {
       return await mockEngine.adminUpdateUserRole(id, role);
     }
+    const res = await apiClient.put(`/api/v1/admin/users/${id}/role`, { role });
+    return res?.data !== undefined ? res.data : res;
   },
 
   createUser: async (userData) => {
-    try {
-      const res = await apiClient.post('/api/v1/admin/users', userData);
-      return res?.data !== undefined ? res.data : res;
-    } catch {
+    if (isMock) {
       return await mockEngine.adminCreateUser(userData);
     }
+    const res = await apiClient.post('/api/v1/admin/users', userData);
+    return res?.data !== undefined ? res.data : res;
   },
 
   deleteUser: async (id) => {
-    try {
-      const res = await apiClient.delete(`/api/v1/admin/users/${id}`);
-      return res?.data !== undefined ? res.data : res;
-    } catch {
+    if (isMock) {
       return await mockEngine.adminDeleteUser(id);
     }
+    const res = await apiClient.delete(`/api/v1/admin/users/${id}`);
+    return res?.data !== undefined ? res.data : res;
   },
 };
