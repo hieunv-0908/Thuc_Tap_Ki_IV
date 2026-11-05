@@ -1,7 +1,7 @@
 import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
 
-const isMock = false;
+const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const categoryApi = {
   getCategories: async () => {

@@ -1,7 +1,7 @@
 import apiClient from './axios';
 import { mockEngine } from './mock/mockEngine';
 
-const isMock = false;
+const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const normalizeProduct = (p) => {
   if (!p) return p;
@@ -22,7 +22,7 @@ export const normalizeProduct = (p) => {
 };
 
 export const productApi = {
-  getProducts: async ({ q = '', categoryId = '', sort = '', page = 0, size = 8 } = {}) => {
+  getProducts: async ({ q = '', categoryId = '', sort = '', page = 0, size = 10 } = {}) => {
     if (isMock) {
       const mockRes = await mockEngine.getProducts({ q, categoryId, sort, page, size });
       return {
@@ -30,16 +30,12 @@ export const productApi = {
         content: (mockRes.content || []).map(normalizeProduct),
       };
     }
-    const pageNum = Number(page) || 1;
-    const zeroBasedPage = pageNum > 0 ? pageNum - 1 : 0;
-    const safeSize = Math.min(100, Math.max(1, Number(size) || 10));
-
     const params = new URLSearchParams();
     if (q) params.append('q', q);
     if (categoryId) params.append('categoryId', categoryId);
     if (sort) params.append('sort', sort);
-    params.append('page', zeroBasedPage);
-    params.append('size', safeSize);
+    params.append('page', page);
+    if (size) params.append('size', size);
 
     const res = await apiClient.get(`/api/v1/products?${params.toString()}`);
     // Support ApiResponse wrapper { code, message, data } as well as direct data
@@ -48,7 +44,7 @@ export const productApi = {
     let content = [];
     let totalPages = 1;
     let totalElements = 0;
-    let currentPage = pageNum;
+    let currentPage = page;
 
     if (Array.isArray(rawData)) {
       content = rawData;
@@ -58,7 +54,7 @@ export const productApi = {
       content = rawData.content;
       totalPages = rawData.totalPages ?? 1;
       totalElements = rawData.totalElements ?? rawData.content.length;
-      currentPage = rawData.number !== undefined ? rawData.number + 1 : pageNum;
+      currentPage = rawData.page ?? page;
     }
 
     return {
