@@ -4,8 +4,6 @@ import {
   User,
   Lock,
   AlertCircle,
-  Sparkles,
-  ShieldCheck,
   ClipboardList,
   MapPin,
   Bot,
@@ -113,12 +111,6 @@ export default function Login() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleQuickFill = (username, password) => {
-    setFormData({ username, password });
-    setErrors({});
-    setServerError('');
   };
 
   return (
