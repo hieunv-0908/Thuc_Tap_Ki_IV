@@ -277,36 +277,6 @@ export default function Login() {
             </div>
           </form>
 
-          {/* Quick test credentials */}
-          <div className="mt-6 pt-5 border-t border-line">
-            <p className="text-xs text-ink-subtle font-medium text-center mb-2.5 flex items-center justify-center gap-1.5">
-              <Sparkles className="size-3.5 text-secondary-500" />
-              Tài khoản mẫu từ Database:
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin', 'admin123')}
-                className="p-2 text-xs text-ink rounded-lg border border-secondary-200 bg-secondary-50/60 hover:bg-secondary-100 text-left transition-colors cursor-pointer"
-              >
-                <div className="font-semibold text-secondary-700 flex items-center gap-1">
-                  <ShieldCheck className="size-3" />
-                  Admin
-                </div>
-                <div className="text-[11px] text-secondary-800 truncate">admin / admin123</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickFill('user1', 'password')}
-                className="p-2 text-xs text-ink rounded-lg border border-line bg-gray-50 hover:bg-gray-100 text-left transition-colors cursor-pointer"
-              >
-                <div className="font-semibold text-ink">Khách hàng</div>
-                <div className="text-[11px] text-ink-subtle truncate">user1 / password</div>
-              </button>
-            </div>
-          </div>
-
           {/* Footer Link to Register */}
           <div className="mt-6 text-center text-sm text-ink-muted">
             Chưa có tài khoản?{' '}
