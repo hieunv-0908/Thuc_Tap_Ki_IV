@@ -11,7 +11,16 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "products")
+@Table(
+        name = "products",
+        indexes = {
+                @Index(name = "idx_products_name", columnList = "name"),
+                @Index(
+                        name = "idx_products_category_deleted",
+                        columnList = "category_id, is_deleted"
+                )
+        }
+)
 @SQLDelete(sql = "UPDATE products SET is_deleted = true WHERE id = ?")
 @Data
 @Builder

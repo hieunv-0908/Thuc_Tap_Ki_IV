@@ -58,8 +58,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // 4. Nạp thông tin UserDetails từ database
                 UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
 
-                // 5. Nếu chưa có authentication trong context, tạo mới
-                if (SecurityContextHolder.getContext().getAuthentication() == null) {
+// 5. Kiểm tra tài khoản còn hoạt động và chưa có Authentication
+                if (userDetails.isEnabled()
+                        && SecurityContextHolder.getContext().getAuthentication() == null) {
+
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
@@ -68,11 +70,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             );
 
                     // 6. Gán WebAuthenticationDetails vào Authentication
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    authentication.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request)
+                    );
 
                     // 7. Đặt Authentication vào SecurityContextHolder
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+
                     log.debug("Set Authentication for user: {}", username);
+
+                } else if (!userDetails.isEnabled()) {
+                    log.warn("Truy cập bị từ chối: Tài khoản không hoạt động - {}", username);
                 }
             }
         } catch (Exception e) {
