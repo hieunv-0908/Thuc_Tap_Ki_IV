@@ -10,7 +10,12 @@ import org.hibernate.annotations.SQLDelete;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "categories")
+@Table(
+        name = "categories",
+        indexes = {
+                @Index(name = "idx_categories_name", columnList = "name")
+        }
+)
 @SQLDelete(sql = "UPDATE categories SET is_deleted = true WHERE id = ?")
 @Data
 @Builder
