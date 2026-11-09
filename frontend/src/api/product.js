@@ -1,7 +1,7 @@
 import apiClient from './axios';
-import { mockEngine } from './mock/mockEngine';
+// import { mockEngine } from './mock/mockEngine';
 
-const isMock = import.meta.env.VITE_USE_MOCK === 'true';
+// const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const normalizeProduct = (p) => {
   if (!p) return p;
@@ -23,13 +23,13 @@ export const normalizeProduct = (p) => {
 
 export const productApi = {
   getProducts: async ({ q = '', categoryId = '', sort = '', page = 0, size = 10 } = {}) => {
-    if (isMock) {
-      const mockRes = await mockEngine.getProducts({ q, categoryId, sort, page: Number(page) || 1, size });
-      return {
-        ...mockRes,
-        content: (mockRes.content || []).map(normalizeProduct),
-      };
-    }
+    // if (isMock) {
+    //   const mockRes = await mockEngine.getProducts({ q, categoryId, sort, page: Number(page) || 1, size });
+    //   return {
+    //     ...mockRes,
+    //     content: (mockRes.content || []).map(normalizeProduct),
+    //   };
+    // }
 
     const pageNum = Number(page) || 0;
     // Spring Boot Pageable dùng 0-based page (0 là trang đầu tiên).
@@ -47,74 +47,43 @@ export const productApi = {
     params.append('page', zeroBasedPage);
     params.append('size', safeSize);
 
-    try {
-      const res = await apiClient.get(`/api/v1/products?${params.toString()}`);
+    const res = await apiClient.get(`/api/v1/products?${params.toString()}`);
 
-      let rawData = res;
-      if (res?.data !== undefined) rawData = res.data;
-      else if (res?.result !== undefined) rawData = res.result;
+    let rawData = res;
+    if (res?.data !== undefined) rawData = res.data;
+    else if (res?.result !== undefined) rawData = res.result;
 
-      let content = [];
-      let totalPages = 1;
-      let totalElements = 0;
-      let currentPage = pageNum > 0 ? pageNum : 1;
+    let content = [];
+    let totalPages = 1;
+    let totalElements = 0;
+    let currentPage = pageNum > 0 ? pageNum : 1;
 
-      if (Array.isArray(rawData)) {
-        content = rawData;
-        totalElements = rawData.length;
-        totalPages = 1;
-      } else if (rawData && Array.isArray(rawData.content)) {
-        content = rawData.content;
-        totalPages = rawData.totalPages ?? 1;
-        totalElements = rawData.totalElements ?? rawData.content.length;
-        currentPage = rawData.number !== undefined ? rawData.number + 1 : (rawData.page ?? (pageNum > 0 ? pageNum : 1));
-      }
-
-      // Nếu Backend trả về content nhưng rỗng và đang ở trang đầu, kiểm tra fallback mock
-      if (content.length === 0 && zeroBasedPage === 0 && !q && !categoryId) {
-        console.warn('Backend trả về rỗng, hiển thị dữ liệu mẫu.');
-        const mockRes = await mockEngine.getProducts({ q, categoryId, sort, page: 1, size });
-        return {
-          ...mockRes,
-          content: (mockRes.content || []).map(normalizeProduct),
-        };
-      }
-
-      return {
-        content: content.map(normalizeProduct),
-        totalPages,
-        totalElements,
-        page: currentPage,
-      };
-    } catch (err) {
-      // Khi không kết nối được backend (status 0 hoặc 404), hiển thị mock dự phòng
-      if (err.status === 0 || err.status === 404) {
-        console.warn('Không thể kết nối Backend (status:', err.status, '), hiển thị dữ liệu mẫu.');
-        const mockRes = await mockEngine.getProducts({ q, categoryId, sort, page: Number(page) || 1, size });
-        return {
-          ...mockRes,
-          content: (mockRes.content || []).map(normalizeProduct),
-        };
-      }
-      throw err;
+    if (Array.isArray(rawData)) {
+      content = rawData;
+      totalElements = rawData.length;
+      totalPages = 1;
+    } else if (rawData && Array.isArray(rawData.content)) {
+      content = rawData.content;
+      totalPages = rawData.totalPages ?? 1;
+      totalElements = rawData.totalElements ?? rawData.content.length;
+      currentPage = rawData.number !== undefined ? rawData.number + 1 : (rawData.page ?? (pageNum > 0 ? pageNum : 1));
     }
+
+    return {
+      content: content.map(normalizeProduct),
+      totalPages,
+      totalElements,
+      page: currentPage,
+    };
   },
 
   getProductById: async (id) => {
-    if (isMock) {
-      const mockRes = await mockEngine.getProductById(id);
-      return normalizeProduct(mockRes);
-    }
-    try {
-      const res = await apiClient.get(`/api/v1/products/${id}`);
-      const data = res?.data !== undefined ? res.data : res;
-      return normalizeProduct(data);
-    } catch (err) {
-      if (err.status === 0 || err.status === 404) {
-        const mockRes = await mockEngine.getProductById(id);
-        return normalizeProduct(mockRes);
-      }
-      throw err;
-    }
+    // if (isMock) {
+    //   const mockRes = await mockEngine.getProductById(id);
+    //   return normalizeProduct(mockRes);
+    // }
+    const res = await apiClient.get(`/api/v1/products/${id}`);
+    const data = res?.data !== undefined ? res.data : res;
+    return normalizeProduct(data);
   },
 };
