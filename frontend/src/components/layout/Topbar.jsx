@@ -1,6 +1,7 @@
 import { useLocation, Link } from 'react-router-dom';
 import { Menu, ChevronRight, Store, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import ThemeToggle from '../ui/ThemeToggle';
 
 export default function Topbar({ onOpenMobile }) {
   const { user } = useAuthStore();
@@ -75,6 +76,8 @@ export default function Topbar({ onOpenMobile }) {
 
       {/* Right: Quick actions & Profile */}
       <div className="flex items-center gap-3">
+        <ThemeToggle />
+
         <Link
           to="/"
           target="_blank"
@@ -102,4 +105,3 @@ export default function Topbar({ onOpenMobile }) {
     </header>
   );
 }
-

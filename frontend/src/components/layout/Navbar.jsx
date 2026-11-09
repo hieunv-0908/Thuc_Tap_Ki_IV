@@ -17,6 +17,7 @@ import { useCartStore } from '../../store/cartStore';
 import { toast } from '../../store/toastStore';
 import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
+import ThemeToggle from '../ui/ThemeToggle';
 
 const QUICK_SEARCH_CHIPS = [
   { label: 'Gấu bông Capybara', emoji: '🧸' },
@@ -226,6 +227,10 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
+
             {/* Mobile Search Toggle */}
             <button
               type="button"
@@ -464,6 +469,11 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
 
             {/* Drawer Bottom Actions */}
             <div className="p-4 border-t border-line bg-gray-50/50">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-ink">Giao diện</span>
+                <ThemeToggle />
+              </div>
+
               {isAuthenticated ? (
                 <Button
                   variant="outline"
