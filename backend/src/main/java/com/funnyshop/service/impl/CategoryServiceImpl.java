@@ -69,4 +69,25 @@ public class CategoryServiceImpl implements CategoryService {
         category.setIsDeleted(true);
         categoryRepository.save(category);
     }
+
+    // Khôi phục danh mục đã xóa mềm
+    @Override
+    @Transactional
+    public CategoryResponse restoreCategory(Long id) {
+
+        // Dùng findById để tìm cả danh mục đã bị xóa mềm
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Không tìm thấy danh mục với ID: " + id
+                        )
+                );
+
+        // Khôi phục trạng thái danh mục
+        category.setIsDeleted(false);
+
+        Category restoredCategory = categoryRepository.save(category);
+
+        return CategoryResponse.fromEntity(restoredCategory);
+    }
 }
