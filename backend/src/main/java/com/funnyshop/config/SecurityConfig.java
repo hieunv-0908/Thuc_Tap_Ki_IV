@@ -81,13 +81,37 @@ public class SecurityConfig {
                 .accessDeniedHandler(customAccessDeniedHandler)
             )
 
-            // 4. Cấu hình Phân quyền Endpoints
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/products/**", "/api/products/**", "/api/v1/categories/**", "/api/categories/**").permitAll()
-                .requestMatchers("/api/v1/admin/**", "/api/admin/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            );
+            // 4. Cấu hình Phân quyền Endpoints (Đã fix)
+                .authorizeHttpRequests(auth -> auth
+
+                        // Các API Public
+                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+
+                        // Chỉ ADMIN được khôi phục Category
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/categories/*/restore",
+                                "/api/categories/*/restore"
+                        ).hasRole("ADMIN")
+
+                        // Các API GET Product và Category được Public
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/products/**",
+                                "/api/products/**",
+                                "/api/v1/categories/**",
+                                "/api/categories/**"
+                        ).permitAll()
+
+                        // Các API Admin
+                        .requestMatchers(
+                                "/api/v1/admin/**",
+                                "/api/admin/**"
+                        ).hasRole("ADMIN")
+
+                        // Các API còn lại yêu cầu đăng nhập
+                        .anyRequest().authenticated()
+                );
 
             // 5. Thêm JwtAuthenticationFilter trước UsernamePasswordAuthenticationFilter
             http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
