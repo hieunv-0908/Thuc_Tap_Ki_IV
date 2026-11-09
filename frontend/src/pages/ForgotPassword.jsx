@@ -22,7 +22,7 @@ import Button from '../components/ui/Button';
 import StepIndicator from '../components/ui/StepIndicator';
 
 const RESET_STEPS = ['Xác nhận tài khoản', 'Mã OTP & Mật khẩu', 'Hoàn tất'];
-const isMock = import.meta.env.VITE_USE_MOCK === 'true';
+const isMock = false;
 
 /**
  * ForgotPassword page complying with FunnyShop Design System
@@ -182,32 +182,24 @@ export default function ForgotPassword() {
     setIsSubmitting(true);
 
     try {
-      if (isMock) {
-        await authApi.resetPassword({
-          emailOrUsername: identifier.trim(),
-          otp: otp.trim(),
-          newPassword,
-        });
-      } else {
-        // Bước 1: Xác thực OTP
-        const verifyRes = await authApi.verifyResetOtp({
-          email: userEmail,
-          otp: otp.trim(),
-        });
+      // Bước 1: Xác thực OTP
+      const verifyRes = await authApi.verifyResetOtp({
+        email: userEmail,
+        otp: otp.trim(),
+      });
 
-        const resetToken = verifyRes?.resetToken;
+      const resetToken = verifyRes?.resetToken;
 
-        if (!resetToken) {
-          throw new Error('Không nhận được resetToken từ Backend.');
-        }
-
-        // Bước 2: Đặt lại mật khẩu
-        await authApi.resetPassword({
-          resetToken,
-          newPassword,
-          confirmPassword,
-        });
+      if (!resetToken) {
+        throw new Error('Không nhận được resetToken từ Backend.');
       }
+
+      // Bước 2: Đặt lại mật khẩu
+      await authApi.resetPassword({
+        resetToken,
+        newPassword,
+        confirmPassword,
+      });
 
       setCurrentStep(2);
       toast.success('Mật khẩu đã được cập nhật thành công!');

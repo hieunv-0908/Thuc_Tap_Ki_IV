@@ -1,8 +1,8 @@
 import apiClient from './axios';
-import { mockEngine } from './mock/mockEngine';
+// import { mockEngine } from './mock/mockEngine';
 import { productApi } from './product';
 
-const isMock = import.meta.env.VITE_USE_MOCK === 'true';
+// const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 /**
  * Trích xuất danh sách từ bất kỳ format response nào của BE:
@@ -28,140 +28,86 @@ function extractList(res) {
 export const adminApi = {
   // ── Products ────────────────────────────────────────────────────────────
   getProducts: async ({ q = '', categoryId = '', sort = '', page = 0, size = 100 } = {}) => {
-    if (isMock) {
-      return await mockEngine.getProducts({ q, categoryId, sort, page: 1, size });
-    }
-    try {
-      const firstPageRes = await productApi.getProducts({ q, categoryId, sort, page, size });
-      // Nếu Backend trả về rỗng (DB trống hoặc chưa seed), fallback sang mock để admin có dữ liệu
-      if (!firstPageRes.content || firstPageRes.content.length === 0) {
-        console.warn('Backend không có sản phẩm nào, hiển thị dữ liệu mẫu.');
-        return await mockEngine.getProducts({ q, categoryId, sort, page: 1, size });
-      }
+    // if (isMock) {
+    //   return await mockEngine.getProducts({ q, categoryId, sort, page: 1, size });
+    // }
+    const firstPageRes = await productApi.getProducts({ q, categoryId, sort, page, size });
 
-      if (size >= 100 && firstPageRes.totalPages > 1) {
-        let allContent = [...(firstPageRes.content || [])];
-        for (let p = 2; p <= firstPageRes.totalPages; p++) {
-          const nextRes = await productApi.getProducts({ q, categoryId, sort, page: p, size: 100 });
-          if (nextRes.content) {
-            allContent = allContent.concat(nextRes.content);
-          }
+    if (size >= 100 && firstPageRes.totalPages > 1) {
+      let allContent = [...(firstPageRes.content || [])];
+      for (let p = 2; p <= firstPageRes.totalPages; p++) {
+        const nextRes = await productApi.getProducts({ q, categoryId, sort, page: p, size: 100 });
+        if (nextRes.content) {
+          allContent = allContent.concat(nextRes.content);
         }
-        return {
-          ...firstPageRes,
-          content: allContent,
-          totalElements: allContent.length,
-        };
       }
-      return firstPageRes;
-    } catch (err) {
-      console.warn('Lỗi tải sản phẩm từ backend, hiển thị dữ liệu mẫu dự phòng:', err);
-      return await mockEngine.getProducts({ q, categoryId, sort, page: 1, size });
+      return {
+        ...firstPageRes,
+        content: allContent,
+        totalElements: allContent.length,
+      };
     }
+    return firstPageRes;
   },
 
   createProduct: async (productData) => {
-    if (isMock) {
-      return await mockEngine.adminCreateProduct(productData);
-    }
+    // if (isMock) {
+    //   return await mockEngine.adminCreateProduct(productData);
+    // }
     const payload = {
       ...productData,
       stockQuantity: productData.stock !== undefined ? Number(productData.stock) : Number(productData.stockQuantity || 0),
     };
-    try {
-      const res = await apiClient.post('/api/v1/admin/products', payload);
-      return res?.data !== undefined ? res.data : res;
-    } catch (err) {
-      if (err.status === 0 || err.status === 404) {
-        return await mockEngine.adminCreateProduct(productData);
-      }
-      throw err;
-    }
+    const res = await apiClient.post('/api/v1/admin/products', payload);
+    return res?.data !== undefined ? res.data : res;
   },
 
   updateProduct: async (id, productData) => {
-    if (isMock) {
-      return await mockEngine.adminUpdateProduct(id, productData);
-    }
+    // if (isMock) {
+    //   return await mockEngine.adminUpdateProduct(id, productData);
+    // }
     const payload = {
       ...productData,
       stockQuantity: productData.stock !== undefined ? Number(productData.stock) : Number(productData.stockQuantity || 0),
     };
-    try {
-      const res = await apiClient.put(`/api/v1/admin/products/${id}`, payload);
-      return res?.data !== undefined ? res.data : res;
-    } catch (err) {
-      if (err.status === 0 || err.status === 404) {
-        return await mockEngine.adminUpdateProduct(id, productData);
-      }
-      throw err;
-    }
+    const res = await apiClient.put(`/api/v1/admin/products/${id}`, payload);
+    return res?.data !== undefined ? res.data : res;
   },
 
   deleteProduct: async (id) => {
-    if (isMock) {
-      return await mockEngine.adminDeleteProduct(id);
-    }
-    try {
-      const res = await apiClient.delete(`/api/v1/admin/products/${id}`);
-      return res?.data !== undefined ? res.data : res;
-    } catch (err) {
-      if (err.status === 0 || err.status === 404) {
-        return await mockEngine.adminDeleteProduct(id);
-      }
-      throw err;
-    }
+    // if (isMock) {
+    //   return await mockEngine.adminDeleteProduct(id);
+    // }
+    const res = await apiClient.delete(`/api/v1/admin/products/${id}`);
+    return res?.data !== undefined ? res.data : res;
   },
 
   restoreProduct: async (id) => {
-    if (isMock) {
-      return null;
-    }
-    try {
-      const res = await apiClient.patch(`/api/v1/admin/products/${id}/restore`);
-      return res?.data !== undefined ? res.data : res;
-    } catch (err) {
-      if (err.status === 0 || err.status === 404) {
-        return null;
-      }
-      throw err;
-    }
+    // if (isMock) {
+    //   return null;
+    // }
+    const res = await apiClient.patch(`/api/v1/admin/products/${id}/restore`);
+    return res?.data !== undefined ? res.data : res;
   },
 
   getAllOrders: async ({ page = 0, size = 100 } = {}) => {
-    if (isMock) {
-      return await mockEngine.adminGetAllOrders();
-    }
+    // if (isMock) {
+    //   return await mockEngine.adminGetAllOrders();
+    // }
     const zeroBasedPage = page > 0 ? page - 1 : 0;
     const safeSize = Math.min(100, Math.max(1, Number(size) || 10));
-    try {
-      const res = await apiClient.get('/api/v1/admin/orders', {
-        params: { page: zeroBasedPage, size: safeSize },
-      });
-      const list = extractList(res);
-      if (list && list.length > 0) return list;
-      return await mockEngine.adminGetAllOrders();
-    } catch (err) {
-      if (err.status === 0 || err.status === 404) {
-        return await mockEngine.adminGetAllOrders();
-      }
-      throw err;
-    }
+    const res = await apiClient.get('/api/v1/admin/orders', {
+      params: { page: zeroBasedPage, size: safeSize },
+    });
+    return extractList(res);
   },
 
   updateOrderStatus: async (id, status) => {
-    if (isMock) {
-      return await mockEngine.adminUpdateOrderStatus(id, status);
-    }
-    try {
-      const res = await apiClient.patch(`/api/v1/admin/orders/${id}/status`, { status });
-      return res?.data !== undefined ? res.data : res;
-    } catch (err) {
-      if (err.status === 0 || err.status === 404) {
-        return await mockEngine.adminUpdateOrderStatus(id, status);
-      }
-      throw err;
-    }
+    // if (isMock) {
+    //   return await mockEngine.adminUpdateOrderStatus(id, status);
+    // }
+    const res = await apiClient.patch(`/api/v1/admin/orders/${id}/status`, { status });
+    return res?.data !== undefined ? res.data : res;
   },
 
   // ── Categories ──────────────────────────────────────────────────────────
@@ -182,79 +128,42 @@ export const adminApi = {
 
   // ── Users ───────────────────────────────────────────────────────────────
   getUsers: async () => {
-    if (isMock) {
-      return await mockEngine.adminGetUsers();
-    }
-    try {
-      const res = await apiClient.get('/api/v1/admin/users');
-      const list = extractList(res);
-      if (list && list.length > 0) return list;
-      // Nếu Backend chưa có người dùng nào, hiển thị dữ liệu mẫu để admin quản lý
-      return await mockEngine.adminGetUsers();
-    } catch (err) {
-      // Backend chưa có endpoint /api/v1/admin/users hoặc chưa bật server
-      console.warn('Backend chưa hỗ trợ /api/v1/admin/users hoặc lỗi kết nối, hiển thị dữ liệu mẫu:', err);
-      return await mockEngine.adminGetUsers();
-    }
+    // if (isMock) {
+    //   return await mockEngine.adminGetUsers();
+    // }
+    const res = await apiClient.get('/api/v1/admin/users');
+    return extractList(res);
   },
 
   updateUserStatus: async (id, status) => {
-    if (isMock) {
-      return await mockEngine.adminUpdateUserStatus(id, status);
-    }
-    try {
-      const res = await apiClient.put(`/api/v1/admin/users/${id}/status`, { status });
-      return res?.data !== undefined ? res.data : res;
-    } catch (err) {
-      if (err.status === 0 || err.status === 404) {
-        return await mockEngine.adminUpdateUserStatus(id, status);
-      }
-      throw err;
-    }
+    // if (isMock) {
+    //   return await mockEngine.adminUpdateUserStatus(id, status);
+    // }
+    const res = await apiClient.put(`/api/v1/admin/users/${id}/status`, { status });
+    return res?.data !== undefined ? res.data : res;
   },
 
   updateUserRole: async (id, role) => {
-    if (isMock) {
-      return await mockEngine.adminUpdateUserRole(id, role);
-    }
-    try {
-      const res = await apiClient.put(`/api/v1/admin/users/${id}/role`, { role });
-      return res?.data !== undefined ? res.data : res;
-    } catch (err) {
-      if (err.status === 0 || err.status === 404) {
-        return await mockEngine.adminUpdateUserRole(id, role);
-      }
-      throw err;
-    }
+    // if (isMock) {
+    //   return await mockEngine.adminUpdateUserRole(id, role);
+    // }
+    const res = await apiClient.put(`/api/v1/admin/users/${id}/role`, { role });
+    return res?.data !== undefined ? res.data : res;
   },
 
   createUser: async (userData) => {
-    if (isMock) {
-      return await mockEngine.adminCreateUser(userData);
-    }
-    try {
-      const res = await apiClient.post('/api/v1/admin/users', userData);
-      return res?.data !== undefined ? res.data : res;
-    } catch (err) {
-      if (err.status === 0 || err.status === 404) {
-        return await mockEngine.adminCreateUser(userData);
-      }
-      throw err;
-    }
+    // if (isMock) {
+    //   return await mockEngine.adminCreateUser(userData);
+    // }
+    const res = await apiClient.post('/api/v1/admin/users', userData);
+    return res?.data !== undefined ? res.data : res;
   },
 
   deleteUser: async (id) => {
-    if (isMock) {
-      return await mockEngine.adminDeleteUser(id);
-    }
-    try {
-      const res = await apiClient.delete(`/api/v1/admin/users/${id}`);
-      return res?.data !== undefined ? res.data : res;
-    } catch (err) {
-      if (err.status === 0 || err.status === 404) {
-        return await mockEngine.adminDeleteUser(id);
-      }
-      throw err;
-    }
+    // if (isMock) {
+    //   return await mockEngine.adminDeleteUser(id);
+    // }
+    const res = await apiClient.delete(`/api/v1/admin/users/${id}`);
+    return res?.data !== undefined ? res.data : res;
   },
 };
