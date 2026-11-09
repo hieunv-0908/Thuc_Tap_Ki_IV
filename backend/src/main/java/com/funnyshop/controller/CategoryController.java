@@ -6,9 +6,7 @@ import com.funnyshop.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -23,13 +21,30 @@ public class CategoryController {
     public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllCategories() {
         List<CategoryResponse> categories = categoryService.getAllCategories();
 
-        ApiResponse<List<CategoryResponse>> response = ApiResponse.<List<CategoryResponse>>builder()
-                .code(HttpStatus.OK.value())
-                .message("Lấy danh sách danh mục thành công!")
-                .data(categories)
-                .build();
+        ApiResponse<List<CategoryResponse>> response =
+                ApiResponse.<List<CategoryResponse>>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Lấy danh sách danh mục thành công!")
+                        .data(categories)
+                        .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    // API khôi phục danh mục
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<ApiResponse<CategoryResponse>> restoreCategory(
+            @PathVariable Long id
+    ) {
+        CategoryResponse category = categoryService.restoreCategory(id);
+
+        ApiResponse<CategoryResponse> response =
+                ApiResponse.<CategoryResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Khôi phục danh mục thành công!")
+                        .data(category)
+                        .build();
 
         return ResponseEntity.ok(response);
     }
 }
-
