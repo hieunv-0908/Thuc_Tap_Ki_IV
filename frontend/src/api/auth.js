@@ -1,7 +1,7 @@
 import apiClient from './axios';
-import { mockEngine } from './mock/mockEngine';
+// import { mockEngine } from './mock/mockEngine';
 
-const isMock = import.meta.env.VITE_USE_MOCK === 'true';
+// const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const authApi = {
   /**
@@ -10,9 +10,9 @@ export const authApi = {
    * BE trả:  { code, message, data: { accessToken, tokenType, expiresIn, user } }
    */
   login: async ({username, password}) => {
-    if (isMock) {
-      return await mockEngine.login({email: username, password});
-    }
+    // if (isMock) {
+    //   return await mockEngine.login({email: username, password});
+    // }
 
     console.log('[login] Gửi request =>', {username});
     try {
@@ -41,9 +41,9 @@ export const authApi = {
    * BE trả:  { code, message, data: { id, username, email, fullName, phone, role, status } }
    */
   register: async ({username, fullName, email, password, phone}) => {
-    if (isMock) {
-      return await mockEngine.register({fullName, email, password});
-    }
+    // if (isMock) {
+    //   return await mockEngine.register({fullName, email, password});
+    // }
     const res = await apiClient.post('/api/v1/auth/register', {
       username,
       email,
@@ -60,11 +60,11 @@ export const authApi = {
    */
   forgotPassword: async ({ email, emailOrUsername }) => {
     const targetEmail = (email || emailOrUsername || '').trim();
-    if (isMock) {
-      return await mockEngine.requestPasswordReset({
-        emailOrUsername: targetEmail,
-      });
-    }
+    // if (isMock) {
+    //   return await mockEngine.requestPasswordReset({
+    //     emailOrUsername: targetEmail,
+    //   });
+    // }
 
     const res = await apiClient.post('/api/v1/auth/forgot-password', {
       email: targetEmail,
@@ -82,12 +82,12 @@ export const authApi = {
   verifyResetOtp: async ({ email, emailOrUsername, otp }) => {
     const targetEmail = (email || emailOrUsername || '').trim();
     const targetOtp = (otp || '').trim();
-    if (isMock) {
-      return await mockEngine.verifyResetOtp({
-        emailOrUsername: targetEmail,
-        otp: targetOtp,
-      });
-    }
+    // if (isMock) {
+    //   return await mockEngine.verifyResetOtp({
+    //     emailOrUsername: targetEmail,
+    //     otp: targetOtp,
+    //   });
+    // }
 
     const res = await apiClient.post('/api/v1/auth/verify-otp', {
       email: targetEmail,
@@ -106,17 +106,17 @@ export const authApi = {
     resetToken,
     newPassword,
     confirmPassword,
-    emailOrUsername,
-    email,
-    otp,
+    // emailOrUsername,
+    // email,
+    // otp,
   }) => {
-    if (isMock) {
-      return await mockEngine.resetPassword({
-        emailOrUsername: emailOrUsername || email,
-        otp,
-        newPassword,
-      });
-    }
+    // if (isMock) {
+    //   return await mockEngine.resetPassword({
+    //     emailOrUsername: emailOrUsername || email,
+    //     otp,
+    //     newPassword,
+    //   });
+    // }
 
     const res = await apiClient.post('/api/v1/auth/reset-password', {
       resetToken,
