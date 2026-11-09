@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore';
 import { toast } from '../store/toastStore';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/',
+  baseURL: import.meta.env.VITE_API_URL || '',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
