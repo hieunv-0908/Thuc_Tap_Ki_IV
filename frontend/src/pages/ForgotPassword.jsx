@@ -93,27 +93,35 @@ export default function ForgotPassword() {
     setErrors({});
 
     const trimmed = identifier.trim();
+
     if (!trimmed) {
-      setErrors({ identifier: 'Vui lòng nhập email hoặc tên đăng nhập' });
+      setErrors({ identifier: 'Vui lòng nhập email' });
       return;
     }
-    if (trimmed.includes('@') && !isValidEmail(trimmed)) {
-      setErrors({ identifier: 'Địa chỉ email không đúng định dạng' });
+
+    if (!isValidEmail(trimmed)) {
+      setErrors({ identifier: 'Địa chỉ email không hợp lệ' });
       return;
     }
 
     setIsSubmitting(true);
+
     try {
-      const res = await authApi.forgotPassword({ emailOrUsername: trimmed });
-      setUserEmail(res.email || trimmed);
-      // Chỉ hiển thị OTP gợi ý khi ở chế độ Mock
-      setMockOtpHint(isMock ? (res.mockOtp || '123456') : '');
+      const res = await authApi.forgotPassword({
+        email: trimmed,
+      });
+
+      setUserEmail(trimmed);
+      setMockOtpHint(isMock ? (res?.mockOtp || '123456') : '');
       setResendCountdown(60);
       setCanResend(false);
       setCurrentStep(1);
-      toast.success(res.message || 'Mã xác thực OTP đã được gửi!');
+
+      toast.success(res?.message || 'Mã xác thực OTP đã được gửi!');
     } catch (err) {
-      setServerError(err.message || 'Không tìm thấy tài khoản. Vui lòng kiểm tra lại.');
+      setServerError(
+          err.message || 'Không thể gửi OTP. Vui lòng kiểm tra lại email.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -125,7 +133,10 @@ export default function ForgotPassword() {
     setIsSubmitting(true);
     setServerError('');
     try {
-      const res = await authApi.forgotPassword({ emailOrUsername: identifier.trim() });
+      // const res = await authApi.forgotPassword({ emailOrUsername: identifier.trim() });
+      const res = await authApi.forgotPassword({
+        email: userEmail,
+      });
       // Chỉ cập nhật OTP gợi ý khi ở chế độ Mock
       setMockOtpHint(isMock ? (res.mockOtp || '123456') : '');
       setResendCountdown(60);
@@ -142,12 +153,13 @@ export default function ForgotPassword() {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setServerError('');
+
     const newErrors = {};
 
     if (!otp.trim()) {
       newErrors.otp = 'Vui lòng nhập mã OTP';
-    } else if (otp.trim().length !== 6) {
-      newErrors.otp = 'Mã OTP bao gồm 6 chữ số';
+    } else if (!/^\d{6}$/.test(otp.trim())) {
+      newErrors.otp = 'Mã OTP phải gồm 6 chữ số';
     }
 
     if (!newPassword) {
@@ -157,7 +169,7 @@ export default function ForgotPassword() {
     }
 
     if (!confirmPassword) {
-      newErrors.confirmPassword = 'Vui lòng xác nhận lại mật khẩu mới';
+      newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu';
     } else if (confirmPassword !== newPassword) {
       newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
     }
@@ -168,22 +180,45 @@ export default function ForgotPassword() {
     }
 
     setIsSubmitting(true);
+
     try {
-      await authApi.resetPassword({
-        emailOrUsername: identifier.trim(),
-        otp: otp.trim(),
-        newPassword,
-      });
+      if (isMock) {
+        await authApi.resetPassword({
+          emailOrUsername: identifier.trim(),
+          otp: otp.trim(),
+          newPassword,
+        });
+      } else {
+        // Bước 1: Xác thực OTP
+        const verifyRes = await authApi.verifyResetOtp({
+          email: userEmail,
+          otp: otp.trim(),
+        });
+
+        const resetToken = verifyRes?.resetToken;
+
+        if (!resetToken) {
+          throw new Error('Không nhận được resetToken từ Backend.');
+        }
+
+        // Bước 2: Đặt lại mật khẩu
+        await authApi.resetPassword({
+          resetToken,
+          newPassword,
+          confirmPassword,
+        });
+      }
 
       setCurrentStep(2);
-      toast.success('Mật khẩu của bạn đã được cập nhật thành công!');
+      toast.success('Mật khẩu đã được cập nhật thành công!');
     } catch (err) {
-      setServerError(err.message || 'Đặt lại mật khẩu thất bại. Vui lòng thử lại.');
+      setServerError(
+          err.message || 'Đặt lại mật khẩu thất bại. Vui lòng thử lại.'
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
-
   // Quick fill sample account
   const handleQuickFillAccount = (acc) => {
     setIdentifier(acc);
