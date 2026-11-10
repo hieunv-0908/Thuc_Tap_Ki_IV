@@ -5,6 +5,7 @@ import com.funnyshop.dto.response.UserResponse;
 import com.funnyshop.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import com.funnyshop.dto.request.UserCreateRequest;
 
 public interface UserService {
     UserResponse getCurrentUserProfile(Long userId);
@@ -26,4 +27,10 @@ public interface UserService {
 
     // Xóa người dùng
     void deleteUser(Long id);
+
+    // Admin tạo tài khoản CUSTOMER
+    UserResponse createUser(UserCreateRequest request);
+
+    // Admin thay đổi vai trò người dùng
+    UserResponse updateUserRole(Long id, User.Role role);
 }

@@ -1,3 +1,4 @@
+
 package com.funnyshop.service;
 
 import com.funnyshop.dto.request.OrderCheckoutItemRequest;
@@ -120,10 +121,11 @@ class OrderServiceImplTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
         when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(sampleProduct1));
         when(productRepository.findByIdForUpdate(20L)).thenReturn(Optional.of(sampleProduct2));
+
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
-            Order o = invocation.getArgument(0);
-            o.setId(100L);
-            return o;
+            Order order = invocation.getArgument(0);
+            order.setId(100L);
+            return order;
         });
 
         OrderResponse response = orderService.checkout(1L, request);
@@ -134,33 +136,34 @@ class OrderServiceImplTest {
         assertEquals("COD", response.getPaymentMethod());
         assertEquals(OrderStatus.PENDING, response.getStatus());
 
-        // Kiểm tra tồn kho sau khi trừ:
-        // Product 1 ban đầu 10, mua 2 -> còn 8
         assertEquals(8, sampleProduct1.getStockQuantity());
-        // Product 2 ban đầu 5, mua 1 -> còn 4
         assertEquals(4, sampleProduct2.getStockQuantity());
 
-        // Kiểm tra tổng tiền: 300.000 * 2 + 150.000 * 1 = 750.000
         BigDecimal expectedTotal = new BigDecimal("750000.00");
         assertEquals(expectedTotal, response.getTotalAmount());
 
-        // Verify product save
         verify(productRepository, times(1)).save(sampleProduct1);
         verify(productRepository, times(1)).save(sampleProduct2);
 
-        // Verify Order items có priceAtOrder chính xác
         ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
         verify(orderRepository).save(orderCaptor.capture());
+
         Order saved = orderCaptor.getValue();
+
         assertEquals(2, saved.getOrderItems().size());
-        assertEquals(new BigDecimal("300000.00"), saved.getOrderItems().get(0).getPriceAtOrder());
-        assertEquals(new BigDecimal("150000.00"), saved.getOrderItems().get(1).getPriceAtOrder());
+        assertEquals(
+                new BigDecimal("300000.00"),
+                saved.getOrderItems().get(0).getPriceAtOrder()
+        );
+        assertEquals(
+                new BigDecimal("150000.00"),
+                saved.getOrderItems().get(1).getPriceAtOrder()
+        );
     }
 
     @Test
-    @DisplayName("checkout - Ném AppException BadRequest khi số lượng đặt vượt quá tồn kho (Out of stock)")
+    @DisplayName("checkout - Ném AppException BadRequest khi số lượng đặt vượt quá tồn kho")
     void checkout_OutOfStock_ThrowsAppException() {
-        // Tồn kho sampleProduct2 là 5, khách yêu cầu 6
         OrderCheckoutRequest request = OrderCheckoutRequest.builder()
                 .fullName("Nguyen Van A")
                 .phone("0912345678")
@@ -180,6 +183,7 @@ class OrderServiceImplTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         assertTrue(ex.getMessage().contains("không đủ số lượng tồn kho"));
+
         verify(orderRepository, never()).save(any());
     }
 
@@ -207,7 +211,7 @@ class OrderServiceImplTest {
     }
 
     @Test
-    @DisplayName("checkout - Ném AppException khi sản phẩm đã bị xóa mềm (isDeleted = true)")
+    @DisplayName("checkout - Ném AppException khi sản phẩm đã bị xóa mềm")
     void checkout_SoftDeletedProduct_ThrowsException() {
         sampleProduct1.setIsDeleted(true);
 
@@ -230,13 +234,13 @@ class OrderServiceImplTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         assertTrue(ex.getMessage().contains("ngừng kinh doanh"));
+
         verify(orderRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("checkout - Tự động gộp số lượng khi request chứa nhiều item trùng productId")
     void checkout_DuplicateProductId_AggregatesQuantity() {
-        // Request gửi 2 dòng cùng productId = 10L, qty = 2 và qty = 3 => tổng = 5
         OrderCheckoutRequest request = OrderCheckoutRequest.builder()
                 .fullName("Nguyen Van A")
                 .phone("0912345678")
@@ -249,12 +253,14 @@ class OrderServiceImplTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
         when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(sampleProduct1));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         orderService.checkout(1L, request);
 
-        // Product1 ban đầu tồn 10, mua tổng cộng 5 -> còn 5
         assertEquals(5, sampleProduct1.getStockQuantity());
+
         verify(productRepository, times(1)).save(sampleProduct1);
     }
 
@@ -265,20 +271,28 @@ class OrderServiceImplTest {
     @Test
     @DisplayName("updateOrderStatus - Chuyển trạng thái hợp lệ từ PENDING -> PROCESSING thành công")
     void updateOrderStatus_ValidTransition() {
-        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleOrder));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
 
-        OrderResponse response = orderService.updateOrderStatus(1L, OrderStatus.PROCESSING);
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderResponse response = orderService.updateOrderStatus(
+                1L, OrderStatus.PROCESSING
+        );
 
         assertNotNull(response);
         assertEquals(OrderStatus.PROCESSING, response.getStatus());
+
+        verify(orderRepository).findByIdForUpdate(1L);
         verify(orderRepository).save(sampleOrder);
     }
 
     @Test
     @DisplayName("updateOrderStatus - Ném lỗi BadRequest khi chuyển trạng thái sai quy tắc PENDING -> COMPLETED")
     void updateOrderStatus_InvalidTransition_ThrowsAppException() {
-        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleOrder));
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
 
         AppException ex = assertThrows(
                 AppException.class,
@@ -287,14 +301,18 @@ class OrderServiceImplTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         assertTrue(ex.getMessage().contains("Không thể chuyển trạng thái"));
-        verify(orderRepository, never()).save(any());
+
+        verify(orderRepository, never()).save(any(Order.class));
+        verifyNoInteractions(productRepository);
     }
 
     @Test
     @DisplayName("updateOrderStatus - Ném lỗi BadRequest khi cố chuyển trạng thái từ đơn đã CANCELLED")
     void updateOrderStatus_CancelledTerminalState_ThrowsAppException() {
         sampleOrder.setStatus(OrderStatus.CANCELLED);
-        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleOrder));
+
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
 
         AppException ex = assertThrows(
                 AppException.class,
@@ -303,25 +321,69 @@ class OrderServiceImplTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         assertTrue(ex.getMessage().contains("CANCELLED"));
-        verify(orderRepository, never()).save(any());
+
+        verify(orderRepository, never()).save(any(Order.class));
+        verifyNoInteractions(productRepository);
     }
 
     @Test
     @DisplayName("updateOrderStatus - Ném NotFoundException khi order không tồn tại")
     void updateOrderStatus_NotFound() {
-        when(orderRepository.findByIdWithDetails(999L)).thenReturn(Optional.empty());
-        when(orderRepository.findById(999L)).thenReturn(Optional.empty());
+        when(orderRepository.findByIdForUpdate(999L))
+                .thenReturn(Optional.empty());
 
         assertThrows(
                 ResourceNotFoundException.class,
                 () -> orderService.updateOrderStatus(999L, OrderStatus.PROCESSING)
         );
+
+        verify(orderRepository).findByIdForUpdate(999L);
+        verify(orderRepository, never()).save(any(Order.class));
+        verifyNoInteractions(productRepository);
     }
+
+    // ==========================================
+    // TESTS FOR STOCK ROLLBACK
+    // ==========================================
+
+    @Test
+    @DisplayName("updateOrderStatus - Hủy đơn hàng thành công và hoàn lại tồn kho")
+    void updateOrderStatus_CancelOrder_RestoresStock() {
+        // Tồn kho ban đầu: 10
+        // Số lượng sản phẩm trong đơn: 2
+        // Tồn kho sau khi hủy: 12
+
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
+
+        when(productRepository.findByIdForUpdateIncludingDeleted(10L))
+                .thenReturn(Optional.of(sampleProduct1));
+
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderResponse response = orderService.updateOrderStatus(
+                1L, OrderStatus.CANCELLED
+        );
+
+        assertNotNull(response);
+        assertEquals(OrderStatus.CANCELLED, response.getStatus());
+        assertEquals(12, sampleProduct1.getStockQuantity());
+
+        verify(productRepository).findByIdForUpdateIncludingDeleted(10L);
+        verify(productRepository).save(sampleProduct1);
+        verify(orderRepository).save(sampleOrder);
+    }
+
+    // ==========================================
+    // TESTS FOR GET ORDER
+    // ==========================================
 
     @Test
     @DisplayName("getOrderById - Customer xem đơn của chính mình thành công")
     void getOrderById_OwnOrder_Success() {
-        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleOrder));
+        when(orderRepository.findByIdWithDetails(1L))
+                .thenReturn(Optional.of(sampleOrder));
 
         OrderResponse response = orderService.getOrderById(1L, 1L, false);
 
@@ -332,7 +394,8 @@ class OrderServiceImplTest {
     @Test
     @DisplayName("getOrderById - Customer bị chặn 403 Forbidden khi xem đơn của người khác")
     void getOrderById_OtherUserOrder_ThrowsForbidden() {
-        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleOrder));
+        when(orderRepository.findByIdWithDetails(1L))
+                .thenReturn(Optional.of(sampleOrder));
 
         AppException ex = assertThrows(
                 AppException.class,
@@ -346,13 +409,18 @@ class OrderServiceImplTest {
     @Test
     @DisplayName("getOrderById - Admin có quyền xem bất kỳ đơn hàng nào của hệ thống")
     void getOrderById_Admin_CanViewAny() {
-        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleOrder));
+        when(orderRepository.findByIdWithDetails(1L))
+                .thenReturn(Optional.of(sampleOrder));
 
         OrderResponse response = orderService.getOrderById(1L, 999L, true);
 
         assertNotNull(response);
         assertEquals(1L, response.getId());
     }
+
+    // ==========================================
+    // TESTS FOR GET ALL ORDERS
+    // ==========================================
 
     @Test
     @DisplayName("getAllOrders - Admin lấy danh sách đơn hàng thành công")

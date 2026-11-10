@@ -1,30 +1,28 @@
 package com.funnyshop.controller.admin;
 
-import com.funnyshop.dto.request.UserUpdateRequest;
+import com.funnyshop.dto.request.UserCreateRequest;
+import com.funnyshop.dto.request.UserRoleUpdateRequest;
 import com.funnyshop.dto.request.UserStatusUpdateRequest;
+import com.funnyshop.dto.request.UserUpdateRequest;
 import com.funnyshop.dto.response.ApiResponse;
 import com.funnyshop.dto.response.UserResponse;
 import com.funnyshop.entity.User;
 import com.funnyshop.service.UserService;
 
 import jakarta.validation.Valid;
-
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.data.domain.Sort;
-
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
 import org.springframework.security.access.prepost.PreAuthorize;
-
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping({"/api/v1/admin/users", "/api/admin/users"})
+@RequestMapping("/api/v1/admin/users")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
@@ -59,13 +57,28 @@ public class AdminUserController {
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(
             @PathVariable Long id) {
 
-        UserResponse userResponse =
-                userService.getUserById(id);
+        UserResponse userResponse = userService.getUserById(id);
 
         return ResponseEntity.ok(
                 ApiResponse.<UserResponse>builder()
                         .code(HttpStatus.OK.value())
                         .message("Lấy thông tin người dùng thành công!")
+                        .data(userResponse)
+                        .build()
+        );
+    }
+
+    // POST /api/v1/admin/users - Admin tạo tài khoản CUSTOMER
+    @PostMapping
+    public ResponseEntity<ApiResponse<UserResponse>> createUser(
+            @Valid @RequestBody UserCreateRequest request) {
+
+        UserResponse userResponse = userService.createUser(request);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                ApiResponse.<UserResponse>builder()
+                        .code(HttpStatus.CREATED.value())
+                        .message("Tạo tài khoản người dùng thành công!")
                         .data(userResponse)
                         .build()
         );
@@ -77,8 +90,7 @@ public class AdminUserController {
             @PathVariable Long id,
             @Valid @RequestBody UserUpdateRequest request) {
 
-        UserResponse userResponse =
-                userService.updateUser(id, request);
+        UserResponse userResponse = userService.updateUser(id, request);
 
         return ResponseEntity.ok(
                 ApiResponse.<UserResponse>builder()
@@ -90,7 +102,10 @@ public class AdminUserController {
     }
 
     // PUT|PATCH /api/v1/admin/users/{id}/status
-    @RequestMapping(value = "/{id}/status", method = {RequestMethod.PUT, RequestMethod.PATCH})
+    @RequestMapping(
+            value = "/{id}/status",
+            method = {RequestMethod.PUT, RequestMethod.PATCH}
+    )
     public ResponseEntity<ApiResponse<UserResponse>> updateUserStatus(
             @PathVariable Long id,
             @Valid @RequestBody UserStatusUpdateRequest request) {
@@ -107,8 +122,25 @@ public class AdminUserController {
         );
     }
 
-    // DELETE /api/v1/admin/users/{id}
-    // Soft Delete: Chuyển trạng thái thành INACTIVE
+    // PUT /api/v1/admin/users/{id}/role
+    @PutMapping("/{id}/role")
+    public ResponseEntity<ApiResponse<UserResponse>> updateUserRole(
+            @PathVariable Long id,
+            @Valid @RequestBody UserRoleUpdateRequest request) {
+
+        UserResponse userResponse =
+                userService.updateUserRole(id, request.getRole());
+
+        return ResponseEntity.ok(
+                ApiResponse.<UserResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Cập nhật vai trò người dùng thành công!")
+                        .data(userResponse)
+                        .build()
+        );
+    }
+
+    // DELETE /api/v1/admin/users/{id} - Soft delete: chuyển thành INACTIVE
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(
             @PathVariable Long id) {
@@ -123,4 +155,3 @@ public class AdminUserController {
         );
     }
 }
-

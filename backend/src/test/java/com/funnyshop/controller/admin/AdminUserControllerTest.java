@@ -1,5 +1,7 @@
 package com.funnyshop.controller.admin;
 
+import com.funnyshop.dto.request.UserCreateRequest;
+import com.funnyshop.dto.request.UserRoleUpdateRequest;
 import com.funnyshop.dto.request.UserStatusUpdateRequest;
 import com.funnyshop.dto.request.UserUpdateRequest;
 import com.funnyshop.dto.response.UserResponse;
@@ -89,6 +91,37 @@ class AdminUserControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/v1/admin/users - Admin tạo tài khoản CUSTOMER thành công 201 CREATED")
+    void createUser_Success() throws Exception {
+        when(userService.createUser(any(UserCreateRequest.class)))
+                .thenReturn(UserResponse.builder()
+                        .id(2L)
+                        .username("customer")
+                        .email("customer@example.com")
+                        .role("CUSTOMER")
+                        .status("ACTIVE")
+                        .build());
+
+        String json = """
+                {
+                    "username": "customer",
+                    "email": "customer@example.com",
+                    "password": "password123",
+                    "fullName": "Khách hàng",
+                    "phone": "0912345678"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/admin/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code", is(201)))
+                .andExpect(jsonPath("$.data.username", is("customer")))
+                .andExpect(jsonPath("$.data.role", is("CUSTOMER")));
+    }
+
+    @Test
     @DisplayName("PUT /api/v1/admin/users/{id} - Cập nhật người dùng thành công 200 OK")
     void updateUser_Success() throws Exception {
         when(userService.updateUser(eq(1L), any(UserUpdateRequest.class))).thenReturn(sampleUserResponse);
@@ -109,7 +142,7 @@ class AdminUserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /api/v1/admin/users/{id}/status - Cập nhật trạng thái người dùng bằng PUT thành công 200 OK")
+    @DisplayName("PUT /api/v1/admin/users/{id}/status - Cập nhật trạng thái người dùng thành công 200 OK")
     void updateUserStatus_PutMethod_Success() throws Exception {
         when(userService.updateUserStatus(eq(1L), eq(User.Status.INACTIVE))).thenReturn(
                 UserResponse.builder()
@@ -134,7 +167,7 @@ class AdminUserControllerTest {
     }
 
     @Test
-    @DisplayName("PATCH /api/v1/admin/users/{id}/status - Cập nhật trạng thái người dùng bằng PATCH thành công 200 OK")
+    @DisplayName("PATCH /api/v1/admin/users/{id}/status - Cập nhật trạng thái người dùng thành công 200 OK")
     void updateUserStatus_PatchMethod_Success() throws Exception {
         when(userService.updateUserStatus(eq(1L), eq(User.Status.ACTIVE))).thenReturn(sampleUserResponse);
 
@@ -153,6 +186,29 @@ class AdminUserControllerTest {
     }
 
     @Test
+    @DisplayName("PUT /api/v1/admin/users/{id}/role - Cập nhật vai trò người dùng thành công 200 OK")
+    void updateUserRole_Success() throws Exception {
+        when(userService.updateUserRole(eq(1L), eq(User.Role.CUSTOMER)))
+                .thenReturn(UserResponse.builder()
+                        .id(1L)
+                        .username("admin")
+                        .role("CUSTOMER")
+                        .status("ACTIVE")
+                        .build());
+
+        mockMvc.perform(put("/api/v1/admin/users/1/role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "role": "CUSTOMER"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.data.role", is("CUSTOMER")));
+    }
+
+    @Test
     @DisplayName("DELETE /api/v1/admin/users/{id} - Khóa/xóa mềm người dùng 200 OK")
     void deleteUser_Success() throws Exception {
         doNothing().when(userService).deleteUser(1L);
@@ -164,4 +220,3 @@ class AdminUserControllerTest {
                 .andExpect(jsonPath("$.message", is("Xóa người dùng thành công!")));
     }
 }
-
