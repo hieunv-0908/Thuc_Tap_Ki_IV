@@ -12,10 +12,14 @@ import {
   ArrowRight,
   AlertCircle,
   Check,
+  KeyRound,
+  Send,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { userApi } from '../api/user';
 import { orderApi } from '../api/order';
+import { authApi } from '../api/auth';
 import { toast } from '../store/toastStore';
 import { isValidPassword, isValidPhone } from '../utils/validators';
 import { formatDate } from '../utils/formatDate';
@@ -62,15 +66,39 @@ export default function Profile() {
   const [infoErrors, setInfoErrors] = useState({});
   const [infoSubmitting, setInfoSubmitting] = useState(false);
 
-  // Form 2: Đổi mật khẩu
+  // Form 2: Đổi mật khẩu kèm xác thực OTP Gmail
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
+  const [otp, setOtp] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const [canResend, setCanResend] = useState(true);
   const [passwordErrors, setPasswordErrors] = useState({});
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [passwordServerError, setPasswordServerError] = useState('');
+
+  // Đếm ngược thời gian gửi lại mã OTP
+  useEffect(() => {
+    let timer;
+    if (resendCountdown > 0) {
+      timer = setInterval(() => {
+        setResendCountdown((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [resendCountdown]);
 
   // Lấy thông tin user và số đơn hàng từ API backend
   useEffect(() => {
@@ -187,9 +215,10 @@ export default function Profile() {
     return Boolean(
       passwordForm.currentPassword ||
       passwordForm.newPassword ||
-      passwordForm.confirmPassword
+      passwordForm.confirmPassword ||
+      otp
     );
-  }, [passwordForm]);
+  }, [passwordForm, otp]);
 
   // --- Form 1 Handlers ---
   const handleInfoChange = (e) => {
@@ -254,7 +283,31 @@ export default function Profile() {
     }
   };
 
-  // --- Form 2 Handlers ---
+  // --- Form 2 Handlers: Đổi mật khẩu với OTP Gmail ---
+  const handleSendOtp = async () => {
+    const targetEmail = (profileData?.email || storeUser?.email || '').trim();
+    if (!targetEmail) {
+      toast.error('Không tìm thấy địa chỉ email tài khoản để nhận mã OTP.');
+      return;
+    }
+
+    if (!canResend || isSendingOtp) return;
+
+    try {
+      setIsSendingOtp(true);
+      setPasswordServerError('');
+      const res = await authApi.forgotPassword({ email: targetEmail });
+      setOtpSent(true);
+      setResendCountdown(60);
+      setCanResend(false);
+      toast.success(res?.message || `Mã OTP đã được gửi đến email ${targetEmail}.`);
+    } catch (err) {
+      toast.error(err.message || 'Không thể gửi mã OTP. Vui lòng thử lại sau.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordForm((prev) => ({ ...prev, [name]: value }));
@@ -269,10 +322,6 @@ export default function Profile() {
     setPasswordServerError('');
     const newErrors = {};
 
-    if (!passwordForm.currentPassword) {
-      newErrors.currentPassword = 'Vui lòng nhập mật khẩu hiện tại';
-    }
-
     if (!passwordForm.newPassword) {
       newErrors.newPassword = 'Vui lòng nhập mật khẩu mới';
     } else if (!isValidPassword(passwordForm.newPassword)) {
@@ -285,16 +334,41 @@ export default function Profile() {
       newErrors.confirmPassword = 'Mật khẩu xác nhận không trùng khớp';
     }
 
+    if (!otp.trim()) {
+      newErrors.otp = 'Vui lòng nhấn "Lấy mã OTP" và nhập mã 6 số từ Gmail';
+    } else if (!/^\d{6}$/.test(otp.trim())) {
+      newErrors.otp = 'Mã OTP phải gồm 6 chữ số';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setPasswordErrors(newErrors);
       return;
     }
 
+    const targetEmail = (profileData?.email || storeUser?.email || '').trim();
+    if (!targetEmail) {
+      setPasswordServerError('Không tìm thấy email của tài khoản.');
+      return;
+    }
+
     setPasswordSubmitting(true);
     try {
-      await userApi.changePassword({
-        currentPassword: passwordForm.currentPassword,
+      // Bước 1: Xác thực OTP và lấy resetToken
+      const verifyRes = await authApi.verifyResetOtp({
+        email: targetEmail,
+        otp: otp.trim(),
+      });
+
+      const resetToken = verifyRes?.resetToken;
+      if (!resetToken) {
+        throw new Error('Mã OTP không hợp lệ hoặc đã hết hạn.');
+      }
+
+      // Bước 2: Cập nhật mật khẩu mới bằng resetToken
+      await authApi.resetPassword({
+        resetToken,
         newPassword: passwordForm.newPassword,
+        confirmPassword: passwordForm.confirmPassword,
       });
 
       setPasswordForm({
@@ -302,10 +376,14 @@ export default function Profile() {
         newPassword: '',
         confirmPassword: '',
       });
+      setOtp('');
+      setOtpSent(false);
+      setResendCountdown(0);
+      setCanResend(true);
 
-      toast.success('Cập nhật thành công');
+      toast.success('Đổi mật khẩu thành công!');
     } catch (err) {
-      setPasswordServerError(err.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại.');
+      setPasswordServerError(err.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại mã OTP.');
     } finally {
       setPasswordSubmitting(false);
     }
@@ -558,20 +636,6 @@ export default function Profile() {
           )}
 
           <form onSubmit={handlePasswordSubmit} className="space-y-4" noValidate>
-            <Input
-              label="Mật khẩu hiện tại"
-              id="profile-currentPassword"
-              name="currentPassword"
-              type="password"
-              value={passwordForm.currentPassword}
-              onChange={handlePasswordChange}
-              placeholder="Nhập mật khẩu hiện tại"
-              error={passwordErrors.currentPassword}
-              leftIcon={Lock}
-              required
-              disabled={passwordSubmitting}
-            />
-
             <div>
               <Input
                 label="Mật khẩu mới"
@@ -655,6 +719,67 @@ export default function Profile() {
                   <Check className="size-3.5" />
                   <span>Mật khẩu xác nhận trùng khớp</span>
                 </div>
+              )}
+            </div>
+
+            {/* Mã xác thực OTP gửi về Gmail */}
+            <div className="rounded-xl border border-line bg-gray-50/70 p-4 space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <label htmlFor="profile-otp" className="text-sm font-semibold text-ink flex items-center gap-1.5">
+                  <KeyRound className="size-4 text-primary-700" />
+                  <span>Mã xác thực OTP (từ Gmail)</span>
+                  <span className="text-red-500">*</span>
+                </label>
+                <span className="text-xs text-ink-muted">
+                  Gửi tới: <strong className="text-ink">{profileData?.email || storeUser?.email}</strong>
+                </span>
+              </div>
+
+              <div className="flex gap-2 items-start pt-1">
+                <div className="flex-1">
+                  <Input
+                    id="profile-otp"
+                    name="otp"
+                    type="text"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => {
+                      setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
+                      if (passwordErrors.otp) {
+                        setPasswordErrors((prev) => ({ ...prev, otp: '' }));
+                      }
+                    }}
+                    placeholder="Nhập mã 6 số"
+                    error={passwordErrors.otp}
+                    disabled={passwordSubmitting}
+                  />
+                </div>
+
+                <Button
+                  type="button"
+                  variant={otpSent ? 'outline' : 'primary'}
+                  size="md"
+                  onClick={handleSendOtp}
+                  loading={isSendingOtp}
+                  disabled={isSendingOtp || (!canResend && resendCountdown > 0) || passwordSubmitting}
+                  leftIcon={otpSent ? RefreshCw : Send}
+                  className="shrink-0 h-10 px-3 sm:px-4 text-xs font-semibold cursor-pointer"
+                >
+                  {isSendingOtp
+                    ? 'Đang gửi...'
+                    : resendCountdown > 0
+                    ? `Gửi lại (${resendCountdown}s)`
+                    : otpSent
+                    ? 'Gửi lại mã'
+                    : 'Nhận mã OTP'}
+                </Button>
+              </div>
+
+              {otpSent && (
+                <p className="text-xs text-emerald-600 font-medium flex items-center gap-1 mt-1.5">
+                  <Check className="size-3.5" />
+                  <span>Mã OTP đã được gửi đến Gmail của bạn. Vui lòng kiểm tra hòm thư!</span>
+                </p>
               )}
             </div>
 
