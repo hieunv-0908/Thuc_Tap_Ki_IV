@@ -3,7 +3,6 @@ import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import SidebarAdmin from '../components/layout/SidebarAdmin';
 import Topbar from '../components/layout/Topbar';
 import ToastContainer from '../components/ui/ToastContainer';
-import Forbidden from '../pages/Forbidden';
 import { useAuthStore } from '../store/authStore';
 
 export default function AdminLayout() {
@@ -34,9 +33,9 @@ export default function AdminLayout() {
     );
   }
 
-  // Not an Admin: show Forbidden (403)
+  // Not an Admin: redirect to home
   if (user.role !== 'ADMIN') {
-    return <Forbidden />;
+    return <Navigate to="/" replace />;
   }
 
   return (

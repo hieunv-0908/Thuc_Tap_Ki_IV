@@ -104,7 +104,12 @@ export default function Login() {
       if (res.user?.role === 'ADMIN') {
         navigate(fromPath !== '/' ? fromPath : '/admin/products');
       } else {
-        navigate(fromPath);
+        if (fromPath.startsWith('/admin')) {
+          toast.info('Tài khoản của bạn không có quyền quản trị. Đã chuyển về trang chủ.');
+          navigate('/');
+        } else {
+          navigate(fromPath);
+        }
       }
     } catch (err) {
       if (err.status === 401) {

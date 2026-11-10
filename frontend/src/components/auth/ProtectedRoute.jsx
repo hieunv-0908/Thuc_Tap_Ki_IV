@@ -38,6 +38,9 @@ export default function ProtectedRoute({ requiredRole }) {
 
   // Role check if required
   if (requiredRole && user.role !== requiredRole) {
+    if (requiredRole === 'ADMIN') {
+      return <Navigate to="/" replace />;
+    }
     return <Navigate to="/forbidden" replace />;
   }
 
