@@ -72,13 +72,6 @@ export default function Profile() {
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [passwordServerError, setPasswordServerError] = useState('');
 
-  // Kiểm tra đăng nhập
-  useEffect(() => {
-    if (_hasHydrated && !isAuthenticated) {
-      navigate('/login', { state: { from: '/profile' } });
-    }
-  }, [_hasHydrated, isAuthenticated, navigate]);
-
   // Lấy thông tin user và số đơn hàng từ API backend
   useEffect(() => {
     if (!isAuthenticated) return;

@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, ArrowRight, Calendar, Package } from 'lucide-react';
 import { orderApi } from '../api/order';
-import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate } from '../utils/formatDate';
 import { ORDER_STATUS, ORDER_STATUS_LABELS } from '../utils/constants';
@@ -18,17 +17,17 @@ import Button from '../components/ui/Button';
  */
 export default function Orders() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStore();
 
   const [orders, setOrders] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // fetchOrders: không gọi setState đồng bộ ở đầu (tránh vi phạm react-hooks/no-set-state-in-effect)
-  // loading=true đã được khởi tạo sẵn ở useState(true), nên lần load đầu không cần set lại
+  // fetchOrders: dùng cho retry
   const fetchOrders = useCallback(async () => {
     try {
+      setLoading(true);
+      setError(null);
       const data = await orderApi.getMyOrders();
       const sorted = (data || []).sort(
         (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
@@ -42,22 +41,32 @@ export default function Orders() {
   }, []);
 
   // handleRetry: gọi từ nút Retry của ErrorState
-  // setState được gọi từ event handler (không phải trực tiếp trong effect) → hợp lệ
   const handleRetry = useCallback(() => {
-    setLoading(true);
-    setError(null);
     fetchOrders();
   }, [fetchOrders]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login', { state: { from: '/orders' } });
-      return;
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, navigate]);
+    let isMounted = true;
+    orderApi
+      .getMyOrders()
+      .then((data) => {
+        if (!isMounted) return;
+        const sorted = (data || []).sort(
+          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+        );
+        setOrders(sorted);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setError(err.message || 'Không thể tải danh sách đơn hàng.');
+        setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Status counts
   const statusCounts = useMemo(() => {
