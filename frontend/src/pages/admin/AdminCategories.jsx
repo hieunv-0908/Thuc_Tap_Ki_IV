@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Layers, Plus, Pencil, Trash2, X, Check } from 'lucide-react';
+import { Layers, Plus, Pencil, Trash2, Ban, X, Check } from 'lucide-react';
 import Table from '../../components/ui/Table';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import StatCard from '../../components/admin/StatCard';
@@ -23,6 +23,7 @@ export default function AdminCategories() {
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState(null);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -129,6 +130,12 @@ export default function AdminCategories() {
     }
   };
 
+  const handleDeactivateConfirm = () => {
+    if (!deactivateTarget) return;
+    setDeactivateTarget(null);
+    toast.info('Chức năng vô hiệu hóa danh mục chưa được kết nối.');
+  };
+
   const columns = [
     {
       key: 'id',
@@ -162,6 +169,15 @@ export default function AdminCategories() {
             title="Chỉnh sửa danh mục"
           >
             <Pencil className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeactivateTarget(row)}
+            className="p-1.5 rounded-lg text-ink-muted hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+            title="Vô hiệu hóa danh mục"
+            aria-label={`Vô hiệu hóa danh mục ${row.name}`}
+          >
+            <Ban className="size-4" />
           </button>
           <button
             type="button"
@@ -314,6 +330,15 @@ export default function AdminCategories() {
         cancelText="Hủy"
         variant="danger"
         loading={isDeleting}
+      />
+      <ConfirmDialog
+        isOpen={Boolean(deactivateTarget)}
+        onClose={() => setDeactivateTarget(null)}
+        onConfirm={handleDeactivateConfirm}
+        title="Vô hiệu hóa danh mục?"
+        description={`Bạn có chắc chắn muốn vô hiệu hóa danh mục "${deactivateTarget?.name}"?`}
+        confirmText="Vô hiệu hóa"
+        cancelText="Hủy"
       />
     </div>
   );
