@@ -15,6 +15,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import com.funnyshop.dto.request.OrderStatusUpdateRequest;
+import com.funnyshop.enums.OrderStatus;
 
 import java.util.List;
 
@@ -96,6 +98,30 @@ public class OrderController {
                         .code(HttpStatus.OK.value())
                         .message("Lấy chi tiết đơn hàng thành công!")
                         .data(order)
+                        .build()
+        );
+    }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<OrderResponse>> updateOrderStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody OrderStatusUpdateRequest request
+    ) {
+        OrderResponse response = orderService.updateOrderStatus(
+                id,
+                request.getStatus()
+        );
+
+        return ResponseEntity.ok(
+                ApiResponse.<OrderResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message(
+                                request.getStatus() == OrderStatus.CANCELLED
+                                        ? "Hủy đơn hàng và hoàn kho thành công!"
+                                        : "Cập nhật trạng thái đơn hàng thành công!"
+                        )
+                        .data(response)
                         .build()
         );
     }

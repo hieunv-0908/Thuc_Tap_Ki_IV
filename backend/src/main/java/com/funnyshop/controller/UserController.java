@@ -6,6 +6,7 @@ import com.funnyshop.dto.response.ApiResponse;
 import com.funnyshop.dto.response.UserResponse;
 import com.funnyshop.security.JwtTokenProvider;
 import com.funnyshop.service.UserService;
+import com.funnyshop.dto.request.UserCreateRequest;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -114,6 +115,24 @@ public class UserController {
                         .code(HttpStatus.OK.value())
                         .message("Lấy danh sách người dùng thành công!")
                         .data(users)
+                        .build()
+        );
+    }
+
+    // POST /api/v1/users
+    // ADMIN tạo tài khoản CUSTOMER
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> createUser(
+            @Valid @RequestBody UserCreateRequest request) {
+
+        UserResponse userResponse = userService.createUser(request);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                ApiResponse.<UserResponse>builder()
+                        .code(HttpStatus.CREATED.value())
+                        .message("Tạo tài khoản người dùng thành công!")
+                        .data(userResponse)
                         .build()
         );
     }

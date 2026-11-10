@@ -25,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.Comparator;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -136,27 +138,100 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.findAllOrders(pageable).map(OrderResponse::fromEntity);
     }
 
+
+
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus) {
-        Order order = orderRepository.findByIdWithDetails(orderId)
-                .orElseGet(() -> orderRepository.findById(orderId)
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "Không tìm thấy đơn hàng với ID: " + orderId
-                        ))
-                );
+
+        // Khóa đơn hàng để tránh nhiều request cùng xử lý một đơn
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn hàng với ID: " + orderId
+                ));
 
         OrderStatus currentStatus = order.getStatus();
+
+        // Kiểm tra quy tắc chuyển trạng thái
         if (!currentStatus.canTransitionTo(newStatus)) {
             throw new AppException(
-                    "Không thể chuyển trạng thái đơn hàng từ " + currentStatus + " sang " + newStatus,
+                    "Không thể chuyển trạng thái đơn hàng từ "
+                            + currentStatus + " sang " + newStatus,
                     HttpStatus.BAD_REQUEST
             );
         }
 
+        // Nếu chuyển sang CANCELLED thì tiến hành hoàn kho
+        if (newStatus == OrderStatus.CANCELLED) {
+
+            // Sắp xếp ID sản phẩm để giảm nguy cơ deadlock
+            List<OrderItem> sortedItems = order.getOrderItems()
+                    .stream()
+                    .sorted(Comparator.comparing(
+                            item -> item.getProduct().getId()
+                    ))
+                    .toList();
+
+            for (OrderItem item : sortedItems) {
+
+                Long productId = item.getProduct().getId();
+                Integer quantity = item.getQuantity();
+
+                if (quantity == null || quantity <= 0) {
+                    throw new AppException(
+                            "Số lượng sản phẩm trong đơn hàng không hợp lệ!",
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
+
+                // Khóa sản phẩm trước khi cập nhật tồn kho
+                Product product = productRepository
+                        .findByIdForUpdateIncludingDeleted(productId)
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "Không tìm thấy sản phẩm với ID: " + productId
+                        ));
+
+                int currentStock = product.getStockQuantity() != null
+                        ? product.getStockQuantity()
+                        : 0;
+
+                int restoredStock;
+
+                try {
+                    restoredStock = Math.addExact(currentStock, quantity);
+                } catch (ArithmeticException ex) {
+                    throw new AppException(
+                            "Số lượng tồn kho vượt quá giới hạn cho phép!",
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
+
+                product.setStockQuantity(restoredStock);
+                productRepository.save(product);
+            }
+        }
+
+        // Cập nhật trạng thái đơn hàng sau khi hoàn kho
         order.setStatus(newStatus);
+
         Order savedOrder = orderRepository.save(order);
+
         return OrderResponse.fromEntity(savedOrder);
+    }
+
+    @Override
+    public List<OrderResponse> getMyOrdersList(Long userId) {
+        List<Order> orders = orderRepository.findByUserId(userId);
+
+        return orders.stream()
+                .sorted(
+                        Comparator.comparing(
+                                Order::getCreatedAt,
+                                Comparator.nullsLast(Comparator.reverseOrder())
+                        )
+                )
+                .map(OrderResponse::fromEntity)
+                .toList();
     }
 
     @Override
@@ -164,20 +239,19 @@ public class OrderServiceImpl implements OrderService {
         if (page < 0) {
             throw new IllegalArgumentException("page phải >= 0");
         }
+
         if (size < 1 || size > 100) {
             throw new IllegalArgumentException("size phải nằm trong khoảng 1 đến 100");
         }
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return orderRepository.findByUserId(userId, pageable).map(OrderResponse::fromEntity);
-    }
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
 
-    @Override
-    public List<OrderResponse> getMyOrdersList(Long userId) {
-        return orderRepository.findByUserId(userId).stream()
-                .sorted(Comparator.comparing(Order::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(OrderResponse::fromEntity)
-                .toList();
+        return orderRepository.findByUserId(userId, pageable)
+                .map(OrderResponse::fromEntity);
     }
 
     @Override

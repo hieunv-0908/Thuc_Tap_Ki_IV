@@ -12,6 +12,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.funnyshop.dto.request.UserCreateRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional(readOnly = true)
@@ -47,6 +52,48 @@ public class UserServiceImpl implements UserService {
     }
 
     // ================= ADMIN =================
+
+
+    @Override
+    @Transactional
+    public UserResponse createUser(UserCreateRequest request) {
+
+        log.info("Admin creating new CUSTOMER account: {}", request.getUsername());
+
+        // Kiểm tra username đã tồn tại
+        if (userRepository.existsByUsername(request.getUsername().trim())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Username đã tồn tại!"
+            );
+        }
+
+        // Kiểm tra email đã tồn tại
+        if (userRepository.existsByEmail(request.getEmail().trim())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Email đã tồn tại!"
+            );
+        }
+
+        // Tạo tài khoản mới
+        User user = User.builder()
+                .username(request.getUsername().trim())
+                .email(request.getEmail().trim())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .fullName(request.getFullName())
+                .phone(request.getPhone())
+                .role(User.Role.CUSTOMER)
+                .status(User.Status.ACTIVE)
+                .build();
+
+        User savedUser = userRepository.save(user);
+
+        log.info("CUSTOMER account created successfully with ID: {}", savedUser.getId());
+
+        return mapToUserResponse(savedUser);
+    }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -147,4 +194,22 @@ public class UserServiceImpl implements UserService {
                 .status(user.getStatus().name())
                 .build();
     }
+
+    @Override
+    @Transactional
+    public UserResponse updateUserRole(Long id, User.Role role) {
+
+        log.info("Admin updating role for userId: {}", id);
+
+        User user = findUserById(id);
+
+        user.setRole(role);
+
+        User updatedUser = userRepository.save(user);
+
+        log.info("User role updated successfully for userId: {}", id);
+
+        return mapToUserResponse(updatedUser);
+    }
+
 }
