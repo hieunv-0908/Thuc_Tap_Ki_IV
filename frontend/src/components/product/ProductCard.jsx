@@ -162,7 +162,9 @@ export default function ProductCard({ product, onClick }) {
           {/* Price & Original Price */}
           <div className="mt-2.5 flex items-baseline gap-2 flex-wrap">
             <span className="text-lg font-bold text-primary-700">
-              {formatCurrency(product.price)}
+              {product.minPrice && product.maxPrice && product.minPrice < product.maxPrice
+                ? `Từ ${formatCurrency(product.minPrice)}`
+                : formatCurrency(product.price)}
             </span>
             {hasDiscount && (
               <span className="text-xs text-ink-subtle line-through">
