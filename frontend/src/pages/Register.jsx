@@ -149,7 +149,12 @@ export default function Register() {
       });
 
       toast.success('Đăng ký tài khoản thành công! Vui lòng đăng nhập.');
-      navigate('/login');
+      navigate('/login', {
+        state: {
+          registeredUsername: formData.username.trim(),
+          successNotice: 'Đăng ký thành công! Hãy nhập mật khẩu để đăng nhập.',
+        },
+      });
     } catch (err) {
       setServerError(err.message || 'Không thể đăng ký tài khoản. Vui lòng thử lại.');
     } finally {

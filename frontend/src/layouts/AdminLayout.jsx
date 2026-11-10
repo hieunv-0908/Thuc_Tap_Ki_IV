@@ -25,7 +25,13 @@ export default function AdminLayout() {
 
   // Not authenticated: redirect to login
   if (!isAuthenticated || !user) {
-    return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />;
+    return (
+      <Navigate
+        to={`/login?redirect=${encodeURIComponent(location.pathname)}`}
+        state={{ from: location.pathname }}
+        replace
+      />
+    );
   }
 
   // Not an Admin: show Forbidden (403)

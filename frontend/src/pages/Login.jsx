@@ -4,6 +4,7 @@ import {
   User,
   Lock,
   AlertCircle,
+  CheckCircle2,
   ClipboardList,
   MapPin,
   Bot,
@@ -29,8 +30,11 @@ export default function Login() {
     new URLSearchParams(location.search).get('redirect') ||
     '/';
 
+  const registeredUsername = location.state?.registeredUsername || '';
+  const successNotice = location.state?.successNotice || '';
+
   const [formData, setFormData] = useState({
-    username: '',
+    username: registeredUsername,
     password: '',
   });
 
@@ -203,6 +207,17 @@ export default function Login() {
             </p>
           </div>
 
+          {/* Success Notice from Registration */}
+          {successNotice && !serverError && (
+            <div
+              role="status"
+              className="mb-5 flex items-start gap-3 p-3.5 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm animate-in fade-in duration-200"
+            >
+              <CheckCircle2 className="size-5 shrink-0 mt-0.5 text-green-600" aria-hidden="true" />
+              <div className="flex-1 font-medium">{successNotice}</div>
+            </div>
+          )}
+
           {/* Server Error Alert */}
           {serverError && (
             <div
@@ -229,6 +244,7 @@ export default function Login() {
               leftIcon={User}
               required
               disabled={isSubmitting}
+              autoFocus={!registeredUsername}
             />
 
             <Input
@@ -244,6 +260,7 @@ export default function Login() {
               leftIcon={Lock}
               required
               disabled={isSubmitting}
+              autoFocus={Boolean(registeredUsername)}
             />
 
             <div className="flex items-center justify-end -mt-1">
