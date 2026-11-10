@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -63,6 +64,22 @@ public class GlobalHandleException {
                 .message("Bạn không có quyền truy cập tài nguyên này!")
                 .build();
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Object>> handleResponseStatusException(
+            ResponseStatusException ex) {
+
+        log.warn("ResponseStatusException: {}", ex.getReason());
+
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+
+        ApiResponse<Object> response = ApiResponse.builder()
+                .code(status.value())
+                .message(ex.getReason())
+                .build();
+
+        return ResponseEntity.status(status).body(response);
     }
 
     @ExceptionHandler(Exception.class)

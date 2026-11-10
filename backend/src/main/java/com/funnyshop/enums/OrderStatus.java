@@ -11,6 +11,7 @@ public enum OrderStatus {
         if (next == null) {
             return false;
         }
+
         return switch (this) {
             case PENDING -> next == PROCESSING || next == CANCELLED;
             case PROCESSING -> next == SHIPPING || next == CANCELLED;
@@ -19,4 +20,3 @@ public enum OrderStatus {
         };
     }
 }
-

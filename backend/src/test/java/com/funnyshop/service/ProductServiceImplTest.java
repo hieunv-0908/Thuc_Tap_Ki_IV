@@ -5,9 +5,13 @@ import com.funnyshop.dto.request.ProductUpdateRequest;
 import com.funnyshop.dto.response.ProductResponse;
 import com.funnyshop.entity.Category;
 import com.funnyshop.entity.Product;
+import com.funnyshop.entity.ProductImage;
+import com.funnyshop.entity.ProductVariant;
 import com.funnyshop.exception.ResourceNotFoundException;
 import com.funnyshop.repository.CategoryRepository;
+import com.funnyshop.repository.ProductImageRepository;
 import com.funnyshop.repository.ProductRepository;
+import com.funnyshop.repository.ProductVariantRepository;
 import com.funnyshop.service.impl.ProductServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,11 +42,18 @@ class ProductServiceImplTest {
     @Mock
     private CategoryRepository categoryRepository;
 
+    @Mock
+    private ProductVariantRepository productVariantRepository;
+
+    @Mock
+    private ProductImageRepository productImageRepository;
+
     @InjectMocks
     private ProductServiceImpl productService;
 
     private Product mockProduct;
     private Category mockCategory;
+    private ProductVariant mockVariant;
 
     @BeforeEach
     void setUp() {
@@ -52,15 +64,27 @@ class ProductServiceImplTest {
                 .isDeleted(false)
                 .build();
 
+        mockVariant = ProductVariant.builder()
+                .id(1001L)
+                .sku("SKU-100-M")
+                .color("White")
+                .size("M")
+                .price(new BigDecimal("150000.00"))
+                .stockQuantity(50)
+                .isDeleted(false)
+                .build();
+
         mockProduct = Product.builder()
                 .id(100L)
                 .name("Áo Thun Funny")
                 .description("Áo cotton mềm mại")
-                .price(new BigDecimal("150000.00"))
-                .stockQuantity(50)
                 .category(mockCategory)
                 .isDeleted(false)
+                .variants(new ArrayList<>(List.of(mockVariant)))
+                .images(new ArrayList<>())
                 .build();
+
+        mockVariant.setProduct(mockProduct);
     }
 
     @Test
@@ -103,6 +127,7 @@ class ProductServiceImplTest {
             p.setId(101L);
             return p;
         });
+        when(productVariantRepository.save(any(ProductVariant.class))).thenAnswer(i -> i.getArgument(0));
 
         ProductResponse response = productService.createProduct(request);
 
@@ -111,6 +136,7 @@ class ProductServiceImplTest {
         assertEquals("Sản phẩm mới", response.getName());
         assertFalse(response.getIsDeleted());
         verify(productRepository).save(any(Product.class));
+        verify(productVariantRepository).save(any(ProductVariant.class));
     }
 
     @Test
@@ -127,6 +153,7 @@ class ProductServiceImplTest {
         when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
         when(categoryRepository.findByIdAndIsDeletedFalse(1L)).thenReturn(Optional.of(mockCategory));
         when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
+        when(productVariantRepository.save(any(ProductVariant.class))).thenAnswer(i -> i.getArgument(0));
 
         ProductResponse response = productService.updateProduct(100L, request);
 
@@ -149,6 +176,7 @@ class ProductServiceImplTest {
         when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
         when(categoryRepository.findByIdAndIsDeletedFalse(1L)).thenReturn(Optional.of(mockCategory));
         when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
+        when(productVariantRepository.save(any(ProductVariant.class))).thenAnswer(i -> i.getArgument(0));
 
         ProductResponse response = productService.updateProduct(100L, request);
 
@@ -185,12 +213,12 @@ class ProductServiceImplTest {
     }
 
     @Test
-    @DisplayName("getProducts - Sắp xếp theo giá giảm dần và lọc bỏ bản ghi đã xóa")
-    void getProducts_SortByPriceDesc() {
+    @DisplayName("getProducts - Sắp xếp theo tên và lọc bỏ bản ghi đã xóa")
+    void getProducts_SortByName() {
         Page<Product> page = new PageImpl<>(List.of(mockProduct));
         when(productRepository.searchProducts(any(), any(), any(Pageable.class))).thenReturn(page);
 
-        Page<ProductResponse> result = productService.getProducts("áo", 1L, "price", "desc", 0, 10);
+        Page<ProductResponse> result = productService.getProducts("áo", 1L, "name", "desc", 0, 10);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
@@ -199,7 +227,7 @@ class ProductServiceImplTest {
         verify(productRepository).searchProducts(eq("áo"), eq(1L), pageableCaptor.capture());
 
         Pageable captured = pageableCaptor.getValue();
-        Sort.Order order = captured.getSort().getOrderFor("price");
+        Sort.Order order = captured.getSort().getOrderFor("name");
         assertNotNull(order);
         assertTrue(order.isDescending());
     }

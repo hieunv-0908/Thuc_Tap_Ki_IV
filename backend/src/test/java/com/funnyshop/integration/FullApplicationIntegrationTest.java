@@ -3,11 +3,13 @@ package com.funnyshop.integration;
 import com.funnyshop.entity.Category;
 import com.funnyshop.entity.Order;
 import com.funnyshop.entity.Product;
+import com.funnyshop.entity.ProductVariant;
 import com.funnyshop.entity.User;
 import com.funnyshop.enums.OrderStatus;
 import com.funnyshop.repository.CategoryRepository;
 import com.funnyshop.repository.OrderRepository;
 import com.funnyshop.repository.ProductRepository;
+import com.funnyshop.repository.ProductVariantRepository;
 import com.funnyshop.repository.UserRepository;
 import com.funnyshop.security.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +48,9 @@ class FullApplicationIntegrationTest {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private ProductVariantRepository productVariantRepository;
 
     @Autowired
     private OrderRepository orderRepository;
@@ -100,9 +105,17 @@ class FullApplicationIntegrationTest {
         activeProduct = productRepository.save(Product.builder()
                 .name("Áo Sơ Mi Nam Test")
                 .description("Mô tả sản phẩm test")
+                .category(activeCategory)
+                .isDeleted(false)
+                .build());
+
+        productVariantRepository.save(ProductVariant.builder()
+                .product(activeProduct)
+                .sku("TEST-SOMI-1")
+                .color("White")
+                .size("L")
                 .price(new BigDecimal("299000.00"))
                 .stockQuantity(50)
-                .category(activeCategory)
                 .isDeleted(false)
                 .build());
 
@@ -125,11 +138,19 @@ class FullApplicationIntegrationTest {
     @DisplayName("Public - GET /api/v1/products trả 200 OK và chỉ trả sản phẩm chưa xóa mềm")
     void testPublicGetProducts() throws Exception {
         // Tạo thêm 1 sản phẩm đã xóa mềm
-        productRepository.save(Product.builder()
+        Product deletedProduct = productRepository.save(Product.builder()
                 .name("Sản phẩm đã xóa mềm")
+                .category(activeCategory)
+                .isDeleted(true)
+                .build());
+
+        productVariantRepository.save(ProductVariant.builder()
+                .product(deletedProduct)
+                .sku("TEST-SOMI-DEL")
+                .color("Black")
+                .size("M")
                 .price(new BigDecimal("100000.00"))
                 .stockQuantity(10)
-                .category(activeCategory)
                 .isDeleted(true)
                 .build());
 

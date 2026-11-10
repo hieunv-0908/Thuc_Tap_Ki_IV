@@ -5,16 +5,19 @@ import com.funnyshop.dto.request.OrderCheckoutRequest;
 import com.funnyshop.dto.response.OrderResponse;
 import com.funnyshop.entity.Order;
 import com.funnyshop.entity.OrderItem;
-import com.funnyshop.entity.Product;
+import com.funnyshop.entity.ProductVariant;
 import com.funnyshop.entity.User;
 import com.funnyshop.enums.OrderStatus;
 import com.funnyshop.exception.AppException;
+import com.funnyshop.exception.InsufficientStockException;
 import com.funnyshop.exception.ResourceNotFoundException;
 import com.funnyshop.repository.OrderRepository;
 import com.funnyshop.repository.ProductRepository;
+import com.funnyshop.repository.ProductVariantRepository;
 import com.funnyshop.repository.UserRepository;
 import com.funnyshop.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -33,6 +37,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
 
     @Override
@@ -49,14 +54,34 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException("Danh sách sản phẩm đặt hàng không được để trống!", HttpStatus.BAD_REQUEST);
         }
 
-        // Gộp số lượng nếu request có nhiều item cùng productId
-        Map<Long, Integer> productQuantities = new LinkedHashMap<>();
+        // Gộp số lượng theo variantId
+        Map<Long, Integer> variantQuantities = new HashMap<>();
         for (OrderCheckoutItemRequest itemReq : request.getItems()) {
-            if (itemReq.getProductId() == null || itemReq.getQuantity() == null || itemReq.getQuantity() <= 0) {
-                throw new AppException("Thông tin sản phẩm hoặc số lượng đặt mua không hợp lệ!", HttpStatus.BAD_REQUEST);
+            if (itemReq.getQuantity() == null || itemReq.getQuantity() <= 0) {
+                throw new AppException("Số lượng đặt mua không hợp lệ!", HttpStatus.BAD_REQUEST);
             }
-            productQuantities.merge(itemReq.getProductId(), itemReq.getQuantity(), Integer::sum);
+
+            Long targetVariantId = itemReq.getVariantId();
+            if (targetVariantId == null && itemReq.getProductId() != null) {
+                // Tương thích ngược: Lấy biến thể đầu tiên của sản phẩm nếu client cũ chỉ truyền productId
+                List<ProductVariant> variants = productVariantRepository.findByProductIdAndIsDeletedFalse(itemReq.getProductId());
+                if (variants.isEmpty()) {
+                    throw new ResourceNotFoundException("Không tìm thấy biến thể khả dụng cho sản phẩm ID: " + itemReq.getProductId());
+                }
+                targetVariantId = variants.get(0).getId();
+            }
+
+            if (targetVariantId == null) {
+                throw new AppException("Thông tin sản phẩm hoặc biến thể không được để trống!", HttpStatus.BAD_REQUEST);
+            }
+
+            variantQuantities.merge(targetVariantId, itemReq.getQuantity(), Integer::sum);
         }
+
+        // Sắp xếp variantId tăng dần (ASC) để triệt tiêu nguy cơ Deadlock giữa các transaction đồng thời
+        List<Map.Entry<Long, Integer>> sortedEntries = variantQuantities.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .toList();
 
         Order order = Order.builder()
                 .user(user)
@@ -72,44 +97,34 @@ public class OrderServiceImpl implements OrderService {
 
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        for (Map.Entry<Long, Integer> entry : productQuantities.entrySet()) {
-            Long productId = entry.getKey();
+        for (Map.Entry<Long, Integer> entry : sortedEntries) {
+            Long variantId = entry.getKey();
             Integer quantity = entry.getValue();
 
-            // Khóa bi quan bản ghi sản phẩm để chống race condition / overselling
-            Product product = productRepository.findByIdForUpdate(productId)
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Không tìm thấy sản phẩm với ID: " + productId + " hoặc sản phẩm đã ngừng kinh doanh!"
-                    ));
+            ProductVariant variant = productVariantRepository.findById(variantId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể sản phẩm với ID: " + variantId));
 
-            if (Boolean.TRUE.equals(product.getIsDeleted())) {
-                throw new AppException(
-                        "Sản phẩm '" + product.getName() + "' đã ngừng kinh doanh!",
-                        HttpStatus.BAD_REQUEST
-                );
+            if (Boolean.TRUE.equals(variant.getIsDeleted()) ||
+                    (variant.getProduct() != null && Boolean.TRUE.equals(variant.getProduct().getIsDeleted()))) {
+                String name = variant.getProduct() != null ? variant.getProduct().getName() : "Sản phẩm";
+                throw new AppException("Sản phẩm '" + name + "' đã ngừng kinh doanh!", HttpStatus.BAD_REQUEST);
             }
 
-            int availableStock = product.getStockQuantity() != null ? product.getStockQuantity() : 0;
-            if (availableStock < quantity) {
-                throw new AppException(
-                        "Sản phẩm '" + product.getName() + "' không đủ số lượng tồn kho (hiện còn: "
-                                + availableStock + ", yêu cầu: " + quantity + ")!",
-                        HttpStatus.BAD_REQUEST
-                );
+            // Trừ tồn kho nguyên tử trực tiếp ở tầng CSDL
+            int updatedRows = productVariantRepository.decrementStockAtomic(variantId, quantity);
+            if (updatedRows == 0) {
+                String productName = variant.getProduct() != null ? variant.getProduct().getName() : "Sản phẩm";
+                String displayName = productName + " (" + variant.getColor() + " - " + variant.getSize() + ")";
+                throw new InsufficientStockException(displayName, quantity, variant.getStockQuantity());
             }
 
-            // Trừ tồn kho tự động
-            product.setStockQuantity(availableStock - quantity);
-            productRepository.save(product);
-
-            // Chốt giá mua bất biến tại thời điểm đặt hàng
-            BigDecimal priceAtOrder = product.getPrice();
+            BigDecimal priceAtOrder = variant.getPrice();
             BigDecimal itemTotal = priceAtOrder.multiply(BigDecimal.valueOf(quantity));
             totalAmount = totalAmount.add(itemTotal);
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
-                    .product(product)
+                    .productVariant(variant)
                     .quantity(quantity)
                     .priceAtOrder(priceAtOrder)
                     .build();
@@ -137,26 +152,65 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus) {
-        Order order = orderRepository.findByIdWithDetails(orderId)
-                .orElseGet(() -> orderRepository.findById(orderId)
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "Không tìm thấy đơn hàng với ID: " + orderId
-                        ))
-                );
+
+        // Khóa đơn hàng để tránh nhiều request cùng xử lý một đơn
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn hàng với ID: " + orderId
+                ));
 
         OrderStatus currentStatus = order.getStatus();
+
+        // Kiểm tra quy tắc chuyển trạng thái
         if (!currentStatus.canTransitionTo(newStatus)) {
             throw new AppException(
-                    "Không thể chuyển trạng thái đơn hàng từ " + currentStatus + " sang " + newStatus,
+                    "Không thể chuyển trạng thái đơn hàng từ "
+                            + currentStatus + " sang " + newStatus,
                     HttpStatus.BAD_REQUEST
             );
         }
 
+        // Nếu chuyển sang CANCELLED thì tiến hành hoàn kho nguyên tử
+        if (newStatus == OrderStatus.CANCELLED) {
+            // Sắp xếp variantId tăng dần để triệt tiêu deadlock
+            List<OrderItem> sortedItems = order.getOrderItems()
+                    .stream()
+                    .filter(item -> item.getProductVariant() != null)
+                    .sorted(Comparator.comparing(item -> item.getProductVariant().getId()))
+                    .toList();
+
+            for (OrderItem item : sortedItems) {
+                Long variantId = item.getProductVariant().getId();
+                Integer quantity = item.getQuantity();
+
+                if (quantity != null && quantity > 0) {
+                    productVariantRepository.incrementStockAtomic(variantId, quantity);
+                }
+            }
+        }
+
+        // Cập nhật trạng thái đơn hàng sau khi hoàn kho
         order.setStatus(newStatus);
         Order savedOrder = orderRepository.save(order);
+
         return OrderResponse.fromEntity(savedOrder);
+    }
+
+    @Override
+    public List<OrderResponse> getMyOrdersList(Long userId) {
+        List<Order> orders = orderRepository.findByUserId(userId);
+
+        return orders.stream()
+                .sorted(
+                        Comparator.comparing(
+                                Order::getCreatedAt,
+                                Comparator.nullsLast(Comparator.reverseOrder())
+                        )
+                )
+                .map(OrderResponse::fromEntity)
+                .toList();
     }
 
     @Override
@@ -164,39 +218,28 @@ public class OrderServiceImpl implements OrderService {
         if (page < 0) {
             throw new IllegalArgumentException("page phải >= 0");
         }
+
         if (size < 1 || size > 100) {
             throw new IllegalArgumentException("size phải nằm trong khoảng 1 đến 100");
         }
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return orderRepository.findByUserId(userId, pageable).map(OrderResponse::fromEntity);
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return orderRepository.findByUserId(userId, pageable)
+                .map(OrderResponse::fromEntity);
     }
 
     @Override
-    public List<OrderResponse> getMyOrdersList(Long userId) {
-        return orderRepository.findByUserId(userId).stream()
-                .sorted(Comparator.comparing(Order::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(OrderResponse::fromEntity)
-                .toList();
-    }
-
-    @Override
-    public OrderResponse getOrderById(Long orderId, Long currentUserId, boolean isAdmin) {
+    public OrderResponse getOrderById(Long orderId, Long userId, boolean isAdmin) {
         Order order = orderRepository.findByIdWithDetails(orderId)
-                .orElseGet(() -> orderRepository.findById(orderId)
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "Không tìm thấy đơn hàng với ID: " + orderId
-                        ))
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với ID: " + orderId));
 
-        if (!isAdmin) {
-            if (order.getUser() == null || !order.getUser().getId().equals(currentUserId)) {
-                throw new AppException(
-                        "Bạn không có quyền truy cập đơn hàng này!",
-                        HttpStatus.FORBIDDEN,
-                        HttpStatus.FORBIDDEN.value()
-                );
-            }
+        if (!isAdmin && !order.getUser().getId().equals(userId)) {
+            throw new AppException("Bạn không có quyền xem thông tin đơn hàng này!", HttpStatus.FORBIDDEN);
         }
 
         return OrderResponse.fromEntity(order);

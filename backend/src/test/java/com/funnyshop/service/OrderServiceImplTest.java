@@ -6,12 +6,15 @@ import com.funnyshop.dto.response.OrderResponse;
 import com.funnyshop.entity.Order;
 import com.funnyshop.entity.OrderItem;
 import com.funnyshop.entity.Product;
+import com.funnyshop.entity.ProductVariant;
 import com.funnyshop.entity.User;
 import com.funnyshop.enums.OrderStatus;
 import com.funnyshop.exception.AppException;
+import com.funnyshop.exception.InsufficientStockException;
 import com.funnyshop.exception.ResourceNotFoundException;
 import com.funnyshop.repository.OrderRepository;
 import com.funnyshop.repository.ProductRepository;
+import com.funnyshop.repository.ProductVariantRepository;
 import com.funnyshop.repository.UserRepository;
 import com.funnyshop.service.impl.OrderServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +37,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +50,9 @@ class OrderServiceImplTest {
     private ProductRepository productRepository;
 
     @Mock
+    private ProductVariantRepository productVariantRepository;
+
+    @Mock
     private UserRepository userRepository;
 
     @InjectMocks
@@ -53,8 +60,9 @@ class OrderServiceImplTest {
 
     private User sampleUser;
     private Order sampleOrder;
-    private Product sampleProduct1;
-    private Product sampleProduct2;
+    private Product sampleProduct;
+    private ProductVariant sampleVariant1;
+    private ProductVariant sampleVariant2;
 
     @BeforeEach
     void setUp() {
@@ -64,25 +72,37 @@ class OrderServiceImplTest {
                 .fullName("Nguyen Van A")
                 .build();
 
-        sampleProduct1 = Product.builder()
+        sampleProduct = Product.builder()
+                .id(1L)
+                .name("Áo Polo Nam Classic")
+                .isDeleted(false)
+                .build();
+
+        sampleVariant1 = ProductVariant.builder()
                 .id(10L)
-                .name("Tai nghe Bluetooth")
+                .product(sampleProduct)
+                .sku("POLO-BLK-M")
+                .color("Black")
+                .size("M")
                 .price(new BigDecimal("300000.00"))
                 .stockQuantity(10)
                 .isDeleted(false)
                 .build();
 
-        sampleProduct2 = Product.builder()
+        sampleVariant2 = ProductVariant.builder()
                 .id(20L)
-                .name("Chuot khong day")
-                .price(new BigDecimal("150000.00"))
+                .product(sampleProduct)
+                .sku("POLO-NVY-L")
+                .color("Navy")
+                .size("L")
+                .price(new BigDecimal("320000.00"))
                 .stockQuantity(5)
                 .isDeleted(false)
                 .build();
 
         OrderItem item = OrderItem.builder()
                 .id(101L)
-                .product(sampleProduct1)
+                .productVariant(sampleVariant1)
                 .quantity(2)
                 .priceAtOrder(new BigDecimal("300000.00"))
                 .build();
@@ -100,11 +120,11 @@ class OrderServiceImplTest {
     }
 
     // ==========================================
-    // TESTS FOR CHECKOUT & INVENTORY
+    // TESTS FOR CHECKOUT & ATOMIC INVENTORY
     // ==========================================
 
     @Test
-    @DisplayName("checkout - Thành công, trừ tồn kho tự động, chốt priceAtOrder, COD và PENDING")
+    @DisplayName("checkout - Thành công, trừ tồn kho nguyên tử, chốt priceAtOrder, COD và PENDING")
     void checkout_Success() {
         OrderCheckoutRequest request = OrderCheckoutRequest.builder()
                 .fullName("Nguyen Van A")
@@ -112,18 +132,22 @@ class OrderServiceImplTest {
                 .address("123 Đường Cầu Giấy, Hà Nội")
                 .paymentMethod("COD")
                 .items(List.of(
-                        new OrderCheckoutItemRequest(10L, 2),
-                        new OrderCheckoutItemRequest(20L, 1)
+                        OrderCheckoutItemRequest.builder().variantId(10L).quantity(2).build(),
+                        OrderCheckoutItemRequest.builder().variantId(20L).quantity(1).build()
                 ))
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(sampleProduct1));
-        when(productRepository.findByIdForUpdate(20L)).thenReturn(Optional.of(sampleProduct2));
+        when(productVariantRepository.findById(10L)).thenReturn(Optional.of(sampleVariant1));
+        when(productVariantRepository.findById(20L)).thenReturn(Optional.of(sampleVariant2));
+
+        when(productVariantRepository.decrementStockAtomic(10L, 2)).thenReturn(1);
+        when(productVariantRepository.decrementStockAtomic(20L, 1)).thenReturn(1);
+
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
-            Order o = invocation.getArgument(0);
-            o.setId(100L);
-            return o;
+            Order order = invocation.getArgument(0);
+            order.setId(100L);
+            return order;
         });
 
         OrderResponse response = orderService.checkout(1L, request);
@@ -134,44 +158,36 @@ class OrderServiceImplTest {
         assertEquals("COD", response.getPaymentMethod());
         assertEquals(OrderStatus.PENDING, response.getStatus());
 
-        // Kiểm tra tồn kho sau khi trừ:
-        // Product 1 ban đầu 10, mua 2 -> còn 8
-        assertEquals(8, sampleProduct1.getStockQuantity());
-        // Product 2 ban đầu 5, mua 1 -> còn 4
-        assertEquals(4, sampleProduct2.getStockQuantity());
-
-        // Kiểm tra tổng tiền: 300.000 * 2 + 150.000 * 1 = 750.000
-        BigDecimal expectedTotal = new BigDecimal("750000.00");
+        BigDecimal expectedTotal = new BigDecimal("920000.00"); // 300k*2 + 320k*1
         assertEquals(expectedTotal, response.getTotalAmount());
 
-        // Verify product save
-        verify(productRepository, times(1)).save(sampleProduct1);
-        verify(productRepository, times(1)).save(sampleProduct2);
+        verify(productVariantRepository, times(1)).decrementStockAtomic(10L, 2);
+        verify(productVariantRepository, times(1)).decrementStockAtomic(20L, 1);
 
-        // Verify Order items có priceAtOrder chính xác
         ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
         verify(orderRepository).save(orderCaptor.capture());
+
         Order saved = orderCaptor.getValue();
         assertEquals(2, saved.getOrderItems().size());
         assertEquals(new BigDecimal("300000.00"), saved.getOrderItems().get(0).getPriceAtOrder());
-        assertEquals(new BigDecimal("150000.00"), saved.getOrderItems().get(1).getPriceAtOrder());
+        assertEquals(new BigDecimal("320000.00"), saved.getOrderItems().get(1).getPriceAtOrder());
     }
 
     @Test
-    @DisplayName("checkout - Ném AppException BadRequest khi số lượng đặt vượt quá tồn kho (Out of stock)")
-    void checkout_OutOfStock_ThrowsAppException() {
-        // Tồn kho sampleProduct2 là 5, khách yêu cầu 6
+    @DisplayName("checkout - Ném InsufficientStockException khi decrementStockAtomic trả về 0")
+    void checkout_OutOfStock_ThrowsInsufficientStockException() {
         OrderCheckoutRequest request = OrderCheckoutRequest.builder()
                 .fullName("Nguyen Van A")
                 .phone("0912345678")
                 .address("123 Đường Cầu Giấy, Hà Nội")
                 .items(List.of(
-                        new OrderCheckoutItemRequest(20L, 6)
+                        OrderCheckoutItemRequest.builder().variantId(20L).quantity(6).build()
                 ))
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productRepository.findByIdForUpdate(20L)).thenReturn(Optional.of(sampleProduct2));
+        when(productVariantRepository.findById(20L)).thenReturn(Optional.of(sampleVariant2));
+        when(productVariantRepository.decrementStockAtomic(20L, 6)).thenReturn(0);
 
         AppException ex = assertThrows(
                 AppException.class,
@@ -180,23 +196,24 @@ class OrderServiceImplTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         assertTrue(ex.getMessage().contains("không đủ số lượng tồn kho"));
+
         verify(orderRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("checkout - Ném ResourceNotFoundException khi sản phẩm không tồn tại")
-    void checkout_ProductNotFound_ThrowsException() {
+    @DisplayName("checkout - Ném ResourceNotFoundException khi biến thể không tồn tại")
+    void checkout_VariantNotFound_ThrowsException() {
         OrderCheckoutRequest request = OrderCheckoutRequest.builder()
                 .fullName("Nguyen Van A")
                 .phone("0912345678")
                 .address("123 Đường Cầu Giấy, Hà Nội")
                 .items(List.of(
-                        new OrderCheckoutItemRequest(999L, 1)
+                        OrderCheckoutItemRequest.builder().variantId(999L).quantity(1).build()
                 ))
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productRepository.findByIdForUpdate(999L)).thenReturn(Optional.empty());
+        when(productVariantRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(
                 ResourceNotFoundException.class,
@@ -207,21 +224,21 @@ class OrderServiceImplTest {
     }
 
     @Test
-    @DisplayName("checkout - Ném AppException khi sản phẩm đã bị xóa mềm (isDeleted = true)")
-    void checkout_SoftDeletedProduct_ThrowsException() {
-        sampleProduct1.setIsDeleted(true);
+    @DisplayName("checkout - Ném AppException khi biến thể đã bị xóa mềm")
+    void checkout_SoftDeletedVariant_ThrowsException() {
+        sampleVariant1.setIsDeleted(true);
 
         OrderCheckoutRequest request = OrderCheckoutRequest.builder()
                 .fullName("Nguyen Van A")
                 .phone("0912345678")
                 .address("123 Đường Cầu Giấy, Hà Nội")
                 .items(List.of(
-                        new OrderCheckoutItemRequest(10L, 1)
+                        OrderCheckoutItemRequest.builder().variantId(10L).quantity(1).build()
                 ))
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(sampleProduct1));
+        when(productVariantRepository.findById(10L)).thenReturn(Optional.of(sampleVariant1));
 
         AppException ex = assertThrows(
                 AppException.class,
@@ -230,32 +247,33 @@ class OrderServiceImplTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         assertTrue(ex.getMessage().contains("ngừng kinh doanh"));
+
         verify(orderRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("checkout - Tự động gộp số lượng khi request chứa nhiều item trùng productId")
-    void checkout_DuplicateProductId_AggregatesQuantity() {
-        // Request gửi 2 dòng cùng productId = 10L, qty = 2 và qty = 3 => tổng = 5
+    @DisplayName("checkout - Tự động gộp số lượng khi request chứa nhiều item trùng variantId")
+    void checkout_DuplicateVariantId_AggregatesQuantity() {
         OrderCheckoutRequest request = OrderCheckoutRequest.builder()
                 .fullName("Nguyen Van A")
                 .phone("0912345678")
                 .address("123 Đường Cầu Giấy, Hà Nội")
                 .items(List.of(
-                        new OrderCheckoutItemRequest(10L, 2),
-                        new OrderCheckoutItemRequest(10L, 3)
+                        OrderCheckoutItemRequest.builder().variantId(10L).quantity(2).build(),
+                        OrderCheckoutItemRequest.builder().variantId(10L).quantity(3).build()
                 ))
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(sampleProduct1));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(productVariantRepository.findById(10L)).thenReturn(Optional.of(sampleVariant1));
+        when(productVariantRepository.decrementStockAtomic(10L, 5)).thenReturn(1);
+
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         orderService.checkout(1L, request);
 
-        // Product1 ban đầu tồn 10, mua tổng cộng 5 -> còn 5
-        assertEquals(5, sampleProduct1.getStockQuantity());
-        verify(productRepository, times(1)).save(sampleProduct1);
+        verify(productVariantRepository, times(1)).decrementStockAtomic(10L, 5);
     }
 
     // ==========================================
@@ -265,20 +283,28 @@ class OrderServiceImplTest {
     @Test
     @DisplayName("updateOrderStatus - Chuyển trạng thái hợp lệ từ PENDING -> PROCESSING thành công")
     void updateOrderStatus_ValidTransition() {
-        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleOrder));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
 
-        OrderResponse response = orderService.updateOrderStatus(1L, OrderStatus.PROCESSING);
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderResponse response = orderService.updateOrderStatus(
+                1L, OrderStatus.PROCESSING
+        );
 
         assertNotNull(response);
         assertEquals(OrderStatus.PROCESSING, response.getStatus());
+
+        verify(orderRepository).findByIdForUpdate(1L);
         verify(orderRepository).save(sampleOrder);
     }
 
     @Test
     @DisplayName("updateOrderStatus - Ném lỗi BadRequest khi chuyển trạng thái sai quy tắc PENDING -> COMPLETED")
     void updateOrderStatus_InvalidTransition_ThrowsAppException() {
-        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleOrder));
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
 
         AppException ex = assertThrows(
                 AppException.class,
@@ -287,14 +313,17 @@ class OrderServiceImplTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         assertTrue(ex.getMessage().contains("Không thể chuyển trạng thái"));
-        verify(orderRepository, never()).save(any());
+
+        verify(orderRepository, never()).save(any(Order.class));
     }
 
     @Test
     @DisplayName("updateOrderStatus - Ném lỗi BadRequest khi cố chuyển trạng thái từ đơn đã CANCELLED")
     void updateOrderStatus_CancelledTerminalState_ThrowsAppException() {
         sampleOrder.setStatus(OrderStatus.CANCELLED);
-        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleOrder));
+
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
 
         AppException ex = assertThrows(
                 AppException.class,
@@ -303,25 +332,60 @@ class OrderServiceImplTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         assertTrue(ex.getMessage().contains("CANCELLED"));
-        verify(orderRepository, never()).save(any());
+
+        verify(orderRepository, never()).save(any(Order.class));
     }
 
     @Test
     @DisplayName("updateOrderStatus - Ném NotFoundException khi order không tồn tại")
     void updateOrderStatus_NotFound() {
-        when(orderRepository.findByIdWithDetails(999L)).thenReturn(Optional.empty());
-        when(orderRepository.findById(999L)).thenReturn(Optional.empty());
+        when(orderRepository.findByIdForUpdate(999L))
+                .thenReturn(Optional.empty());
 
         assertThrows(
                 ResourceNotFoundException.class,
                 () -> orderService.updateOrderStatus(999L, OrderStatus.PROCESSING)
         );
+
+        verify(orderRepository).findByIdForUpdate(999L);
+        verify(orderRepository, never()).save(any(Order.class));
     }
+
+    // ==========================================
+    // TESTS FOR STOCK ROLLBACK
+    // ==========================================
+
+    @Test
+    @DisplayName("updateOrderStatus - Hủy đơn hàng thành công và gọi incrementStockAtomic hoàn lại tồn kho")
+    void updateOrderStatus_CancelOrder_CallsIncrementStockAtomic() {
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
+
+        when(productVariantRepository.incrementStockAtomic(10L, 2)).thenReturn(1);
+
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderResponse response = orderService.updateOrderStatus(
+                1L, OrderStatus.CANCELLED
+        );
+
+        assertNotNull(response);
+        assertEquals(OrderStatus.CANCELLED, response.getStatus());
+
+        verify(productVariantRepository, times(1)).incrementStockAtomic(10L, 2);
+        verify(orderRepository).save(sampleOrder);
+    }
+
+    // ==========================================
+    // TESTS FOR GET ORDER
+    // ==========================================
 
     @Test
     @DisplayName("getOrderById - Customer xem đơn của chính mình thành công")
     void getOrderById_OwnOrder_Success() {
-        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleOrder));
+        when(orderRepository.findByIdWithDetails(1L))
+                .thenReturn(Optional.of(sampleOrder));
 
         OrderResponse response = orderService.getOrderById(1L, 1L, false);
 
@@ -332,7 +396,8 @@ class OrderServiceImplTest {
     @Test
     @DisplayName("getOrderById - Customer bị chặn 403 Forbidden khi xem đơn của người khác")
     void getOrderById_OtherUserOrder_ThrowsForbidden() {
-        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleOrder));
+        when(orderRepository.findByIdWithDetails(1L))
+                .thenReturn(Optional.of(sampleOrder));
 
         AppException ex = assertThrows(
                 AppException.class,
@@ -346,13 +411,18 @@ class OrderServiceImplTest {
     @Test
     @DisplayName("getOrderById - Admin có quyền xem bất kỳ đơn hàng nào của hệ thống")
     void getOrderById_Admin_CanViewAny() {
-        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleOrder));
+        when(orderRepository.findByIdWithDetails(1L))
+                .thenReturn(Optional.of(sampleOrder));
 
         OrderResponse response = orderService.getOrderById(1L, 999L, true);
 
         assertNotNull(response);
         assertEquals(1L, response.getId());
     }
+
+    // ==========================================
+    // TESTS FOR GET ALL ORDERS
+    // ==========================================
 
     @Test
     @DisplayName("getAllOrders - Admin lấy danh sách đơn hàng thành công")

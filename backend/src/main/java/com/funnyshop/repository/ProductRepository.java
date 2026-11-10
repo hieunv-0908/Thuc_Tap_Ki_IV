@@ -49,4 +49,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Product p WHERE p.id = :id AND p.isDeleted = false")
     Optional<Product> findByIdForUpdate(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Product p WHERE p.id = :id")
+    Optional<Product> findByIdForUpdateIncludingDeleted(@Param("id") Long id);
+
 }
