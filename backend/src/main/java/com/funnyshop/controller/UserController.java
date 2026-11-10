@@ -1,7 +1,6 @@
 package com.funnyshop.controller;
 
 import com.funnyshop.dto.request.UserUpdateRequest;
-import com.funnyshop.dto.request.UserStatusUpdateRequest;
 import com.funnyshop.dto.response.ApiResponse;
 import com.funnyshop.dto.response.UserResponse;
 import com.funnyshop.security.JwtTokenProvider;
@@ -13,16 +12,9 @@ import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
-import org.springframework.data.domain.Sort;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
 import org.springframework.security.access.prepost.PreAuthorize;
-
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -45,7 +37,7 @@ public class UserController {
     }
 
     // ==========================================
-    // 1. HỒ SƠ CÁ NHÂN
+    // HỒ SƠ CÁ NHÂN
     // ==========================================
 
     // GET /api/v1/users/me
