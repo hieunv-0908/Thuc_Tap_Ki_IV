@@ -62,40 +62,40 @@ Mục tiêu là ghi nhận những gì người dùng thực sự nhìn thấy v
 
 ## 4. Hồ sơ và trải nghiệm người dùng
 
-| ID | Thao tác trực tiếp trên giao diện | Kết quả mong đợi | Actual Result | Trạng thái | Evidence / Bug |
-|---|---|---|---|---|---|
-| USER-01 | Đăng nhập CUSTOMER, mở Hồ sơ cá nhân. | Hiển thị đúng thông tin của tài khoản hiện tại; không hiển thị thông tin người dùng khác. |  | CHƯA CHẠY |  |
-| USER-02 | Sửa họ tên, số điện thoại hoặc địa chỉ bằng giá trị hợp lệ; lưu rồi tải lại trang/mở lại hồ sơ. | Báo lưu thành công và giá trị mới vẫn được hiển thị sau khi tải lại. |  | CHƯA CHẠY |  |
-| USER-03 | Thử lưu hồ sơ với trường bắt buộc trống hoặc số điện thoại sai định dạng. | Có hướng dẫn sửa lỗi; không báo lưu thành công với dữ liệu sai. |  | CHƯA CHẠY |  |
-| USER-04 | Mở các trang chính bằng CUSTOMER rồi đăng xuất; thử truy cập lại trang riêng tư. | Điều hướng nhất quán; không hiển thị hồ sơ/đơn hàng riêng tư khi chưa đăng nhập. |  | CHƯA CHẠY |  |
+| ID | Thao tác trực tiếp trên giao diện | Kết quả mong đợi | Actual Result                                                                        | Trạng thái | Evidence / Bug      |
+|---|---|---|--------------------------------------------------------------------------------------|------------|---------------------|
+| USER-01 | Đăng nhập CUSTOMER, mở Hồ sơ cá nhân. | Hiển thị đúng thông tin của tài khoản hiện tại; không hiển thị thông tin người dùng khác. | Khi vào hồ sơ cá nhân của tk thì hiển thị đúng thông tin cá nhân của tài khoản       | Pass       | User-01_Profile.png |
+| USER-02 | Sửa họ tên, số điện thoại hoặc địa chỉ bằng giá trị hợp lệ; lưu rồi tải lại trang/mở lại hồ sơ. | Báo lưu thành công và giá trị mới vẫn được hiển thị sau khi tải lại. | Hiển thị chính thông tin đã chỉnh sửa sau khi tải lại trang                          | Pass       | User-02.png         |
+| USER-03 | Thử lưu hồ sơ với trường bắt buộc trống hoặc số điện thoại sai định dạng. | Có hướng dẫn sửa lỗi; không báo lưu thành công với dữ liệu sai. | Thông báo khi nhập dữ liệu sai hoặc để trống và không cho phép lưu khi sai định dạng | Pass       | User-03.png         |
+| USER-04 | Mở các trang chính bằng CUSTOMER rồi đăng xuất; thử truy cập lại trang riêng tư. | Điều hướng nhất quán; không hiển thị hồ sơ/đơn hàng riêng tư khi chưa đăng nhập. | Vẫn hiển thị lại dữ liệu giỏ hàng sau khi đăng xuất                                  | Fail       | User-04.png         |
 
 ## 5. Catalog và thao tác mua sắm
 
-| ID | Thao tác trực tiếp trên giao diện | Kết quả mong đợi | Actual Result | Trạng thái | Evidence / Bug |
-|---|---|---|---|---|---|
-| CAT-01 | Mở trang chủ/catalog khi chưa đăng nhập; xem danh sách, ảnh, tên, giá và danh mục. | Catalog xem được; thông tin sản phẩm hiển thị đầy đủ, không có lỗi/trang trắng. |  | CHƯA CHẠY |  |
-| CAT-02 | Tìm sản phẩm bằng từ khóa có kết quả, từ khóa không có kết quả và xóa từ khóa. | Danh sách cập nhật đúng; trường hợp không có kết quả có thông báo/trạng thái rỗng dễ hiểu. |  | CHƯA CHẠY |  |
-| CAT-03 | Chọn một danh mục, đổi cách sắp xếp và chuyển trang nếu có. | Kết quả tương ứng với lựa chọn; không lặp/mất dữ liệu bất thường; có thể quay về lựa chọn mặc định. |  | CHƯA CHẠY |  |
-| CAT-04 | Mở chi tiết một sản phẩm từ card sản phẩm; quay lại catalog. | Chi tiết đúng sản phẩm đã chọn; thông tin dễ đọc; quay lại không gây lỗi. |  | CHƯA CHẠY |  |
-| CAT-05 | Thử tìm bộ lọc khoảng giá trên giao diện. | Chỉ kiểm thử nếu giao diện hiện có chức năng này. Nếu không có, ghi `N/A` — UI hiện chưa hỗ trợ lọc khoảng giá; không xem là lỗi API. |  | CHƯA CHẠY |  |
-| CAT-06 | Thử mở trang quản lý sản phẩm bằng CUSTOMER và ADMIN. | CUSTOMER bị chặn; ADMIN thấy được danh sách và thao tác quản trị sản phẩm. |  | CHƯA CHẠY |  |
+| ID | Thao tác trực tiếp trên giao diện | Kết quả mong đợi | Actual Result                                                                                               | Trạng thái | Evidence / Bug          |
+|---|---|---|-------------------------------------------------------------------------------------------------------------|------------|-------------------------|
+| CAT-01 | Mở trang chủ/catalog khi chưa đăng nhập; xem danh sách, ảnh, tên, giá và danh mục. | Catalog xem được; thông tin sản phẩm hiển thị đầy đủ, không có lỗi/trang trắng. | Có hiển thị thông tin sản phẩm khi chưa đăng nhập                                                           | Pass       | Cat-01.png,Cat-01_2.png |
+| CAT-02 | Tìm sản phẩm bằng từ khóa có kết quả, từ khóa không có kết quả và xóa từ khóa. | Danh sách cập nhật đúng; trường hợp không có kết quả có thông báo/trạng thái rỗng dễ hiểu. | Hiển thị sản phẩm tương ứng với từ khoá tìm kiểm và hiển thị thông báo với từ khoá không có kết quả sản phẩm | Pass       | Cat-02.png,Cat-02_2.png |
+| CAT-03 | Chọn một danh mục, đổi cách sắp xếp và chuyển trang nếu có. | Kết quả tương ứng với lựa chọn; không lặp/mất dữ liệu bất thường; có thể quay về lựa chọn mặc định. | Hiển thị đúng sản phẩm của danh mục và cách sắp xếp                                                         | Pass       | Cat-03.png              |
+| CAT-04 | Mở chi tiết một sản phẩm từ card sản phẩm; quay lại catalog. | Chi tiết đúng sản phẩm đã chọn; thông tin dễ đọc; quay lại không gây lỗi. | Hiển thị rõ ràng thông tin chi tiết của sản phẩm                                                            | Pass       | Cat-04.png              |
+| CAT-05 | Thử tìm bộ lọc khoảng giá trên giao diện. | Chỉ kiểm thử nếu giao diện hiện có chức năng này. Nếu không có, ghi `N/A` — UI hiện chưa hỗ trợ lọc khoảng giá; không xem là lỗi API. | UI chưa hỗ trợ lọc khoảng giá                                                                               | N/A        | None                    |
+| CAT-06 | Thử mở trang quản lý sản phẩm bằng CUSTOMER và ADMIN. | CUSTOMER bị chặn; ADMIN thấy được danh sách và thao tác quản trị sản phẩm. | Không hiển thị trang quản lý với tài khoản CUSTOMER và hiển thị đầy đủ với tài khoản ADMIN                  | Pass       | Cat-06.png,Cat-06_2.png |
 
 ## 6. Giỏ hàng và checkout
 
-| ID | Thao tác trực tiếp trên giao diện | Kết quả mong đợi | Actual Result | Trạng thái | Evidence / Bug |
-|---|---|---|---|---|---|
-| CART-01 | Thêm một sản phẩm còn hàng vào giỏ. | Sản phẩm xuất hiện trong giỏ; số lượng, biểu tượng/số đếm giỏ cập nhật. |  | CHƯA CHẠY |  |
-| CART-02 | Thêm lại sản phẩm đã có trong giỏ. | Số lượng tăng theo thiết kế; không xuất hiện dòng trùng không cần thiết. |  | CHƯA CHẠY |  |
-| CART-03 | Trong giỏ, tăng/giảm số lượng và đối chiếu đơn giá × số lượng với thành tiền/tổng tiền. | Số lượng và tổng tiền cập nhật đúng ngay trên giao diện. |  | CHƯA CHẠY |  |
-| CART-04 | Tăng số lượng đến tồn kho tối đa rồi thử tăng thêm; thử thêm sản phẩm hết hàng nếu có. | Không cho vượt số lượng có thể mua; thông báo phù hợp, giao diện không bị treo. |  | CHƯA CHẠY |  |
-| CART-05 | Xóa một sản phẩm trong giỏ có nhiều sản phẩm; sau đó thử xóa toàn bộ. | Chỉ sản phẩm được chọn bị xóa; tổng tiền cập nhật; xóa toàn bộ có xác nhận và đưa giỏ về trạng thái trống. |  | CHƯA CHẠY |  |
-| CART-06 | Có sản phẩm trong giỏ, tải lại trang hoặc rời trang rồi quay lại giỏ. | Giỏ vẫn giữ đúng sản phẩm/số lượng theo thiết kế. |  | CHƯA CHẠY |  |
-| CART-07 | Đăng xuất/đăng nhập lại hoặc mở cùng website ở tab khác sau khi có dữ liệu giỏ. | Ghi nhận giỏ được giữ hay thay đổi theo thiết kế mong muốn; không tự xóa dữ liệu ngoài ý muốn. |  | CHƯA CHẠY |  |
-| ORDER-01 | Chọn đặt hàng khi chưa đăng nhập. | Website yêu cầu đăng nhập; sau khi đăng nhập có thể tiếp tục mua hàng hoặc hướng dẫn rõ bước kế tiếp. |  | CHƯA CHẠY |  |
-| ORDER-02 | Checkout khi đã đăng nhập: thử để trống họ tên, sai số điện thoại, địa chỉ ngắn; sau đó điền dữ liệu hợp lệ. | Validation hiển thị đúng; đơn chỉ được gửi khi thông tin hợp lệ. |  | CHƯA CHẠY |  |
-| ORDER-03 | Đặt đơn hợp lệ với sản phẩm còn hàng; kiểm tra màn hình xác nhận và lịch sử đơn. | Báo đặt hàng thành công, có mã/chi tiết đơn; đơn xuất hiện trong lịch sử với trạng thái ban đầu phù hợp; giỏ được làm trống. |  | CHƯA CHẠY |  |
-| ORDER-04 | Thử checkout khi sản phẩm trong giỏ vừa hết hàng/không còn bán (nếu có thể chuẩn bị dữ liệu an toàn). | Đơn không báo thành công; có thông báo rõ; giỏ không bị mất để người dùng xử lý lại. |  | CHƯA CHẠY |  |
-| ORDER-05 | Mở chi tiết đơn từ lịch sử; thử dùng CUSTOMER khác mở đơn không thuộc mình nếu có tài khoản test. | Người mua xem được đơn của mình; không truy cập được đơn người khác. |  | CHƯA CHẠY |  |
+| ID | Thao tác trực tiếp trên giao diện | Kết quả mong đợi | Actual Result                                                                             | Trạng thái | Evidence / Bug               |
+|---|---|---|-------------------------------------------------------------------------------------------|------------|------------------------------|
+| CART-01 | Thêm một sản phẩm còn hàng vào giỏ. | Sản phẩm xuất hiện trong giỏ; số lượng, biểu tượng/số đếm giỏ cập nhật. | Hiển thị chính xác đầy đủ sản phẩm trong giỏ hàng                                         | Pass       | Cart-01.png                  |
+| CART-02 | Thêm lại sản phẩm đã có trong giỏ. | Số lượng tăng theo thiết kế; không xuất hiện dòng trùng không cần thiết. | Hiển thị số lượng hợp lý, không bị trùng không cần thiết                                  | Pass       | Cart-02.png                  |
+| CART-03 | Trong giỏ, tăng/giảm số lượng và đối chiếu đơn giá × số lượng với thành tiền/tổng tiền. | Số lượng và tổng tiền cập nhật đúng ngay trên giao diện. | Hiển thị  số lượng giá tiền hợp lý                                                        | Pass       | Cart-03.png                  |
+| CART-04 | Tăng số lượng đến tồn kho tối đa rồi thử tăng thêm; thử thêm sản phẩm hết hàng nếu có. | Không cho vượt số lượng có thể mua; thông báo phù hợp, giao diện không bị treo. | Không giới hạn số lượng mua hàng                                                          | N/A        | None                         |
+| CART-05 | Xóa một sản phẩm trong giỏ có nhiều sản phẩm; sau đó thử xóa toàn bộ. | Chỉ sản phẩm được chọn bị xóa; tổng tiền cập nhật; xóa toàn bộ có xác nhận và đưa giỏ về trạng thái trống. | Hiển thị chính xác số lượng trong giỏ hàng khi xoá ít, giỏ hàng trống khi xoá hết hàng    | Pass       | Cart-05.png                  |
+| CART-06 | Có sản phẩm trong giỏ, tải lại trang hoặc rời trang rồi quay lại giỏ. | Giỏ vẫn giữ đúng sản phẩm/số lượng theo thiết kế. | Giỏ vẫn giữ đầy đủ sản phẩm, số lượng  sau khi tải lại trang                              | Pass       | Cart-06.png                  |
+| CART-07 | Đăng xuất/đăng nhập lại hoặc mở cùng website ở tab khác sau khi có dữ liệu giỏ. | Ghi nhận giỏ được giữ hay thay đổi theo thiết kế mong muốn; không tự xóa dữ liệu ngoài ý muốn. | Giỏ hàng vẫn giữ lại đầy đủ khi mở website nhiều tab                                      | Pass       | Cart-07.png,Cart-07_2.png    |
+| ORDER-01 | Chọn đặt hàng khi chưa đăng nhập. | Website yêu cầu đăng nhập; sau khi đăng nhập có thể tiếp tục mua hàng hoặc hướng dẫn rõ bước kế tiếp. | Nhảy ra trang đăng nhập khi chưa đăng nhập mà chọn đặt hàng                               | Pass       | None                         |
+| ORDER-02 | Checkout khi đã đăng nhập: thử để trống họ tên, sai số điện thoại, địa chỉ ngắn; sau đó điền dữ liệu hợp lệ. | Validation hiển thị đúng; đơn chỉ được gửi khi thông tin hợp lệ. | Validate hiển thị đúng, chính xác                                                         | Pass       | Order-02.png                 |
+| ORDER-03 | Đặt đơn hợp lệ với sản phẩm còn hàng; kiểm tra màn hình xác nhận và lịch sử đơn. | Báo đặt hàng thành công, có mã/chi tiết đơn; đơn xuất hiện trong lịch sử với trạng thái ban đầu phù hợp; giỏ được làm trống. | Đơn hàng hiển thị hợp lệ và chính xác giỏ hàng được làm trống sau khi đặt hàng thành công | Pass       | Order-03.png, Order-03_2.png |
+| ORDER-04 | Thử checkout khi sản phẩm trong giỏ vừa hết hàng/không còn bán (nếu có thể chuẩn bị dữ liệu an toàn). | Đơn không báo thành công; có thông báo rõ; giỏ không bị mất để người dùng xử lý lại. | Báo không thành công khi đặt hàng với sản phẩm không còn hàng                             | Pass       | Order-04.png                 |
+| ORDER-05 | Mở chi tiết đơn từ lịch sử; thử dùng CUSTOMER khác mở đơn không thuộc mình nếu có tài khoản test. | Người mua xem được đơn của mình; không truy cập được đơn người khác. | Không hiển thị đơn của tài khoản khác                                                     | Pass        | Order-05.png, Order-05_2.png |
 
 ## 7. Chức năng quản trị
 
