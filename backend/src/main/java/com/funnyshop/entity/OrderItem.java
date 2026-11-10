@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
         name = "order_items",
         indexes = {
                 @Index(name = "idx_order_items_order_id", columnList = "order_id"),
-                @Index(name = "idx_order_items_product_id", columnList = "product_id")
+                @Index(name = "idx_order_items_variant_id", columnList = "product_variant_id")
         }
 )
 @Data
@@ -32,8 +32,8 @@ public class OrderItem {
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @JoinColumn(name = "product_variant_id", nullable = false)
+    private ProductVariant productVariant;
 
     @Column(nullable = false)
     private Integer quantity;
@@ -56,5 +56,11 @@ public class OrderItem {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    // Helper for backward compatibility
+    @Transient
+    public Product getProduct() {
+        return productVariant != null ? productVariant.getProduct() : null;
     }
 }

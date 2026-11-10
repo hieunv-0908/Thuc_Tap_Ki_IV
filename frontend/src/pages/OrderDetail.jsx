@@ -298,6 +298,12 @@ export default function OrderDetail() {
                   <h4 className="text-sm sm:text-base font-semibold text-ink line-clamp-1">
                     {item.name}
                   </h4>
+                  {(item.color || item.size) && (
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-ink-subtle">
+                      {item.color && <span>Màu: <span className="font-medium text-ink">{item.color}</span></span>}
+                      {item.size && <span>Size: <span className="font-semibold text-ink">{item.size}</span></span>}
+                    </div>
+                  )}
                   <p className="text-xs text-ink-muted mt-1">
                     Số lượng: <span className="font-bold text-ink">{item.quantity}</span>
                     <span className="mx-2">•</span>

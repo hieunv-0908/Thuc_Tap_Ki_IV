@@ -118,7 +118,8 @@ export default function Checkout() {
         phone: formData.phone.trim(),
         address: formData.address.trim(),
         items: items.map((i) => ({
-          productId: i.product.id,
+          variantId: i.variantId || (i.product?.variants?.[0]?.id) || undefined,
+          productId: i.productId || i.product?.id,
           quantity: i.quantity,
         })),
       };
@@ -357,9 +358,8 @@ export default function Checkout() {
                     onBlur={handleBlur}
                     placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
                     aria-invalid={Boolean(errors.address)}
-                    className={`w-full min-h-24 rounded-lg border bg-white px-3.5 py-2.5 text-base text-ink placeholder:text-ink-subtle focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all ${
-                      errors.address ? 'border-red-500' : 'border-line'
-                    }`}
+                    className={`w-full min-h-24 rounded-lg border bg-white px-3.5 py-2.5 text-base text-ink placeholder:text-ink-subtle focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all ${errors.address ? 'border-red-500' : 'border-line'
+                      }`}
                   />
                   {errors.address && (
                     <p className="flex items-center gap-1.5 text-xs text-red-700 mt-1">
@@ -439,31 +439,42 @@ export default function Checkout() {
 
             {/* Mini items list with quantity badge */}
             <div className="max-h-72 overflow-y-auto divide-y divide-line pr-1 space-y-2">
-              {items.map(({ product, quantity }) => (
-                <div key={product.id} className="pt-2.5 first:pt-0 flex items-center gap-3">
-                  <div className="relative size-12 rounded-lg border border-line bg-gray-50 overflow-hidden shrink-0 flex items-center justify-center">
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                    {/* Quantity pill badge (Design.md 7.5: bg-gray-900/80 text-white text-xs rounded-full) */}
-                    <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-gray-900/85 text-white text-[10px] font-bold flex items-center justify-center">
-                      {quantity}
-                    </span>
-                  </div>
+              {items.map((item) => {
+                const img = item.imageUrl || item.product?.imageUrl;
+                const name = item.name || item.product?.name;
+                const price = item.price ?? item.product?.price ?? 0;
+                const itemId = item.variantId || item.product?.id || item.productId;
 
-                  <div className="min-w-0 flex-1">
-                    <h5 className="text-xs sm:text-sm font-medium text-ink line-clamp-1">
-                      {product.name}
-                    </h5>
-                    <p className="text-xs font-bold text-primary-700 mt-0.5">
-                      {formatCurrency((product.price || 0) * quantity)}
-                    </p>
+                return (
+                  <div key={itemId} className="pt-2.5 first:pt-0 flex items-center gap-3">
+                    <div className="relative size-12 rounded-lg border border-line bg-gray-50 overflow-hidden shrink-0 flex items-center justify-center">
+                      <img
+                        src={img}
+                        alt={name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-gray-900/85 text-white text-[10px] font-bold flex items-center justify-center">
+                        {item.quantity}
+                      </span>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <h5 className="text-xs sm:text-sm font-medium text-ink line-clamp-1">
+                        {name}
+                      </h5>
+                      {(item.color || item.size) && (
+                        <p className="text-[10px] text-ink-subtle">
+                          Phân loại: {item.color} - {item.size}
+                        </p>
+                      )}
+                      <p className="text-xs font-bold text-primary-700 mt-0.5">
+                        {formatCurrency(price * item.quantity)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Dotted border calculation section */}
