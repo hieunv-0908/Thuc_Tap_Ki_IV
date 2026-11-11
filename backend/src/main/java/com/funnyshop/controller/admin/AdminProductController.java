@@ -18,7 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping({ "/api/v1/admin/products", "/api/admin/products" })
+@RequestMapping({ "/api/v1/admin", "/api/admin" })
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminProductController {
@@ -26,10 +26,10 @@ public class AdminProductController {
     private final ProductService productService;
 
     // ==========================================
-    // BASE PRODUCT MANAGEMENT
+    // PHẦN A: QUẢN LÝ SẢN PHẨM GỐC (Base Product)
     // ==========================================
 
-    @PostMapping
+    @PostMapping("/products")
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
             @Valid @RequestBody ProductCreateRequest request) {
 
@@ -43,7 +43,7 @@ public class AdminProductController {
                         .build());
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/products/{id}")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody ProductUpdateRequest request) {
@@ -58,7 +58,7 @@ public class AdminProductController {
                         .build());
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/products/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
 
@@ -69,12 +69,12 @@ public class AdminProductController {
                         .build());
     }
 
-    @PutMapping("/{id}/restore")
+    @PutMapping("/products/{id}/restore")
     public ResponseEntity<ApiResponse<ProductResponse>> restoreProductPut(@PathVariable Long id) {
         return restoreProduct(id);
     }
 
-    @PatchMapping("/{id}/restore")
+    @PatchMapping("/products/{id}/restore")
     public ResponseEntity<ApiResponse<ProductResponse>> restoreProduct(@PathVariable Long id) {
         ProductResponse response = productService.restoreProduct(id);
 
@@ -87,10 +87,10 @@ public class AdminProductController {
     }
 
     // ==========================================
-    // VARIANT MANAGEMENT (nested under product)
+    // PHẦN B: QUẢN LÝ BIẾN THỂ (Product Variants)
     // ==========================================
 
-    @PostMapping("/{productId}/variants")
+    @PostMapping("/products/{productId}/variants")
     public ResponseEntity<ApiResponse<ProductVariantResponse>> addVariant(
             @PathVariable Long productId,
             @Valid @RequestBody ProductVariantCreateRequest request) {
@@ -105,11 +105,49 @@ public class AdminProductController {
                         .build());
     }
 
+    @PutMapping("/variants/{variantId}")
+    public ResponseEntity<ApiResponse<ProductVariantResponse>> updateVariant(
+            @PathVariable Long variantId,
+            @Valid @RequestBody ProductVariantUpdateRequest request) {
+
+        ProductVariantResponse response = productService.updateVariant(variantId, request);
+
+        return ResponseEntity.ok(
+                ApiResponse.<ProductVariantResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Cập nhật biến thể thành công!")
+                        .data(response)
+                        .build());
+    }
+
+    @DeleteMapping("/variants/{variantId}")
+    public ResponseEntity<ApiResponse<Void>> deleteVariant(@PathVariable Long variantId) {
+        productService.deleteVariant(variantId);
+
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Ẩn/ngừng kinh doanh biến thể thành công!")
+                        .build());
+    }
+
+    @PatchMapping("/variants/{variantId}/restore")
+    public ResponseEntity<ApiResponse<ProductVariantResponse>> restoreVariant(@PathVariable Long variantId) {
+        ProductVariantResponse response = productService.restoreVariant(variantId);
+
+        return ResponseEntity.ok(
+                ApiResponse.<ProductVariantResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Khôi phục biến thể thành công!")
+                        .data(response)
+                        .build());
+    }
+
     // ==========================================
-    // IMAGE MANAGEMENT (nested under product)
+    // PHẦN C: QUẢN LÝ HÌNH ẢNH (Product Images)
     // ==========================================
 
-    @PostMapping("/{productId}/images")
+    @PostMapping("/products/{productId}/images")
     public ResponseEntity<ApiResponse<ProductImageResponse>> addImage(
             @PathVariable Long productId,
             @Valid @RequestBody ProductImageCreateRequest request) {
@@ -121,6 +159,29 @@ public class AdminProductController {
                         .code(HttpStatus.CREATED.value())
                         .message("Thêm hình ảnh cho sản phẩm thành công!")
                         .data(response)
+                        .build());
+    }
+
+    @PatchMapping("/images/{imageId}/primary")
+    public ResponseEntity<ApiResponse<ProductImageResponse>> setPrimaryImage(@PathVariable Long imageId) {
+        ProductImageResponse response = productService.setPrimaryImage(imageId);
+
+        return ResponseEntity.ok(
+                ApiResponse.<ProductImageResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Đặt làm ảnh đại diện chính thành công!")
+                        .data(response)
+                        .build());
+    }
+
+    @DeleteMapping("/images/{imageId}")
+    public ResponseEntity<ApiResponse<Void>> deleteImage(@PathVariable Long imageId) {
+        productService.deleteImage(imageId);
+
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Xóa hình ảnh thành công!")
                         .build());
     }
 }

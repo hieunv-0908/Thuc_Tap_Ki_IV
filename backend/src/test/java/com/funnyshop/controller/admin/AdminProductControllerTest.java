@@ -38,16 +38,13 @@ class AdminProductControllerTest {
     @InjectMocks
     private AdminProductController adminProductController;
 
-    @InjectMocks
-    private AdminVariantImageController adminVariantImageController;
-
     private ProductResponse sampleResponse;
     private ProductVariantResponse sampleVariantResponse;
     private ProductImageResponse sampleImageResponse;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(adminProductController, adminVariantImageController)
+        mockMvc = MockMvcBuilders.standaloneSetup(adminProductController)
                 .setControllerAdvice(new GlobalHandleException())
                 .build();
 
