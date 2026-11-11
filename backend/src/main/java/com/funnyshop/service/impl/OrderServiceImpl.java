@@ -187,7 +187,13 @@ public class OrderServiceImpl implements OrderService {
                 Integer quantity = item.getQuantity();
 
                 if (quantity != null && quantity > 0) {
-                    productVariantRepository.incrementStockAtomic(variantId, quantity);
+                    int updatedRows = productVariantRepository.incrementStockAtomic(variantId, quantity);
+                    if (updatedRows != 1) {
+                        throw new AppException(
+                                "Không thể hoàn tồn kho cho biến thể sản phẩm ID: " + variantId,
+                                HttpStatus.INTERNAL_SERVER_ERROR
+                        );
+                    }
                 }
             }
         }
@@ -197,6 +203,12 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(order);
 
         return OrderResponse.fromEntity(savedOrder);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderResponse cancelOrder(Long orderId) {
+        return updateOrderStatus(orderId, OrderStatus.CANCELLED);
     }
 
     @Override

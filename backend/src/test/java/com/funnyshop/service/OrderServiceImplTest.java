@@ -377,6 +377,56 @@ class OrderServiceImplTest {
         verify(orderRepository).save(sampleOrder);
     }
 
+    @Test
+    @DisplayName("updateOrderStatus - Không đánh dấu hủy nếu không thể hoàn tồn kho")
+    void updateOrderStatus_CancelOrder_StockRollbackFailureDoesNotCancelOrder() {
+        sampleOrder.getOrderItems().add(OrderItem.builder()
+                .id(102L)
+                .productVariant(sampleVariant2)
+                .quantity(3)
+                .priceAtOrder(new BigDecimal("320000.00"))
+                .build());
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
+        when(productVariantRepository.incrementStockAtomic(10L, 2)).thenReturn(1);
+        when(productVariantRepository.incrementStockAtomic(20L, 3)).thenReturn(0);
+
+        AppException ex = assertThrows(
+                AppException.class,
+                () -> orderService.updateOrderStatus(1L, OrderStatus.CANCELLED)
+        );
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, ex.getStatus());
+        assertEquals(OrderStatus.PENDING, sampleOrder.getStatus());
+        verify(productVariantRepository).incrementStockAtomic(10L, 2);
+        verify(productVariantRepository).incrementStockAtomic(20L, 3);
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("cancelOrder - Hủy đơn và hoàn tồn kho qua luồng admin")
+    void cancelOrder_Success() {
+        sampleOrder.getOrderItems().add(OrderItem.builder()
+                .id(102L)
+                .productVariant(sampleVariant2)
+                .quantity(3)
+                .priceAtOrder(new BigDecimal("320000.00"))
+                .build());
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
+        when(productVariantRepository.incrementStockAtomic(10L, 2)).thenReturn(1);
+        when(productVariantRepository.incrementStockAtomic(20L, 3)).thenReturn(1);
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderResponse response = orderService.cancelOrder(1L);
+
+        assertEquals(OrderStatus.CANCELLED, response.getStatus());
+        verify(productVariantRepository).incrementStockAtomic(10L, 2);
+        verify(productVariantRepository).incrementStockAtomic(20L, 3);
+        verify(orderRepository).save(sampleOrder);
+    }
+
     // ==========================================
     // TESTS FOR GET ORDER
     // ==========================================
