@@ -83,8 +83,8 @@ public class UserServiceImpl implements UserService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .phone(request.getPhone())
-                .role(User.Role.CUSTOMER)
-                .status(User.Status.ACTIVE)
+                .role(request.getRole() != null ? request.getRole() : User.Role.CUSTOMER)
+                .status(request.getStatus() != null ? request.getStatus() : User.Status.ACTIVE)
                 .build();
 
         User savedUser = userRepository.save(user);
