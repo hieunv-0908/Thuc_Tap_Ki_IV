@@ -1,7 +1,10 @@
 package com.funnyshop.service;
 
 import com.funnyshop.dto.request.ProductCreateRequest;
+import com.funnyshop.dto.request.ProductImageCreateRequest;
 import com.funnyshop.dto.request.ProductUpdateRequest;
+import com.funnyshop.dto.request.ProductVariantCreateRequest;
+import com.funnyshop.dto.request.ProductVariantUpdateRequest;
 import com.funnyshop.dto.response.ProductResponse;
 import com.funnyshop.entity.Category;
 import com.funnyshop.entity.Product;
@@ -186,7 +189,7 @@ class ProductServiceImplTest {
     }
 
     @Test
-    @DisplayName("deleteProduct - Xóa mềm sản phẩm (chuyển cờ isDeleted thành true)")
+    @DisplayName("deleteProduct - Xóa mềm sản phẩm (chuyển cờ isDeleted thành true) và cascade variants")
     void deleteProduct_SoftDelete_Success() {
         when(productRepository.findByIdAndIsDeletedFalse(100L)).thenReturn(Optional.of(mockProduct));
         when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
@@ -195,10 +198,11 @@ class ProductServiceImplTest {
 
         assertTrue(mockProduct.getIsDeleted());
         verify(productRepository).save(mockProduct);
+        verify(productVariantRepository).updateIsDeletedByProductId(100L, true);
     }
 
     @Test
-    @DisplayName("restoreProduct - Khôi phục sản phẩm đã xóa mềm (chuyển cờ isDeleted thành false)")
+    @DisplayName("restoreProduct - Khôi phục sản phẩm đã xóa mềm và cascade variants")
     void restoreProduct_Success() {
         mockProduct.setIsDeleted(true);
         when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
@@ -210,6 +214,106 @@ class ProductServiceImplTest {
         assertFalse(response.getIsDeleted());
         assertFalse(mockProduct.getIsDeleted());
         verify(productRepository).save(mockProduct);
+        verify(productVariantRepository).updateIsDeletedByProductId(100L, false);
+    }
+
+    @Test
+    @DisplayName("addVariant - Thêm mới biến thể thành công")
+    void addVariant_Success() {
+        ProductVariantCreateRequest request = ProductVariantCreateRequest.builder()
+                .sku("SKU-100-RED-L")
+                .color("Red")
+                .size("L")
+                .price(new BigDecimal("180000.00"))
+                .stockQuantity(25)
+                .build();
+
+        when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
+        when(productVariantRepository.existsBySku("SKU-100-RED-L")).thenReturn(false);
+        when(productVariantRepository.save(any(ProductVariant.class))).thenAnswer(i -> {
+            ProductVariant pv = i.getArgument(0);
+            pv.setId(2001L);
+            return pv;
+        });
+
+        var response = productService.addVariant(100L, request);
+
+        assertNotNull(response);
+        assertEquals(2001L, response.getId());
+        assertEquals("SKU-100-RED-L", response.getSku());
+        assertEquals("Red", response.getColor());
+        assertEquals(25, response.getStockQuantity());
+    }
+
+    @Test
+    @DisplayName("updateVariant - Cập nhật giá và kho biến thể thành công")
+    void updateVariant_Success() {
+        ProductVariantUpdateRequest request = ProductVariantUpdateRequest.builder()
+                .sku("SKU-100-M")
+                .color("White")
+                .size("M")
+                .price(new BigDecimal("170000.00"))
+                .stockQuantity(60)
+                .build();
+
+        when(productVariantRepository.findById(1001L)).thenReturn(Optional.of(mockVariant));
+        when(productVariantRepository.existsBySkuAndIdNot("SKU-100-M", 1001L)).thenReturn(false);
+        when(productVariantRepository.save(any(ProductVariant.class))).thenAnswer(i -> i.getArgument(0));
+
+        var response = productService.updateVariant(1001L, request);
+
+        assertNotNull(response);
+        assertEquals(new BigDecimal("170000.00"), response.getPrice());
+        assertEquals(60, response.getStockQuantity());
+    }
+
+    @Test
+    @DisplayName("deleteVariant - Ngừng kinh doanh biến thể (isDeleted = true)")
+    void deleteVariant_Success() {
+        when(productVariantRepository.findById(1001L)).thenReturn(Optional.of(mockVariant));
+        when(productVariantRepository.save(any(ProductVariant.class))).thenAnswer(i -> i.getArgument(0));
+
+        productService.deleteVariant(1001L);
+
+        assertTrue(mockVariant.getIsDeleted());
+        verify(productVariantRepository).save(mockVariant);
+    }
+
+    @Test
+    @DisplayName("restoreVariant - Khôi phục biến thể (isDeleted = false)")
+    void restoreVariant_Success() {
+        mockVariant.setIsDeleted(true);
+        when(productVariantRepository.findById(1001L)).thenReturn(Optional.of(mockVariant));
+        when(productVariantRepository.save(any(ProductVariant.class))).thenAnswer(i -> i.getArgument(0));
+
+        var response = productService.restoreVariant(1001L);
+
+        assertNotNull(response);
+        assertFalse(response.getIsDeleted());
+        assertFalse(mockVariant.getIsDeleted());
+    }
+
+    @Test
+    @DisplayName("addImage - Thêm hình ảnh và reset ảnh chính cũ nếu isPrimary = true")
+    void addImage_Success() {
+        ProductImageCreateRequest request = ProductImageCreateRequest.builder()
+                .imageUrl("https://example.com/img2.jpg")
+                .isPrimary(true)
+                .build();
+
+        when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
+        when(productImageRepository.save(any(ProductImage.class))).thenAnswer(i -> {
+            ProductImage pi = i.getArgument(0);
+            pi.setId(301L);
+            return pi;
+        });
+
+        var response = productService.addImage(100L, request);
+
+        assertNotNull(response);
+        assertEquals(301L, response.getId());
+        assertTrue(response.getIsPrimary());
+        verify(productImageRepository).resetPrimaryByProductId(100L);
     }
 
     @Test
