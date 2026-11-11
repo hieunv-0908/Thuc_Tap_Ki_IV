@@ -3,6 +3,7 @@ package com.funnyshop.service;
 import com.funnyshop.dto.request.UserCreateRequest;
 import com.funnyshop.dto.response.UserResponse;
 import com.funnyshop.entity.User;
+import com.funnyshop.exception.ResourceNotFoundException;
 import com.funnyshop.repository.UserRepository;
 import com.funnyshop.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.Test;
@@ -12,7 +13,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -78,5 +82,35 @@ class UserServiceImplTest {
 
         assertEquals("CUSTOMER", response.getRole());
         assertEquals("ACTIVE", response.getStatus());
+    }
+
+    @Test
+    void updateUserRoleUpdatesAndReturnsUser() {
+        User user = User.builder()
+                .id(10L)
+                .username("customer")
+                .email("customer@example.com")
+                .password("encoded-password")
+                .role(User.Role.CUSTOMER)
+                .status(User.Status.ACTIVE)
+                .build();
+        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+
+        UserResponse response = userService.updateUserRole(10L, User.Role.ADMIN);
+
+        assertEquals(User.Role.ADMIN, user.getRole());
+        assertEquals("ADMIN", response.getRole());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateUserRoleThrowsWhenUserDoesNotExist() {
+        when(userRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> userService.updateUserRole(404L, User.Role.ADMIN)
+        );
     }
 }

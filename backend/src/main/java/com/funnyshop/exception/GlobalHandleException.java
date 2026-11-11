@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -90,5 +91,16 @@ public class GlobalHandleException {
                 .message("Đã xảy ra lỗi hệ thống: " + ex.getMessage())
                 .build();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex) {
+
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setCode(400);
+        response.setMessage("Dữ liệu gửi lên không hợp lệ!");
+
+        return ResponseEntity.badRequest().body(response);
     }
 }
