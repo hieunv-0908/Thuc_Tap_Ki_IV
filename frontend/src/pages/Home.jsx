@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useSearchParams, useOutletContext, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   Search,
   Package,
@@ -30,7 +30,7 @@ import { SORT_OPTIONS, getCategoryMeta } from '../utils/constants';
  */
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { onSelectProduct } = useOutletContext() || {};
+  const navigate = useNavigate();
 
   const queryQ = searchParams.get('q') || '';
   const queryCategory = searchParams.get('category') || '';
@@ -404,7 +404,7 @@ export default function Home() {
                   <ProductCard
                     key={p.id}
                     product={p}
-                    onClick={(prod) => onSelectProduct && onSelectProduct(prod)}
+                    onClick={(prod) => navigate(`/products/${prod.id}`)}
                   />
                 ))}
               </div>
@@ -690,7 +690,7 @@ export default function Home() {
                   <ProductCard
                     key={p.id}
                     product={p}
-                    onClick={(prod) => onSelectProduct && onSelectProduct(prod)}
+                    onClick={(prod) => navigate(`/products/${prod.id}`)}
                   />
                 ))}
               </div>

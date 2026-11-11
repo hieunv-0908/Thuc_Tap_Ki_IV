@@ -1,5 +1,6 @@
 package com.funnyshop.dto.request;
 
+import com.funnyshop.entity.User;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -25,7 +26,7 @@ public class UserCreateRequest {
     private String email;
 
     @NotBlank(message = "Password không được để trống")
-    @Size(min = 8, max = 72, message = "Password phải từ 8 đến 72 ký tự")
+    @Size(min = 6, max = 72, message = "Password phải từ 6 đến 72 ký tự")
     private String password;
 
     @Size(max = 100, message = "Họ tên không được vượt quá 100 ký tự")
@@ -36,4 +37,8 @@ public class UserCreateRequest {
             message = "Số điện thoại phải có từ 9 đến 15 chữ số"
     )
     private String phone;
+
+    private User.Role role;
+
+    private User.Status status;
 }

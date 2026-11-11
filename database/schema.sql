@@ -95,12 +95,14 @@ CREATE TABLE orders (
 CREATE TABLE order_items (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     order_id BIGINT NOT NULL,
+    product_id BIGINT NULL,
     product_variant_id BIGINT NOT NULL,
     quantity INT NOT NULL,
     price_at_order DECIMAL(12, 2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL,
     FOREIGN KEY (product_variant_id) REFERENCES product_variants(id) ON DELETE CASCADE,
     INDEX idx_order_items_order_id (order_id),
     INDEX idx_order_items_variant_id (product_variant_id)

@@ -1,12 +1,18 @@
 package com.funnyshop.service.impl;
 
 import com.funnyshop.dto.request.ProductCreateRequest;
+import com.funnyshop.dto.request.ProductImageCreateRequest;
 import com.funnyshop.dto.request.ProductUpdateRequest;
+import com.funnyshop.dto.request.ProductVariantCreateRequest;
+import com.funnyshop.dto.request.ProductVariantUpdateRequest;
+import com.funnyshop.dto.response.ProductImageResponse;
 import com.funnyshop.dto.response.ProductResponse;
+import com.funnyshop.dto.response.ProductVariantResponse;
 import com.funnyshop.entity.Category;
 import com.funnyshop.entity.Product;
 import com.funnyshop.entity.ProductImage;
 import com.funnyshop.entity.ProductVariant;
+import com.funnyshop.exception.ResourceAlreadyExistsException;
 import com.funnyshop.exception.ResourceNotFoundException;
 import com.funnyshop.repository.CategoryRepository;
 import com.funnyshop.repository.ProductImageRepository;
@@ -110,6 +116,9 @@ public class ProductServiceImpl implements ProductService {
         Product product = Product.builder()
                 .name(request.getName().trim())
                 .description(request.getDescription())
+                .brand(request.getBrand() != null ? request.getBrand().trim() : null)
+                .material(request.getMaterial() != null ? request.getMaterial().trim() : null)
+                .genderType(request.getGenderType() != null ? request.getGenderType().trim() : null)
                 .category(category)
                 .isDeleted(request.getIsDeleted() != null ? request.getIsDeleted() : false)
                 .variants(new ArrayList<>())
@@ -164,6 +173,15 @@ public class ProductServiceImpl implements ProductService {
 
         product.setName(request.getName().trim());
         product.setDescription(request.getDescription());
+        if (request.getBrand() != null) {
+            product.setBrand(request.getBrand().trim());
+        }
+        if (request.getMaterial() != null) {
+            product.setMaterial(request.getMaterial().trim());
+        }
+        if (request.getGenderType() != null) {
+            product.setGenderType(request.getGenderType().trim());
+        }
         product.setCategory(category);
 
         if (request.getIsDeleted() != null) {
@@ -229,7 +247,11 @@ public class ProductServiceImpl implements ProductService {
                 );
 
         product.setIsDeleted(true);
+        if (product.getVariants() != null) {
+            product.getVariants().forEach(v -> v.setIsDeleted(true));
+        }
         productRepository.save(product);
+        productVariantRepository.updateIsDeletedByProductId(id, true);
     }
 
     @Override
@@ -243,7 +265,152 @@ public class ProductServiceImpl implements ProductService {
                 );
 
         product.setIsDeleted(false);
+        if (product.getVariants() != null) {
+            product.getVariants().forEach(v -> v.setIsDeleted(false));
+        }
         Product restoredProduct = productRepository.save(product);
+        productVariantRepository.updateIsDeletedByProductId(id, false);
         return ProductResponse.fromEntity(restoredProduct);
+    }
+
+    // ==========================================
+    // VARIANT MANAGEMENT
+    // ==========================================
+
+    @Override
+    @Transactional
+    public ProductVariantResponse addVariant(Long productId, ProductVariantCreateRequest request) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + productId)
+                );
+
+        if (productVariantRepository.existsBySku(request.getSku().trim())) {
+            throw new ResourceAlreadyExistsException("Mã SKU '" + request.getSku().trim() + "' đã tồn tại!");
+        }
+
+        ProductVariant variant = ProductVariant.builder()
+                .product(product)
+                .sku(request.getSku().trim())
+                .color(request.getColor().trim())
+                .size(request.getSize().trim())
+                .price(request.getPrice())
+                .stockQuantity(request.getStockQuantity())
+                .isDeleted(false)
+                .build();
+
+        ProductVariant savedVariant = productVariantRepository.save(variant);
+        return ProductVariantResponse.fromEntity(savedVariant);
+    }
+
+    @Override
+    @Transactional
+    public ProductVariantResponse updateVariant(Long variantId, ProductVariantUpdateRequest request) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Không tìm thấy biến thể với ID: " + variantId)
+                );
+
+        if (productVariantRepository.existsBySkuAndIdNot(request.getSku().trim(), variantId)) {
+            throw new ResourceAlreadyExistsException("Mã SKU '" + request.getSku().trim() + "' đã tồn tại ở biến thể khác!");
+        }
+
+        variant.setSku(request.getSku().trim());
+        variant.setColor(request.getColor().trim());
+        variant.setSize(request.getSize().trim());
+        variant.setPrice(request.getPrice());
+        variant.setStockQuantity(request.getStockQuantity());
+
+        ProductVariant updatedVariant = productVariantRepository.save(variant);
+        return ProductVariantResponse.fromEntity(updatedVariant);
+    }
+
+    @Override
+    @Transactional
+    public void deleteVariant(Long variantId) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Không tìm thấy biến thể với ID: " + variantId)
+                );
+
+        variant.setIsDeleted(true);
+        productVariantRepository.save(variant);
+    }
+
+    @Override
+    @Transactional
+    public ProductVariantResponse restoreVariant(Long variantId) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Không tìm thấy biến thể với ID: " + variantId)
+                );
+
+        variant.setIsDeleted(false);
+        ProductVariant restoredVariant = productVariantRepository.save(variant);
+        return ProductVariantResponse.fromEntity(restoredVariant);
+    }
+
+    // ==========================================
+    // IMAGE MANAGEMENT
+    // ==========================================
+
+    @Override
+    @Transactional
+    public ProductImageResponse addImage(Long productId, ProductImageCreateRequest request) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + productId)
+                );
+
+        ProductVariant variant = null;
+        if (request.getVariantId() != null) {
+            variant = productVariantRepository.findById(request.getVariantId())
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException("Không tìm thấy biến thể với ID: " + request.getVariantId())
+                    );
+            if (!variant.getProduct().getId().equals(productId)) {
+                throw new IllegalArgumentException("Biến thể ID " + request.getVariantId() + " không thuộc về sản phẩm ID " + productId);
+            }
+        }
+
+        boolean isPrimary = Boolean.TRUE.equals(request.getIsPrimary());
+        if (isPrimary) {
+            productImageRepository.resetPrimaryByProductId(productId);
+        }
+
+        ProductImage image = ProductImage.builder()
+                .product(product)
+                .variant(variant)
+                .imageUrl(request.getImageUrl().trim())
+                .isPrimary(isPrimary)
+                .build();
+
+        ProductImage savedImage = productImageRepository.save(image);
+        return ProductImageResponse.fromEntity(savedImage);
+    }
+
+    @Override
+    @Transactional
+    public ProductImageResponse setPrimaryImage(Long imageId) {
+        ProductImage image = productImageRepository.findById(imageId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Không tìm thấy hình ảnh với ID: " + imageId)
+                );
+
+        productImageRepository.resetPrimaryByProductId(image.getProduct().getId());
+        image.setIsPrimary(true);
+        ProductImage savedImage = productImageRepository.save(image);
+        return ProductImageResponse.fromEntity(savedImage);
+    }
+
+    @Override
+    @Transactional
+    public void deleteImage(Long imageId) {
+        ProductImage image = productImageRepository.findById(imageId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Không tìm thấy hình ảnh với ID: " + imageId)
+                );
+
+        productImageRepository.delete(image);
     }
 }
