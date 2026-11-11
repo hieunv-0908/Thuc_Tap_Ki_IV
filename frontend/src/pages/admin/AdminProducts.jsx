@@ -126,9 +126,18 @@ export default function AdminProducts() {
   // Overall statistics calculated from full list
   const stats = useMemo(() => {
     const total = products.length;
-    const lowStock = products.filter((p) => p.stock > 0 && p.stock <= 5).length;
-    const outOfStock = products.filter((p) => p.stock === 0).length;
-    const inStock = products.filter((p) => p.stock > 5).length;
+    const lowStock = products.filter((p) => {
+      const stock = p.totalStock !== undefined ? p.totalStock : (p.stockQuantity ?? p.stock ?? 0);
+      return stock > 0 && stock <= 10;
+    }).length;
+    const outOfStock = products.filter((p) => {
+      const stock = p.totalStock !== undefined ? p.totalStock : (p.stockQuantity ?? p.stock ?? 0);
+      return stock <= 0;
+    }).length;
+    const inStock = products.filter((p) => {
+      const stock = p.totalStock !== undefined ? p.totalStock : (p.stockQuantity ?? p.stock ?? 0);
+      return stock > 10;
+    }).length;
 
     return { total, lowStock, outOfStock, inStock };
   }, [products]);
@@ -152,12 +161,13 @@ export default function AdminProducts() {
       }
 
       // Filter by stock status
+      const stock = product.totalStock !== undefined ? product.totalStock : (product.stockQuantity ?? product.stock ?? 0);
       if (selectedStockStatus === 'LOW_STOCK') {
-        if (product.stock <= 0 || product.stock > 5) return false;
+        if (stock <= 0 || stock > 10) return false;
       } else if (selectedStockStatus === 'OUT_OF_STOCK') {
-        if (product.stock > 0) return false;
+        if (stock > 0) return false;
       } else if (selectedStockStatus === 'IN_STOCK') {
-        if (product.stock <= 5) return false;
+        if (stock <= 10) return false;
       }
 
       return true;
@@ -276,36 +286,77 @@ export default function AdminProducts() {
       key: 'price',
       header: 'Giá bán',
       className: 'whitespace-nowrap',
-      render: (row) => (
-        <span className="font-bold text-primary-700">
-          {formatCurrency(row.price)}
-        </span>
-      ),
+      render: (row) => {
+        const hasRange = row.minPrice && row.maxPrice && row.minPrice < row.maxPrice;
+        if (hasRange) {
+          return (
+            <div className="flex flex-col">
+              <span className="font-bold text-primary-700 text-sm">
+                {formatCurrency(row.minPrice)} - {formatCurrency(row.maxPrice)}
+              </span>
+              <span className="text-[11px] text-ink-subtle">Khoảng giá biến thể</span>
+            </div>
+          );
+        }
+        return (
+          <span className="font-bold text-primary-700 text-sm">
+            {formatCurrency(row.price ?? row.minPrice ?? 0)}
+          </span>
+        );
+      },
     },
     {
       key: 'stock',
       header: 'Tồn kho',
       className: 'whitespace-nowrap',
       render: (row) => {
-        if (row.stock === 0) {
+        const stock = row.totalStock !== undefined ? row.totalStock : (row.stockQuantity ?? row.stock ?? 0);
+        const variantCount = Array.isArray(row.variants)
+          ? row.variants.filter((v) => !v.isDeleted).length
+          : 0;
+
+        if (stock <= 0) {
           return (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
-              Hết hàng
-            </span>
-          );
-        }
-        if (row.stock <= 5) {
-          return (
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-bold text-xs">
-              <AlertTriangle className="size-3.5" />
-              <span>Chỉ còn {row.stock}</span>
+            <div className="flex flex-col gap-0.5">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200 w-fit">
+                Hết hàng
+              </span>
+              {variantCount > 0 && (
+                <span className="text-[11px] text-ink-subtle">
+                  {variantCount} biến thể
+                </span>
+              )}
             </div>
           );
         }
+
+        if (stock <= 10) {
+          return (
+            <div className="flex flex-col gap-0.5">
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-bold text-xs w-fit">
+                <AlertTriangle className="size-3.5" />
+                <span>Chỉ còn {stock}</span>
+              </div>
+              {variantCount > 0 && (
+                <span className="text-[11px] text-ink-subtle">
+                  {variantCount} biến thể
+                </span>
+              )}
+            </div>
+          );
+        }
+
         return (
-          <span className="text-ink font-medium">
-            {row.stock} chiếc
-          </span>
+          <div className="flex flex-col">
+            <span className="text-ink font-semibold text-sm">
+              {stock} chiếc
+            </span>
+            {variantCount > 0 && (
+              <span className="text-[11px] text-ink-subtle">
+                {variantCount} biến thể
+              </span>
+            )}
+          </div>
         );
       },
     },

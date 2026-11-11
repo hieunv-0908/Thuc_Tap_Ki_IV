@@ -90,6 +90,74 @@ export const adminApi = {
     return res?.data !== undefined ? res.data : res;
   },
 
+  // ── Product Variants (TASK-FE-01) ──────────────────────────────────────
+  createVariant: async (productId, variantData) => {
+    const payload = {
+      sku: variantData.sku?.trim(),
+      color: variantData.color?.trim(),
+      size: variantData.size?.trim(),
+      price: Number(variantData.price) || 0,
+      stockQuantity: Number(
+        variantData.stockQuantity !== undefined
+          ? variantData.stockQuantity
+          : (variantData.stock !== undefined ? variantData.stock : 0)
+      ),
+    };
+    const res = await apiClient.post(`/api/v1/admin/products/${productId}/variants`, payload);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  updateVariant: async (variantId, variantData) => {
+    const payload = {
+      sku: variantData.sku?.trim(),
+      color: variantData.color?.trim(),
+      size: variantData.size?.trim(),
+      price: Number(variantData.price) || 0,
+      stockQuantity: Number(
+        variantData.stockQuantity !== undefined
+          ? variantData.stockQuantity
+          : (variantData.stock !== undefined ? variantData.stock : 0)
+      ),
+    };
+    const res = await apiClient.put(`/api/v1/admin/variants/${variantId}`, payload);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  deleteVariant: async (variantId) => {
+    const res = await apiClient.delete(`/api/v1/admin/variants/${variantId}`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  restoreVariant: async (variantId) => {
+    const res = await apiClient.patch(`/api/v1/admin/variants/${variantId}/restore`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  // ── Product Images (TASK-FE-02) ─────────────────────────────────────────
+  addImage: async (productId, imageData) => {
+    const payload = {
+      imageUrl: imageData.imageUrl?.trim() || imageData.url?.trim() || '',
+      isPrimary: Boolean(imageData.isPrimary),
+      variantId: imageData.variantId ? Number(imageData.variantId) : null,
+    };
+    const res = await apiClient.post(`/api/v1/admin/products/${productId}/images`, payload);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  createImage: async (productId, imageData) => {
+    return adminApi.addImage(productId, imageData);
+  },
+
+  setPrimaryImage: async (imageId) => {
+    const res = await apiClient.patch(`/api/v1/admin/images/${imageId}/primary`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  deleteImage: async (imageId) => {
+    const res = await apiClient.delete(`/api/v1/admin/images/${imageId}`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
   getAllOrders: async ({ page = 0, size = 100 } = {}) => {
     // if (isMock) {
     //   return await mockEngine.adminGetAllOrders();
