@@ -32,6 +32,10 @@ public class OrderItem {
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id", nullable = true)
+    private Product product;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_variant_id", nullable = false)
     private ProductVariant productVariant;
 
@@ -59,8 +63,10 @@ public class OrderItem {
     }
 
     // Helper for backward compatibility
-    @Transient
     public Product getProduct() {
+        if (product != null) {
+            return product;
+        }
         return productVariant != null ? productVariant.getProduct() : null;
     }
 }
