@@ -1,65 +1,93 @@
--- Insert Users
-INSERT INTO users (username, email, password, full_name, phone, role, status, created_at, updated_at) VALUES
-('admin', 'admin@funnyshop.com', '$2a$12$lG7AeUutxhMnbT999XuBI.eJSqBwdPwhDJWYCTrEpgEXowEHEsxgy', 'Admin User', '0901234567', 'ADMIN', 'ACTIVE', NOW(), NOW()),
-('user1', 'user1@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Nguyen Van A', '0912345678', 'CUSTOMER', 'ACTIVE', NOW(), NOW()),
-('user2', 'user2@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Tran Thi B', '0923456789', 'CUSTOMER', 'ACTIVE', NOW(), NOW());
+-- =======================================================
+-- FUNNYSHOP INITIAL DATA
+-- Hỗ trợ phân loại Thời trang: Product Variants & Images
+-- =======================================================
 
--- Insert Categories
-INSERT INTO categories (name, description, created_at, updated_at) VALUES
-('Thời trang Nam', 'Sản phẩm thời trang dành cho nam giới: áo sơ mi, quần jeans, áo khoác...', NOW(), NOW()),
-('Thời trang Nữ', 'Sản phẩm thời trang dành cho nữ giới: váy, đầm, áo nữ, quần nữ...', NOW(), NOW()),
-('Đồ điện tử', 'Các sản phẩm điện tử: điện thoại, laptop, tai nghe, loa...', NOW(), NOW()),
-('Phụ kiện & Quà tặng', 'Phụ kiện thời trang, quà tặng, đồ trang sức...', NOW(), NOW()),
-('Đồ gia dụng', 'Đồ dùng trong gia đình: bếp, nồi, chảo, máy hút bụi...', NOW(), NOW());
+USE funnyshop;
 
--- Insert Products (40 products)
-INSERT INTO products (name, description, price, stock_quantity, category_id, image_url, created_at, updated_at) VALUES
--- Thời trang Nam (10 products)
-('Áo Sơ Mi Nam Trắng', 'Áo sơ mi nam trắng cao cấp, vải cotton mềm mại', 250000.00, 50, 1, 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400', NOW(), NOW()),
-('Áo Sơ Mi Nam Xanh', 'Áo sơ mi nam xanh dương, thiết kế slim fit', 280000.00, 45, 1, 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=400', NOW(), NOW()),
-('Quần Jeans Nam', 'Quần jeans nam màu xanh đen, co giãn tốt', 450000.00, 60, 1, 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400', NOW(), NOW()),
-('Áo Khoác Nam', 'Áo khoác nam chống nước, giữ ấm tốt', 850000.00, 30, 1, 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400', NOW(), NOW()),
-('Quần Kaki Nam', 'Quần kaki nam màu be, form dáng đứng', 350000.00, 55, 1, 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=400', NOW(), NOW()),
-('Áo Thun Nam', 'Áo thun nam cotton 100%, thoáng mát', 150000.00, 100, 1, 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400', NOW(), NOW()),
-('Áo Polo Nam', 'Áo polo nam cao cấp, cổ bẻ', 320000.00, 40, 1, 'https://images.unsplash.com/photo-1625910513413-5fc45a757d93?w=400', NOW(), NOW()),
-('Quần Short Nam', 'Quần short nam vải kaki, thoải mái', 280000.00, 70, 1, 'https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400', NOW(), NOW()),
-('Áo Vest Nam', 'Áo vest nam sang trọng, phù hợp đi tiệc', 1500000.00, 15, 1, 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400', NOW(), NOW()),
-('Giày Sneaker Nam', 'Giày sneaker nam thể thao, đế êm', 650000.00, 45, 1, 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', NOW(), NOW()),
+-- 1. Insert Users
+INSERT INTO users (id, username, email, password, full_name, phone, role, status, created_at, updated_at) VALUES
+(1, 'admin', 'admin@funnyshop.com', '$2a$12$lG7AeUutxhMnbT999XuBI.eJSqBwdPwhDJWYCTrEpgEXowEHEsxgy', 'Admin User', '0901234567', 'ADMIN', 'ACTIVE', NOW(), NOW()),
+(2, 'user1', 'user1@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Nguyen Van A', '0912345678', 'CUSTOMER', 'ACTIVE', NOW(), NOW()),
+(3, 'user2', 'user2@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Tran Thi B', '0923456789', 'CUSTOMER', 'ACTIVE', NOW(), NOW())
+ON DUPLICATE KEY UPDATE updated_at = NOW();
 
--- Thời trang Nữ (10 products)
-('Váy Đầm Nữ', 'Váy đầm nữ thiết kế đẹp, chất liệu lụa', 550000.00, 35, 2, 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400', NOW(), NOW()),
-('Áo Sơ Mi Nữ', 'Áo sơ mi nữ công sở, thanh lịch', 320000.00, 50, 2, 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400', NOW(), NOW()),
-('Quần Jeans Nữ', 'Quần jeans nữ skinny, tôn dáng', 480000.00, 55, 2, 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400', NOW(), NOW()),
-('Áo Khoác Nữ', 'Áo khoác nữ thời trang, giữ ấm', 780000.00, 25, 2, 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400', NOW(), NOW()),
-('Chân Váy Nữ', 'Chân váy nữ ngắn, thời trang', 380000.00, 40, 2, 'https://images.unsplash.com/photo-1583496661160-fb5886a0uj9a?w=400', NOW(), NOW()),
-('Áo Thun Nữ', 'Áo thun nữ cotton, in hình cute', 180000.00, 80, 2, 'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=400', NOW(), NOW()),
-('Đầm Maxi', 'Đầm maxi nữ dáng dài, bay bổng', 680000.00, 20, 2, 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400', NOW(), NOW()),
-('Áo Blouse', 'Áo blouse nữ công sở, sang trọng', 420000.00, 45, 2, 'https://images.unsplash.com/photo-1564257631407-4deb1f99d992?w=400', NOW(), NOW()),
-('Quần Legging', 'Quần legging nữ co giãn, thoải mái', 250000.00, 90, 2, 'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=400', NOW(), NOW()),
-('Giày Cao Gót', 'Giày cao gót nữ 7cm, sang trọng', 890000.00, 30, 2, 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400', NOW(), NOW()),
+-- 2. Insert Categories
+INSERT INTO categories (id, name, description, is_deleted, created_at, updated_at) VALUES
+(1, 'Thời trang Nam', 'Sản phẩm thời trang dành cho nam giới: áo polo, sơ mi, quần jeans, áo khoác...', FALSE, NOW(), NOW()),
+(2, 'Thời trang Nữ', 'Sản phẩm thời trang dành cho nữ giới: váy đầm lụa, sơ mi, quần tây, áo khoác...', FALSE, NOW(), NOW()),
+(3, 'Đồ điện tử', 'Các sản phẩm công nghệ và phụ kiện cao cấp...', FALSE, NOW(), NOW()),
+(4, 'Phụ kiện Thời trang', 'Phụ kiện ví da, thắt lưng, balo, trang sức thời thượng...', FALSE, NOW(), NOW()),
+(5, 'Đồ gia dụng', 'Tiện ích không gian sống gia đình...', FALSE, NOW(), NOW())
+ON DUPLICATE KEY UPDATE updated_at = NOW();
 
--- Đồ điện tử (10 products)
-('iPhone 15 Pro', 'Điện thoại iPhone 15 Pro 256GB', 25000000.00, 20, 3, 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400', NOW(), NOW()),
-('Samsung Galaxy S24', 'Điện thoại Samsung Galaxy S24', 22000000.00, 25, 3, 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400', NOW(), NOW()),
-('MacBook Air M2', 'Laptop MacBook Air M2 13 inch', 28000000.00, 15, 3, 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400', NOW(), NOW()),
-('Tai Nghe Bluetooth', 'Tai nghe Bluetooth Sony WH-1000XM5', 5500000.00, 40, 3, 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400', NOW(), NOW()),
-('Loa Bluetooth', 'Loa Bluetooth JBL Charge 5', 3500000.00, 35, 3, 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400', NOW(), NOW()),
-('Đồng hồ thông minh', 'Đồng hồ thông minh Apple Watch Series 9', 9500000.00, 30, 3, 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400', NOW(), NOW()),
-('Bàn phím cơ', 'Bàn phím cơ Keychron K2', 1800000.00, 50, 3, 'https://images.unsplash.com/photo-1587829741301-dc798b91add1?w=400', NOW(), NOW()),
-('Chuột Gaming', 'Chuột gaming Logitech G502', 1200000.00, 60, 3, 'https://images.unsplash.com/photo-1527814050087-3793815479db?w=400', NOW(), NOW()),
-('Màn hình 27 inch', 'Màn hình Dell UltraSharp 27 inch', 8500000.00, 20, 3, 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=400', NOW(), NOW()),
-('Webcam HD', 'Webcam Logitech C920 HD', 2200000.00, 45, 3, 'https://images.unsplash.com/photo-1587826080692-f439cd0b70da?w=400', NOW(), NOW()),
+-- 3. Insert Products (Mô hình thời trang: brand, material, gender_type)
+INSERT INTO products (id, name, description, brand, material, gender_type, category_id, is_deleted, created_at, updated_at) VALUES
+(1, 'Áo Polo Nam Classic Fit', 'Áo polo nam dáng Regular Classic, co giãn 4 chiều thoáng khí, lịch lãm công sở và dạo phố.', 'FunnyStyle', 'Cotton Pique 100%', 'MEN', 1, FALSE, NOW(), NOW()),
+(2, 'Áo Sơ Mi Nam Oxford Dài Tay', 'Áo sơ mi nam chất liệu Oxford dày dặn, đứng form, chống nhăn cao cấp.', 'FunnyStyle', 'Vải Oxford Premium', 'MEN', 1, FALSE, NOW(), NOW()),
+(3, 'Quần Jeans Nam Slimfit Co Giãn', 'Quần jeans nam form slimfit hiện đại, vải denim cao cấp bền màu.', 'DenimLab', 'Denim Cotton Spandex', 'MEN', 1, FALSE, NOW(), NOW()),
+(4, 'Váy Đầm Nữ Lụa Xòe Dáng Dài', 'Đầm lụa nữ thiết kế chiết eo tôn dáng, chất liệu lụa mềm mại bay bổng.', 'GraceLady', 'Lụa Tơ Tằm Tự Nhiên', 'WOMEN', 2, FALSE, NOW(), NOW()),
+(5, 'Áo Khoác Blazer Nữ Công Sở', 'Áo khoác blazer nữ 2 lớp sang trọng, đường may tỉ mỉ thanh lịch.', 'GraceLady', 'Kaki Tuyết Mưa', 'WOMEN', 2, FALSE, NOW(), NOW()),
+(6, 'Áo Thun Unisex Basic Minimalist', 'Áo thun form rộng tay lỡ phong cách đường phố trẻ trung năng động.', 'FunnyStreet', 'Cotton 2 Chiều 250gsm', 'UNISEX', 1, FALSE, NOW(), NOW())
+ON DUPLICATE KEY UPDATE updated_at = NOW();
 
--- Phụ kiện & Quà tặng (5 products)
-('Dây chuyền bạc', 'Dây chuyền bạc 925 thiết kế đẹp', 850000.00, 30, 4, 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400', NOW(), NOW()),
-('Nhẫn bạc', 'Nhẫn bạc 925 đơn giản', 450000.00, 50, 4, 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400', NOW(), NOW()),
-('Balo thời trang', 'Balo thời trang chống nước', 550000.00, 60, 4, 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400', NOW(), NOW()),
-('Ví da nam', 'Ví da nam thật, bền đẹp', 380000.00, 70, 4, 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=400', NOW(), NOW()),
-('Túi xách nữ', 'Túi xách nữ da thật, sang trọng', 1200000.00, 25, 4, 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400', NOW(), NOW()),
+-- 4. Insert Product Variants (SKU, Màu sắc, Kích cỡ, Giá bán, Tồn kho)
+INSERT INTO product_variants (id, product_id, sku, color, size, price, stock_quantity, is_deleted, created_at, updated_at) VALUES
+-- Áo Polo Nam (Product 1): 4 biến thể
+(1, 1, 'POLO-BLK-M', 'Black', 'M', 320000.00, 25, FALSE, NOW(), NOW()),
+(2, 1, 'POLO-BLK-L', 'Black', 'L', 320000.00, 30, FALSE, NOW(), NOW()),
+(3, 1, 'POLO-NVY-M', 'Navy', 'M', 320000.00, 20, FALSE, NOW(), NOW()),
+(4, 1, 'POLO-NVY-L', 'Navy', 'L', 320000.00, 15, FALSE, NOW(), NOW()),
 
--- Đồ gia dụng (5 products)
-('Nồi chiên không dầu', 'Nồi chiên không dầu 5L', 1800000.00, 40, 5, 'https://images.unsplash.com/photo-1585515320310-259814833e62?w=400', NOW(), NOW()),
-('Máy hút bụi', 'Máy hút bụi cầm tay Xiaomi', 2500000.00, 35, 5, 'https://images.unsplash.com/photo-1558317374-067fb5f30001?w=400', NOW(), NOW()),
-('Bếp từ đôi', 'Bếp từ đôi Sunhouse', 3200000.00, 30, 5, 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400', NOW(), NOW()),
-('Nồi lẩu điện', 'Nồi lẩu điện 2L', 850000.00, 55, 5, 'https://images.unsplash.com/photo-1585515320310-259814833e62?w=400', NOW(), NOW()),
-('Máy làm nóng nước', 'Máy làm nóng nước tức thì', 1500000.00, 45, 5, 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400', NOW(), NOW());
+-- Áo Sơ Mi Nam Oxford (Product 2): 4 biến thể
+(5, 2, 'SOMI-WHT-M', 'White', 'M', 380000.00, 35, FALSE, NOW(), NOW()),
+(6, 2, 'SOMI-WHT-L', 'White', 'L', 380000.00, 40, FALSE, NOW(), NOW()),
+(7, 2, 'SOMI-BLU-M', 'Light Blue', 'M', 390000.00, 25, FALSE, NOW(), NOW()),
+(8, 2, 'SOMI-BLU-L', 'Light Blue', 'L', 390000.00, 20, FALSE, NOW(), NOW()),
+
+-- Quần Jeans Nam (Product 3): 4 biến thể
+(9, 3, 'JEAN-BLU-29', 'Dark Blue', '29', 490000.00, 30, FALSE, NOW(), NOW()),
+(10, 3, 'JEAN-BLU-30', 'Dark Blue', '30', 490000.00, 35, FALSE, NOW(), NOW()),
+(11, 3, 'JEAN-BLK-29', 'Black', '29', 490000.00, 20, FALSE, NOW(), NOW()),
+(12, 3, 'JEAN-BLK-30', 'Black', '30', 490000.00, 25, FALSE, NOW(), NOW()),
+
+-- Váy Đầm Nữ Lụa Xòe (Product 4): 3 biến thể
+(13, 4, 'DAM-RED-S', 'Ruby Red', 'S', 650000.00, 15, FALSE, NOW(), NOW()),
+(14, 4, 'DAM-RED-M', 'Ruby Red', 'M', 650000.00, 20, FALSE, NOW(), NOW()),
+(15, 4, 'DAM-BEI-M', 'Beige', 'M', 650000.00, 18, FALSE, NOW(), NOW()),
+
+-- Áo Khoác Blazer Nữ (Product 5): 2 biến thể
+(16, 5, 'BLAZER-BEI-S', 'Beige', 'S', 820000.00, 12, FALSE, NOW(), NOW()),
+(17, 5, 'BLAZER-BEI-M', 'Beige', 'M', 820000.00, 18, FALSE, NOW(), NOW()),
+
+-- Áo Thun Unisex (Product 6): 3 biến thể
+(18, 6, 'TSHIRT-WHT-L', 'White', 'L', 190000.00, 50, FALSE, NOW(), NOW()),
+(19, 6, 'TSHIRT-BLK-L', 'Black', 'L', 190000.00, 45, FALSE, NOW(), NOW()),
+(20, 6, 'TSHIRT-BLK-XL', 'Black', 'XL', 200000.00, 30, FALSE, NOW(), NOW())
+ON DUPLICATE KEY UPDATE updated_at = NOW();
+
+-- 5. Insert Product Images (Gán ảnh theo sản phẩm và biến thể)
+INSERT INTO product_images (id, product_id, variant_id, image_url, is_primary, created_at) VALUES
+-- Product 1: Polo (Black & Navy)
+(1, 1, 1, 'https://images.unsplash.com/photo-1625910513413-5fc45a757d93?w=800', TRUE, NOW()),
+(2, 1, 3, 'https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=800', FALSE, NOW()),
+
+-- Product 2: Sơ mi Oxford (White & Light Blue)
+(3, 2, 5, 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800', TRUE, NOW()),
+(4, 2, 7, 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=800', FALSE, NOW()),
+
+-- Product 3: Jeans
+(5, 3, 9, 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=800', TRUE, NOW()),
+(6, 3, 11, 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800', FALSE, NOW()),
+
+-- Product 4: Váy Đầm Lụa (Ruby Red & Beige)
+(7, 4, 13, 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800', TRUE, NOW()),
+(8, 4, 15, 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=800', FALSE, NOW()),
+
+-- Product 5: Blazer Nữ
+(9, 5, 16, 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=800', TRUE, NOW()),
+
+-- Product 6: Áo Thun Unisex
+(10, 6, 18, 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800', TRUE, NOW()),
+(11, 6, 19, 'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=800', FALSE, NOW())
+ON DUPLICATE KEY UPDATE image_url = VALUES(image_url);

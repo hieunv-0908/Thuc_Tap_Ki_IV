@@ -1,6 +1,6 @@
 import apiClient from './axios';
 // import { mockEngine } from './mock/mockEngine';
-import { productApi } from './product';
+import { normalizeProduct } from './product';
 
 // const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
@@ -31,23 +31,45 @@ export const adminApi = {
     // if (isMock) {
     //   return await mockEngine.getProducts({ q, categoryId, sort, page: 1, size });
     // }
-    const firstPageRes = await productApi.getProducts({ q, categoryId, sort, page, size });
+    const pageNum = Number(page) || 0;
+    const zeroBasedPage = pageNum > 0 ? pageNum - 1 : 0;
+    const safeSize = Math.min(100, Math.max(1, Number(size) || 10));
 
-    if (size >= 100 && firstPageRes.totalPages > 1) {
-      let allContent = [...(firstPageRes.content || [])];
-      for (let p = 2; p <= firstPageRes.totalPages; p++) {
-        const nextRes = await productApi.getProducts({ q, categoryId, sort, page: p, size: 100 });
-        if (nextRes.content) {
-          allContent = allContent.concat(nextRes.content);
-        }
-      }
-      return {
-        ...firstPageRes,
-        content: allContent,
-        totalElements: allContent.length,
-      };
+    const params = new URLSearchParams();
+    if (q) params.append('keyword', q);
+    if (categoryId) params.append('categoryId', categoryId);
+    if (sort) params.append('sort', sort);
+    params.append('page', zeroBasedPage);
+    params.append('size', safeSize);
+
+    const res = await apiClient.get(`/api/v1/admin/products?${params.toString()}`);
+
+    let rawData = res;
+    if (res?.data !== undefined) rawData = res.data;
+    else if (res?.result !== undefined) rawData = res.result;
+
+    let content = [];
+    let totalPages = 1;
+    let totalElements = 0;
+    let currentPage = pageNum > 0 ? pageNum : 1;
+
+    if (Array.isArray(rawData)) {
+      content = rawData;
+      totalElements = rawData.length;
+      totalPages = 1;
+    } else if (rawData && Array.isArray(rawData.content)) {
+      content = rawData.content;
+      totalPages = rawData.totalPages ?? 1;
+      totalElements = rawData.totalElements ?? rawData.content.length;
+      currentPage = rawData.number !== undefined ? rawData.number + 1 : (rawData.page ?? (pageNum > 0 ? pageNum : 1));
     }
-    return firstPageRes;
+
+    return {
+      content: content.map(normalizeProduct),
+      totalPages,
+      totalElements,
+      page: currentPage,
+    };
   },
 
   createProduct: async (productData) => {
@@ -87,6 +109,74 @@ export const adminApi = {
     //   return null;
     // }
     const res = await apiClient.patch(`/api/v1/admin/products/${id}/restore`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  // ── Product Variants (TASK-FE-01) ──────────────────────────────────────
+  createVariant: async (productId, variantData) => {
+    const payload = {
+      sku: variantData.sku?.trim(),
+      color: variantData.color?.trim(),
+      size: variantData.size?.trim(),
+      price: Number(variantData.price) || 0,
+      stockQuantity: Number(
+        variantData.stockQuantity !== undefined
+          ? variantData.stockQuantity
+          : (variantData.stock !== undefined ? variantData.stock : 0)
+      ),
+    };
+    const res = await apiClient.post(`/api/v1/admin/products/${productId}/variants`, payload);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  updateVariant: async (variantId, variantData) => {
+    const payload = {
+      sku: variantData.sku?.trim(),
+      color: variantData.color?.trim(),
+      size: variantData.size?.trim(),
+      price: Number(variantData.price) || 0,
+      stockQuantity: Number(
+        variantData.stockQuantity !== undefined
+          ? variantData.stockQuantity
+          : (variantData.stock !== undefined ? variantData.stock : 0)
+      ),
+    };
+    const res = await apiClient.put(`/api/v1/admin/variants/${variantId}`, payload);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  deleteVariant: async (variantId) => {
+    const res = await apiClient.delete(`/api/v1/admin/variants/${variantId}`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  restoreVariant: async (variantId) => {
+    const res = await apiClient.patch(`/api/v1/admin/variants/${variantId}/restore`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  // ── Product Images (TASK-FE-02) ─────────────────────────────────────────
+  addImage: async (productId, imageData) => {
+    const payload = {
+      imageUrl: imageData.imageUrl?.trim() || imageData.url?.trim() || '',
+      isPrimary: Boolean(imageData.isPrimary),
+      variantId: imageData.variantId ? Number(imageData.variantId) : null,
+    };
+    const res = await apiClient.post(`/api/v1/admin/products/${productId}/images`, payload);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  createImage: async (productId, imageData) => {
+    return adminApi.addImage(productId, imageData);
+  },
+
+  setPrimaryImage: async (imageId) => {
+    const res = await apiClient.patch(`/api/v1/admin/images/${imageId}/primary`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  deleteImage: async (imageId) => {
+    const res = await apiClient.delete(`/api/v1/admin/images/${imageId}`);
     return res?.data !== undefined ? res.data : res;
   },
 

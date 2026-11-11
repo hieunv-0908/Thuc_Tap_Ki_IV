@@ -52,5 +52,13 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
                    "WHERE id = :variantId",
            nativeQuery = true)
     int incrementStockAtomic(@Param("variantId") Long variantId, @Param("qty") Integer qty);
+
+    @Modifying
+    @Query("UPDATE ProductVariant pv SET pv.isDeleted = :isDeleted WHERE pv.product.id = :productId")
+    int updateIsDeletedByProductId(@Param("productId") Long productId, @Param("isDeleted") boolean isDeleted);
+
+    boolean existsBySku(String sku);
+
+    boolean existsBySkuAndIdNot(String sku, Long id);
 }
 

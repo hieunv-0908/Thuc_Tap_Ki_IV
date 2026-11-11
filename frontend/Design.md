@@ -20,7 +20,7 @@
 
 ---
 
-## 1. Nguyên tắc thiết kế
+## 1. Nguyên tắc thiế
 
 | Nguyên tắc | Diễn giải |
 |---|---|

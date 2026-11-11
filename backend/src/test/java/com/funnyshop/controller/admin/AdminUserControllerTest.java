@@ -98,8 +98,8 @@ class AdminUserControllerTest {
                         .id(2L)
                         .username("customer")
                         .email("customer@example.com")
-                        .role("CUSTOMER")
-                        .status("ACTIVE")
+                        .role("ADMIN")
+                        .status("BANNED")
                         .build());
 
         String json = """
@@ -108,7 +108,9 @@ class AdminUserControllerTest {
                     "email": "customer@example.com",
                     "password": "password123",
                     "fullName": "Khách hàng",
-                    "phone": "0912345678"
+                    "phone": "0912345678",
+                    "role": "ADMIN",
+                    "status": "BANNED"
                 }
                 """;
 
@@ -118,7 +120,8 @@ class AdminUserControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.code", is(201)))
                 .andExpect(jsonPath("$.data.username", is("customer")))
-                .andExpect(jsonPath("$.data.role", is("CUSTOMER")));
+                .andExpect(jsonPath("$.data.role", is("ADMIN")))
+                .andExpect(jsonPath("$.data.status", is("BANNED")));
     }
 
     @Test

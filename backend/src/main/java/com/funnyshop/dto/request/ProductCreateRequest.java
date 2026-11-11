@@ -25,11 +25,18 @@ public class ProductCreateRequest {
 
     private String description;
 
-    @NotNull(message = "Giá sản phẩm không được để trống")
+    @Size(max = 100, message = "Thương hiệu tối đa 100 ký tự")
+    private String brand;
+
+    @Size(max = 100, message = "Chất liệu tối đa 100 ký tự")
+    private String material;
+
+    @Size(max = 50, message = "Giới tính mục tiêu tối đa 50 ký tự")
+    private String genderType;
+
     @DecimalMin(value = "0.0", message = "Giá sản phẩm phải lớn hơn hoặc bằng 0")
     private BigDecimal price;
 
-    @NotNull(message = "Số lượng tồn kho không được để trống")
     @Min(value = 0, message = "Số lượng tồn kho phải lớn hơn hoặc bằng 0")
     private Integer stockQuantity;
 

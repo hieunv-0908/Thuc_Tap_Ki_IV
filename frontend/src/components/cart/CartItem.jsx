@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Trash2, Package } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getCategoryMeta } from '../../utils/constants';
@@ -17,6 +18,7 @@ export default function CartItem({
   const [imgError, setImgError] = useState(false);
 
   const itemId = item.variantId || product?.id || item.id;
+  const productDetailId = product?.id || item.productId;
   const itemName = item.name || product?.name || 'Sản phẩm';
   const itemPrice = item.price ?? product?.price ?? 0;
   const itemImage = item.imageUrl || product?.imageUrl;
@@ -78,9 +80,18 @@ export default function CartItem({
             </span>
           )}
 
-          <h4 className="text-sm sm:text-base font-semibold text-ink line-clamp-2 leading-snug">
-            {itemName}
-          </h4>
+          {productDetailId ? (
+            <Link
+              to={`/products/${productDetailId}`}
+              className="text-sm sm:text-base font-semibold text-ink line-clamp-2 leading-snug hover:text-primary-700 transition-colors"
+            >
+              {itemName}
+            </Link>
+          ) : (
+            <h4 className="text-sm sm:text-base font-semibold text-ink line-clamp-2 leading-snug">
+              {itemName}
+            </h4>
+          )}
 
           {/* Biến thể: Màu sắc, Kích thước */}
           {(item.color || item.size) && (
