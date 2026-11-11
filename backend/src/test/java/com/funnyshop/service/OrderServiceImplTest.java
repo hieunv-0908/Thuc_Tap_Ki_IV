@@ -412,6 +412,8 @@ class OrderServiceImplTest {
                 .quantity(3)
                 .priceAtOrder(new BigDecimal("320000.00"))
                 .build());
+        when(orderRepository.findById(1L))
+                .thenReturn(Optional.of(sampleOrder));
         when(orderRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(sampleOrder));
         when(productVariantRepository.incrementStockAtomic(10L, 2)).thenReturn(1);
@@ -425,6 +427,48 @@ class OrderServiceImplTest {
         verify(productVariantRepository).incrementStockAtomic(10L, 2);
         verify(productVariantRepository).incrementStockAtomic(20L, 3);
         verify(orderRepository).save(sampleOrder);
+    }
+
+    @Test
+    @DisplayName("cancelOrder - Ném lỗi khi cố hủy đơn đang ở trạng thái SHIPPING")
+    void cancelOrder_ShippingStatus_ThrowsAppException() {
+        sampleOrder.setStatus(OrderStatus.SHIPPING);
+        when(orderRepository.findById(1L))
+                .thenReturn(Optional.of(sampleOrder));
+
+        AppException ex = assertThrows(
+                AppException.class,
+                () -> orderService.cancelOrder(1L)
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("SHIPPING"));
+        assertTrue(ex.getMessage().contains("Không thể hủy"));
+
+        verify(orderRepository, never()).findByIdForUpdate(any());
+        verify(productVariantRepository, never()).incrementStockAtomic(any(), any());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("updateOrderStatus - Ném lỗi khi cố chuyển SHIPPING sang CANCELLED")
+    void updateOrderStatus_ShippingToCancelled_ThrowsAppException() {
+        sampleOrder.setStatus(OrderStatus.SHIPPING);
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
+
+        AppException ex = assertThrows(
+                AppException.class,
+                () -> orderService.updateOrderStatus(1L, OrderStatus.CANCELLED)
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("Không thể chuyển trạng thái"));
+        assertTrue(ex.getMessage().contains("SHIPPING"));
+        assertTrue(ex.getMessage().contains("CANCELLED"));
+
+        verify(productVariantRepository, never()).incrementStockAtomic(any(), any());
+        verify(orderRepository, never()).save(any(Order.class));
     }
 
     // ==========================================

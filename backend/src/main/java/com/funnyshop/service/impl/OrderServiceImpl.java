@@ -101,7 +101,7 @@ public class OrderServiceImpl implements OrderService {
             Long variantId = entry.getKey();
             Integer quantity = entry.getValue();
 
-            ProductVariant variant = productVariantRepository.findById(variantId)
+            ProductVariant variant = productVariantRepository.findByIdWithImages(variantId)
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể sản phẩm với ID: " + variantId));
 
             if (Boolean.TRUE.equals(variant.getIsDeleted()) ||
@@ -208,6 +208,19 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderResponse cancelOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn hàng với ID: " + orderId
+                ));
+
+        if (order.getStatus() == OrderStatus.SHIPPING) {
+            throw new AppException(
+                    "Không thể hủy đơn hàng đang trong trạng thái giao hàng (SHIPPING). "
+                            + "Đơn hàng đang giao chỉ có thể chuyển sang trạng thái HOÀN THÀNH.",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
         return updateOrderStatus(orderId, OrderStatus.CANCELLED);
     }
 

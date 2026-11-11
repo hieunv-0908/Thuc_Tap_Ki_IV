@@ -10,6 +10,9 @@ import org.hibernate.annotations.SQLDelete;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(
@@ -34,6 +37,10 @@ public class ProductVariant {
     @JoinColumn(name = "product_id", nullable = false)
     @ToString.Exclude
     private Product product;
+
+    @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ProductImage> images = new ArrayList<>();
 
     @Column(nullable = false, unique = true, length = 100)
     private String sku;
@@ -76,6 +83,23 @@ public class ProductVariant {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    // Helper method to get image URL from variant's images
+    @Transient
+    public String getImageUrl() {
+        if (images == null || images.isEmpty()) {
+            // Fallback to product's image if variant has no images
+            if (product != null) {
+                return product.getImageUrl();
+            }
+            return null;
+        }
+        return images.stream()
+                .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                .findFirst()
+                .map(ProductImage::getImageUrl)
+                .orElseGet(() -> images.get(0).getImageUrl());
     }
 }
 

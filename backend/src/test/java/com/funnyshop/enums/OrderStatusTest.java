@@ -31,10 +31,10 @@ class OrderStatusTest {
     }
 
     @Test
-    @DisplayName("SHIPPING chỉ được chuyển sang COMPLETED hoặc CANCELLED")
+    @DisplayName("SHIPPING chỉ được chuyển sang COMPLETED")
     void shippingTransitions() {
         assertTrue(OrderStatus.SHIPPING.canTransitionTo(OrderStatus.COMPLETED));
-        assertTrue(OrderStatus.SHIPPING.canTransitionTo(OrderStatus.CANCELLED));
+        assertFalse(OrderStatus.SHIPPING.canTransitionTo(OrderStatus.CANCELLED));
 
         assertFalse(OrderStatus.SHIPPING.canTransitionTo(OrderStatus.PENDING));
         assertFalse(OrderStatus.SHIPPING.canTransitionTo(OrderStatus.PROCESSING));
