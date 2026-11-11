@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Package, Star, ShoppingCart, Heart, Flame, Check } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getCategoryMeta } from '../../utils/constants';
@@ -13,6 +14,7 @@ export default function ProductCard({ product, onClick }) {
   const [imgError, setImgError] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const navigate = useNavigate();
   const addItem = useCartStore((s) => s.addItem);
 
   const isOutOfStock = !product || product.stock <= 0;
@@ -51,6 +53,8 @@ export default function ProductCard({ product, onClick }) {
   const handleCardClick = () => {
     if (onClick) {
       onClick(product);
+    } else if (product?.id) {
+      navigate(`/products/${product.id}`);
     }
   };
 
