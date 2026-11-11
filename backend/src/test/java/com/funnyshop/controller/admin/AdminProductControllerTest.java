@@ -1,8 +1,9 @@
 package com.funnyshop.controller.admin;
 
-import com.funnyshop.dto.request.ProductCreateRequest;
-import com.funnyshop.dto.request.ProductUpdateRequest;
+import com.funnyshop.dto.request.*;
+import com.funnyshop.dto.response.ProductImageResponse;
 import com.funnyshop.dto.response.ProductResponse;
+import com.funnyshop.dto.response.ProductVariantResponse;
 import com.funnyshop.exception.GlobalHandleException;
 import com.funnyshop.service.ProductService;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +39,8 @@ class AdminProductControllerTest {
     private AdminProductController adminProductController;
 
     private ProductResponse sampleResponse;
+    private ProductVariantResponse sampleVariantResponse;
+    private ProductImageResponse sampleImageResponse;
 
     @BeforeEach
     void setUp() {
@@ -51,6 +54,24 @@ class AdminProductControllerTest {
                 .price(new BigDecimal("200000.00"))
                 .stockQuantity(15)
                 .isDeleted(false)
+                .build();
+
+        sampleVariantResponse = ProductVariantResponse.builder()
+                .id(10L)
+                .productId(1L)
+                .sku("SKU-1-BLK-M")
+                .color("Black")
+                .size("M")
+                .price(new BigDecimal("250000.00"))
+                .stockQuantity(30)
+                .isDeleted(false)
+                .build();
+
+        sampleImageResponse = ProductImageResponse.builder()
+                .id(50L)
+                .productId(1L)
+                .imageUrl("https://example.com/img.jpg")
+                .isPrimary(true)
                 .build();
     }
 
@@ -110,7 +131,7 @@ class AdminProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code", is(200)))
-                .andExpect(jsonPath("$.message", is("Ẩn/xóa mềm sản phẩm thành công!")));
+                .andExpect(jsonPath("$.message", is("Ẩn/xóa mềm sản phẩm và toàn bộ biến thể thành công!")));
 
         verify(productService, times(1)).deleteProduct(1L);
     }
@@ -124,8 +145,128 @@ class AdminProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code", is(200)))
-                .andExpect(jsonPath("$.message", is("Khôi phục sản phẩm thành công!")));
+                .andExpect(jsonPath("$.message", is("Khôi phục sản phẩm và toàn bộ biến thể thành công!")));
 
         verify(productService, times(1)).restoreProduct(1L);
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/admin/products/{productId}/variants - Thêm mới biến thể thành công")
+    void addVariant_Success() throws Exception {
+        when(productService.addVariant(eq(1L), any(ProductVariantCreateRequest.class))).thenReturn(sampleVariantResponse);
+
+        String json = """
+            {
+                "sku": "SKU-1-BLK-M",
+                "color": "Black",
+                "size": "M",
+                "price": 250000.00,
+                "stockQuantity": 30
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/admin/products/1/variants")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code", is(201)))
+                .andExpect(jsonPath("$.message", is("Thêm mới biến thể thành công!")))
+                .andExpect(jsonPath("$.data.id", is(10)))
+                .andExpect(jsonPath("$.data.sku", is("SKU-1-BLK-M")));
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/admin/variants/{variantId} - Cập nhật biến thể thành công")
+    void updateVariant_Success() throws Exception {
+        when(productService.updateVariant(eq(10L), any(ProductVariantUpdateRequest.class))).thenReturn(sampleVariantResponse);
+
+        String json = """
+            {
+                "sku": "SKU-1-BLK-M",
+                "color": "Black",
+                "size": "M",
+                "price": 260000.00,
+                "stockQuantity": 35
+            }
+            """;
+
+        mockMvc.perform(put("/api/v1/admin/variants/10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Cập nhật biến thể thành công!")));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/admin/variants/{variantId} - Xóa biến thể thành công")
+    void deleteVariant_Success() throws Exception {
+        doNothing().when(productService).deleteVariant(10L);
+
+        mockMvc.perform(delete("/api/v1/admin/variants/10")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Ẩn/ngừng kinh doanh biến thể thành công!")));
+
+        verify(productService, times(1)).deleteVariant(10L);
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/admin/variants/{variantId}/restore - Khôi phục biến thể thành công")
+    void restoreVariant_Success() throws Exception {
+        when(productService.restoreVariant(10L)).thenReturn(sampleVariantResponse);
+
+        mockMvc.perform(patch("/api/v1/admin/variants/10/restore")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Khôi phục biến thể thành công!")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/admin/products/{productId}/images - Thêm ảnh thành công")
+    void addImage_Success() throws Exception {
+        when(productService.addImage(eq(1L), any(ProductImageCreateRequest.class))).thenReturn(sampleImageResponse);
+
+        String json = """
+            {
+                "imageUrl": "https://example.com/img.jpg",
+                "isPrimary": true
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/admin/products/1/images")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code", is(201)))
+                .andExpect(jsonPath("$.message", is("Thêm hình ảnh cho sản phẩm thành công!")));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/admin/images/{imageId}/primary - Đặt ảnh đại diện chính thành công")
+    void setPrimaryImage_Success() throws Exception {
+        when(productService.setPrimaryImage(50L)).thenReturn(sampleImageResponse);
+
+        mockMvc.perform(patch("/api/v1/admin/images/50/primary")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Đặt làm ảnh đại diện chính thành công!")));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/admin/images/{imageId} - Xóa ảnh thành công")
+    void deleteImage_Success() throws Exception {
+        doNothing().when(productService).deleteImage(50L);
+
+        mockMvc.perform(delete("/api/v1/admin/images/50")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Xóa hình ảnh thành công!")));
+
+        verify(productService, times(1)).deleteImage(50L);
     }
 }
