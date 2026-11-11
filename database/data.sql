@@ -7,7 +7,7 @@ USE funnyshop;
 
 -- 1. Insert Users
 INSERT INTO users (id, username, email, password, full_name, phone, role, status, created_at, updated_at) VALUES
-(1, 'admin', 'admin@funnyshop.com', '$2a$12$lG7AeUutxhMnbT999XuBI.eJSqBwdPwhDJWYCTrEpgEXowEHEsxgy', 'Admin User', '0901234567', 'ADMIN', 'ACTIVE', NOW(), NOW()),
+(1, 'admin', 'admin@funnyshop.com', '$2a$12$5..6Bs/3HRVgcxig52IN3uFBw.AxrFHYzeAjgCG88MLpNz5o0A4yG', 'Admin User', '0901234567', 'ADMIN', 'ACTIVE', NOW(), NOW()),
 (2, 'user1', 'user1@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Nguyen Van A', '0912345678', 'CUSTOMER', 'ACTIVE', NOW(), NOW()),
 (3, 'user2', 'user2@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Tran Thi B', '0923456789', 'CUSTOMER', 'ACTIVE', NOW(), NOW())
 ON DUPLICATE KEY UPDATE updated_at = NOW();

@@ -1,6 +1,6 @@
 import apiClient from './axios';
 // import { mockEngine } from './mock/mockEngine';
-import { productApi } from './product';
+import { productApi, normalizeProduct } from './product';
 
 // const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
@@ -31,23 +31,45 @@ export const adminApi = {
     // if (isMock) {
     //   return await mockEngine.getProducts({ q, categoryId, sort, page: 1, size });
     // }
-    const firstPageRes = await productApi.getProducts({ q, categoryId, sort, page, size });
+    const pageNum = Number(page) || 0;
+    const zeroBasedPage = pageNum > 0 ? pageNum - 1 : 0;
+    const safeSize = Math.min(100, Math.max(1, Number(size) || 10));
 
-    if (size >= 100 && firstPageRes.totalPages > 1) {
-      let allContent = [...(firstPageRes.content || [])];
-      for (let p = 2; p <= firstPageRes.totalPages; p++) {
-        const nextRes = await productApi.getProducts({ q, categoryId, sort, page: p, size: 100 });
-        if (nextRes.content) {
-          allContent = allContent.concat(nextRes.content);
-        }
-      }
-      return {
-        ...firstPageRes,
-        content: allContent,
-        totalElements: allContent.length,
-      };
+    const params = new URLSearchParams();
+    if (q) params.append('keyword', q);
+    if (categoryId) params.append('categoryId', categoryId);
+    if (sort) params.append('sort', sort);
+    params.append('page', zeroBasedPage);
+    params.append('size', safeSize);
+
+    const res = await apiClient.get(`/api/v1/admin/products?${params.toString()}`);
+
+    let rawData = res;
+    if (res?.data !== undefined) rawData = res.data;
+    else if (res?.result !== undefined) rawData = res.result;
+
+    let content = [];
+    let totalPages = 1;
+    let totalElements = 0;
+    let currentPage = pageNum > 0 ? pageNum : 1;
+
+    if (Array.isArray(rawData)) {
+      content = rawData;
+      totalElements = rawData.length;
+      totalPages = 1;
+    } else if (rawData && Array.isArray(rawData.content)) {
+      content = rawData.content;
+      totalPages = rawData.totalPages ?? 1;
+      totalElements = rawData.totalElements ?? rawData.content.length;
+      currentPage = rawData.number !== undefined ? rawData.number + 1 : (rawData.page ?? (pageNum > 0 ? pageNum : 1));
     }
-    return firstPageRes;
+
+    return {
+      content: content.map(normalizeProduct),
+      totalPages,
+      totalElements,
+      page: currentPage,
+    };
   },
 
   createProduct: async (productData) => {

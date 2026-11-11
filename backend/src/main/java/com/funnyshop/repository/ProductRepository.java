@@ -54,4 +54,25 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p WHERE p.id = :id")
     Optional<Product> findByIdForUpdateIncludingDeleted(@Param("id") Long id);
 
+    @Query(value = """
+        SELECT p FROM Product p
+        LEFT JOIN FETCH p.category
+        WHERE (:keyword IS NULL
+               OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+          AND (:categoryId IS NULL
+               OR p.category.id = :categoryId)
+        """,
+        countQuery = """
+        SELECT count(p) FROM Product p
+        WHERE (:keyword IS NULL
+               OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+          AND (:categoryId IS NULL
+               OR p.category.id = :categoryId)
+        """)
+    Page<Product> searchAllProducts(
+            @Param("keyword") String keyword,
+            @Param("categoryId") Long categoryId,
+            Pageable pageable
+    );
+
 }

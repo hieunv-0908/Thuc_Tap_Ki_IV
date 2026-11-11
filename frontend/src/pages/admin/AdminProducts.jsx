@@ -210,6 +210,19 @@ export default function AdminProducts() {
     setCurrentPage(1);
   };
 
+  // Handle Soft Delete (Dừng bán)
+  const handleSoftDelete = async (id, name) => {
+    if (!confirm(`Bạn có chắc muốn dừng bán sản phẩm "${name}"? Sản phẩm sẽ bị ẩn khỏi shop.`)) return;
+    try {
+      await adminApi.deleteProduct(id);
+      toast.success(`Đã dừng bán sản phẩm "${name}".`);
+      await fetchData();
+    } catch (err) {
+      console.error('Lỗi dừng bán sản phẩm:', err);
+      toast.error(err.message || 'Không thể dừng bán sản phẩm. Vui lòng thử lại.');
+    }
+  };
+
   // Handle Delete
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -419,6 +432,15 @@ export default function AdminProducts() {
               </button>
               <button
                 type="button"
+                onClick={() => handleSoftDelete(row.id, row.name)}
+                className="p-1.5 rounded-lg text-ink-muted hover:text-orange-700 hover:bg-orange-50 transition-colors cursor-pointer"
+                title="Dừng bán (ẩn sản phẩm)"
+                aria-label={`Dừng bán ${row.name}`}
+              >
+                <EyeOff className="size-4" />
+              </button>
+              <button
+                type="button"
                 onClick={() => setDeleteTarget(row)}
                 className="p-1.5 rounded-lg text-ink-muted hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
                 title="Xóa sản phẩm"
@@ -548,8 +570,8 @@ export default function AdminProducts() {
               className="h-10 w-full px-3 rounded-lg border border-line bg-page text-sm text-ink focus:bg-white focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-colors cursor-pointer"
             >
               <option value="ALL">Tất cả tồn kho</option>
-              <option value="IN_STOCK">Còn hàng (&gt; 5)</option>
-              <option value="LOW_STOCK">Sắp hết hàng (≤ 5)</option>
+              <option value="IN_STOCK">Còn hàng (&gt; 10)</option>
+              <option value="LOW_STOCK">Sắp hết hàng (≤ 10)</option>
               <option value="OUT_OF_STOCK">Đã hết hàng (0)</option>
             </select>
           </div>

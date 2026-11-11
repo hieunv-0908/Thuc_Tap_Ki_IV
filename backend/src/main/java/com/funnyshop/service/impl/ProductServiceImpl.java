@@ -93,6 +93,58 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public Page<ProductResponse> getAllProducts(
+            String keyword,
+            Long categoryId,
+            String sortBy,
+            String sortDir,
+            int page,
+            int size
+    ) {
+        if (page < 0) {
+            throw new IllegalArgumentException("page phải >= 0");
+        }
+
+        if (size < 1 || size > 100) {
+            throw new IllegalArgumentException("size phải nằm trong khoảng 1 đến 100");
+        }
+
+        String property = "id";
+        if (sortBy != null && !sortBy.isBlank()) {
+            property = switch (sortBy.trim()) {
+                case "name" -> "name";
+                case "createdAt" -> "createdAt";
+                case "id" -> "id";
+                default -> "id";
+            };
+        }
+
+        Sort.Direction direction = Sort.Direction.ASC;
+        if (sortDir != null && !sortDir.isBlank()) {
+            if ("desc".equalsIgnoreCase(sortDir.trim())) {
+                direction = Sort.Direction.DESC;
+            } else if ("asc".equalsIgnoreCase(sortDir.trim())) {
+                direction = Sort.Direction.ASC;
+            } else {
+                throw new IllegalArgumentException("sortDir chỉ chấp nhận asc hoặc desc");
+            }
+        }
+
+        Sort sorting = Sort.by(direction, property);
+        Pageable pageable = PageRequest.of(page, size, sorting);
+
+        String normalizedKeyword = (keyword == null || keyword.isBlank())
+                ? null
+                : keyword.trim();
+
+        return productRepository.searchAllProducts(
+                normalizedKeyword,
+                categoryId,
+                pageable
+        ).map(ProductResponse::fromEntity);
+    }
+
+    @Override
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findByIdWithCategory(id)
                 .orElseThrow(() ->

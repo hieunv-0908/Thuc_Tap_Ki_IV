@@ -16,6 +16,14 @@ public interface ProductService {
             int page,
             int size
     );
+    Page<ProductResponse> getAllProducts(
+            String keyword,
+            Long categoryId,
+            String sortBy,
+            String sortDir,
+            int page,
+            int size
+    );
     ProductResponse createProduct(ProductCreateRequest request);
     ProductResponse updateProduct(Long id, ProductUpdateRequest request);
     void deleteProduct(Long id);
