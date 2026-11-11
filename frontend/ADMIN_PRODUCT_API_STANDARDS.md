@@ -385,15 +385,15 @@ Bảng phân rã công việc chi tiết dạng Checklist giúp đội ngũ Fron
 
 ---
 
-#### 🟩 TASK-FE-05: Quản lý trạng thái Xóa mềm (Cascade Soft-delete & Restore)
+#### 🟩 TASK-FE-05: Quản lý trạng thái Xóa mềm (Cascade Soft-delete & Restore) [DONE]
 - **File thực hiện:** `frontend/src/pages/admin/AdminProducts.jsx`
 - **Độ ưu tiên:** `P0`
 - **Checklist công việc:**
-  - [ ] Cột **Trạng thái:** 
+  - [x] Cột **Trạng thái:** 
     - `isDeleted === false`: Badge xanh `Đang bán`.
     - `isDeleted === true`: Badge xám `Đã ẩn/Tạm ngừng`.
-  - [ ] Nút **Ẩn sản phẩm (Xóa mềm):** Gọi `adminApi.deleteProduct(id)`, xác nhận qua Modal Confirm Dialog, cập nhật lại danh sách.
-  - [ ] Nút **Khôi phục sản phẩm:** Thêm nút Khôi phục cạnh nút Ẩn, gọi `adminApi.restoreProduct(id)` kèm Toast thông báo thành công.
+  - [x] Nút **Ẩn sản phẩm (Xóa mềm):** Gọi `adminApi.deleteProduct(id)`, xác nhận qua Modal Confirm Dialog, cập nhật lại danh sách.
+  - [x] Nút **Khôi phục sản phẩm:** Thêm nút Khôi phục cạnh nút Ẩn, gọi `adminApi.restoreProduct(id)` kèm Toast thông báo thành công.
 - **Tiêu chuẩn nghiệm thu (DoD):**
   - Khi khôi phục sản phẩm gốc thành công, toàn bộ các biến thể thuộc sản phẩm đó cũng tự động trở lại trạng thái khả dụng.
 
@@ -401,104 +401,104 @@ Bảng phân rã công việc chi tiết dạng Checklist giúp đội ngũ Fron
 
 ### PHẦN 3: FORM SẢN PHẨM GỐC (`AdminProductForm.jsx` - TAB 1)
 
-#### 🟩 TASK-FE-06: Bổ sung các trường thuộc tính thời trang vào Form gốc
+#### 🟩 TASK-FE-06: Bổ sung các trường thuộc tính thời trang vào Form gốc [DONE]
 - **File thực hiện:** `frontend/src/pages/admin/AdminProductForm.jsx`
 - **Độ ưu tiên:** `P0`
 - **Checklist công việc:**
-  - [ ] Thêm ô nhập **Thương hiệu (`brand`)**: Text input (ví dụ: "FunnyStyle").
-  - [ ] Thêm ô nhập **Chất liệu (`material`)**: Text input (ví dụ: "Vải Oxford Premium").
-  - [ ] Thêm ô chọn **Đối tượng (`genderType`)**: Select dropdown gồm 3 giá trị:
+  - [x] Thêm ô nhập **Thương hiệu (`brand`)**: Text input (ví dụ: "FunnyStyle").
+  - [x] Thêm ô nhập **Chất liệu (`material`)**: Text input (ví dụ: "Vải Oxford Premium").
+  - [x] Thêm ô chọn **Đối tượng (`genderType`)**: Select dropdown gồm 3 giá trị:
     - `MEN` (Nam)
     - `WOMEN` (Nữ)
     - `UNISEX` (Mọi giới tính)
-  - [ ] Giữ nguyên các trường cơ bản: Tên sản phẩm, Mô tả, Danh mục (`categoryId`).
+  - [x] Giữ nguyên các trường cơ bản: Tên sản phẩm, Mô tả, Danh mục (`categoryId`).
 - **Tiêu chuẩn nghiệm thu (DoD):**
   - Validate không để trống Tên, Danh mục, Đối tượng trước khi gửi lên API.
 
 ---
 
-#### 🟩 TASK-FE-07: Tách bạch luồng tạo sản phẩm 2 bước (Wizard / Tabbed Form)
+#### 🟩 TASK-FE-07: Tách bạch luồng tạo sản phẩm 2 bước (Wizard / Tabbed Form) [DONE]
 - **File thực hiện:** `frontend/src/pages/admin/AdminProductForm.jsx`
 - **Độ ưu tiên:** `P1`
 - **Checklist công việc:**
-  - [ ] Chia giao diện thành 3 Tabs rõ ràng:
+  - [x] Chia giao diện thành 3 Tabs rõ ràng:
     - **Tab 1: Thông tin chung (Base Product)**
     - **Tab 2: Biến thể & Kho (Variants)**
     - **Tab 3: Thư viện Hình ảnh (Images)**
-  - [ ] Khi tạo mới sản phẩm (`/admin/products/new`):
+  - [x] Khi tạo mới sản phẩm (`/admin/products/new`):
     - Khóa Tab 2 và Tab 3; chỉ cho phép điền Tab 1.
     - Bấm "Lưu & Tiếp tục" -> Gọi `POST /api/v1/admin/products` -> Lấy `id` sản phẩm mới tạo -> Chuyển sang URL `/admin/products/${newId}` và mở khóa Tab 2, Tab 3.
-  - [ ] Khi chỉnh sửa sản phẩm đã có (`/admin/products/:id`): Mở đầy đủ cả 3 Tabs ngay từ đầu.
+  - [x] Khi chỉnh sửa sản phẩm đã có (`/admin/products/:id`): Mở đầy đủ cả 3 Tabs ngay từ đầu.
 
 ---
 
 ### PHẦN 4: QUẢN LÝ BIẾN THỂ TRÊN FORM ADMIN (`AdminProductForm.jsx` - TAB 2)
 
-#### 🟩 TASK-FE-08: Xây dựng Bảng danh sách Biến thể (Variants Table)
+#### 🟩 TASK-FE-08: Xây dựng Bảng danh sách Biến thể (Variants Table) [DONE]
 - **File thực hiện:** `frontend/src/pages/admin/AdminProductForm.jsx` (hoặc tách component con `AdminProductVariants.jsx`)
 - **Độ ưu tiên:** `P0`
 - **Checklist công việc:**
-  - [ ] Bảng hiển thị các cột: Mã SKU, Màu sắc (kèm chấm màu swatch), Kích thước (Size), Giá bán, Tồn kho, Trạng thái (`Đang bán` / `Ngừng bán`), Thao tác.
-  - [ ] Hiển thị thông số tổng kết phía trên bảng: Tổng số lượng biến thể, Khoảng giá, Tổng tồn kho.
+  - [x] Bảng hiển thị các cột: Mã SKU, Màu sắc (kèm chấm màu swatch), Kích thước (Size), Giá bán, Tồn kho, Trạng thái (`Đang bán` / `Ngừng bán`), Thao tác.
+  - [x] Hiển thị thông số tổng kết phía trên bảng: Tổng số lượng biến thể, Khoảng giá, Tổng tồn kho.
 
 ---
 
-#### 🟩 TASK-FE-09: Modal Thêm & Chỉnh sửa Biến thể riêng lẻ
+#### 🟩 TASK-FE-09: Modal Thêm & Chỉnh sửa Biến thể riêng lẻ [DONE]
 - **File thực hiện:** `frontend/src/pages/admin/AdminProductForm.jsx`
 - **Độ ưu tiên:** `P0`
 - **Checklist công việc:**
-  - [ ] Modal gồm form nhập liệu:
+  - [x] Modal gồm form nhập liệu:
     - Mã SKU (`sku`): Bắt buộc, chuỗi in hoa.
     - Màu sắc (`color`): Bắt buộc (ví dụ: `White`, `Black`, `Navy`).
     - Kích cỡ (`size`): Bắt buộc (ví dụ: `S`, `M`, `L`, `XL`).
     - Giá bán (`price`): Bắt buộc, số dương $\ge 0$.
     - Tồn kho (`stockQuantity`): Bắt buộc, số nguyên $\ge 0$.
-  - [ ] Xử lý sự kiện:
+  - [x] Xử lý sự kiện:
     - Thêm mới: Gọi `adminApi.createVariant(productId, payload)`.
     - Cập nhật: Gọi `adminApi.updateVariant(variantId, payload)`.
-  - [ ] Hiển thị Toast thông báo và tự động refresh danh sách biến thể sau khi lưu thành công.
+  - [x] Hiển thị Toast thông báo và tự động refresh danh sách biến thể sau khi lưu thành công.
 
 ---
 
-#### 🟩 TASK-FE-10: Thao tác Xóa mềm & Khôi phục biến thể riêng lẻ
+#### 🟩 TASK-FE-10: Thao tác Xóa mềm & Khôi phục biến thể riêng lẻ [DONE]
 - **File thực hiện:** `frontend/src/pages/admin/AdminProductForm.jsx`
 - **Độ ưu tiên:** `P1`
 - **Checklist công việc:**
-  - [ ] Nút "Ngừng bán" (Xóa mềm): Gọi `adminApi.deleteVariant(variantId)` -> Biến thể chuyển sang `isDeleted: true` (gạch ngang tên, mờ hàng).
-  - [ ] Nút "Khôi phục": Gọi `adminApi.restoreVariant(variantId)` -> Biến thể quay lại trạng thái bán bình thường.
-  - [ ] Đảm bảo không ảnh hưởng đến các biến thể khác và không ảnh hưởng tới trạng thái sản phẩm gốc.
+  - [x] Nút "Ngừng bán" (Xóa mềm): Gọi `adminApi.deleteVariant(variantId)` -> Biến thể chuyển sang `isDeleted: true` (gạch ngang tên, mờ hàng).
+  - [x] Nút "Khôi phục": Gọi `adminApi.restoreVariant(variantId)` -> Biến thể quay lại trạng thái bán bình thường.
+  - [x] Đảm bảo không ảnh hưởng đến các biến thể khác và không ảnh hưởng tới trạng thái sản phẩm gốc.
 
 ---
 
 ### PHẦN 5: QUẢN LÝ THƯ VIỆN ẢNH TRÊN FORM ADMIN (`AdminProductForm.jsx` - TAB 3)
 
-#### 🟩 TASK-FE-11: Xây dựng Giao diện Gallery Hình ảnh Sản phẩm
+#### 🟩 TASK-FE-11: Xây dựng Giao diện Gallery Hình ảnh Sản phẩm [DONE]
 - **File thực hiện:** `frontend/src/pages/admin/AdminProductForm.jsx` (hoặc tách component con `AdminProductImages.jsx`)
 - **Độ ưu tiên:** `P0`
 - **Checklist công việc:**
-  - [ ] Hiển thị danh sách ảnh dạng lưới (Card Grid) kèm preview ảnh trực quan.
-  - [ ] Gắn Badge **Ảnh đại diện** (Primary) màu vàng/xanh nổi bật cho ảnh có `isPrimary === true`.
-  - [ ] Hiển thị chip liên kết biến thể: Nếu ảnh có `variantId`, hiển thị nhãn màu sắc tương ứng (ví dụ: `Gắn với màu: White`).
+  - [x] Hiển thị danh sách ảnh dạng lưới (Card Grid) kèm preview ảnh trực quan.
+  - [x] Gắn Badge **Ảnh đại diện** (Primary) màu vàng/xanh nổi bật cho ảnh có `isPrimary === true`.
+  - [x] Hiển thị chip liên kết biến thể: Nếu ảnh có `variantId`, hiển thị nhãn màu sắc tương ứng (ví dụ: `Gắn với màu: White`).
 
 ---
 
-#### 🟩 TASK-FE-12: Form Thêm ảnh mới vào thư viện
+#### 🟩 TASK-FE-12: Form Thêm ảnh mới vào thư viện [DONE]
 - **File thực hiện:** `frontend/src/pages/admin/AdminProductForm.jsx`
 - **Độ ưu tiên:** `P0`
 - **Checklist công việc:**
-  - [ ] Ô nhập `imageUrl`: Text input chứa đường link ảnh trực tiếp (preview ngay ảnh khi nhập link).
-  - [ ] Checkbox `isPrimary`: "Đặt làm ảnh đại diện chính của sản phẩm".
-  - [ ] Dropdown `variantId`: Danh sách các biến thể của sản phẩm để người dùng chọn gắn ảnh theo màu (tùy chọn).
-  - [ ] Gọi `adminApi.addImage(productId, payload)` -> Tải lại danh sách ảnh khi thành công.
+  - [x] Ô nhập `imageUrl`: Text input chứa đường link ảnh trực tiếp (preview ngay ảnh khi nhập link).
+  - [x] Checkbox `isPrimary`: "Đặt làm ảnh đại diện chính của sản phẩm".
+  - [x] Dropdown `variantId`: Danh sách các biến thể của sản phẩm để người dùng chọn gắn ảnh theo màu (tùy chọn).
+  - [x] Gọi `adminApi.addImage(productId, payload)` -> Tải lại danh sách ảnh khi thành công.
 
 ---
 
-#### 🟩 TASK-FE-13: Thao tác Chuyển ảnh chính và Xóa ảnh
+#### 🟩 TASK-FE-13: Thao tác Chuyển ảnh chính và Xóa ảnh [DONE]
 - **File thực hiện:** `frontend/src/pages/admin/AdminProductForm.jsx`
 - **Độ ưu tiên:** `P0`
 - **Checklist công việc:**
-  - [ ] Nút **"Đặt làm ảnh chính"**: Với các ảnh chưa phải là primary, hiển thị nút này; khi bấm gọi `adminApi.setPrimaryImage(imageId)`.
-  - [ ] Nút **"Xóa ảnh"**: Xác nhận trước khi xóa, gọi `adminApi.deleteImage(imageId)` -> Xóa ảnh khỏi gallery.
+  - [x] Nút **"Đặt làm ảnh chính"**: Với các ảnh chưa phải là primary, hiển thị nút này; khi bấm gọi `adminApi.setPrimaryImage(imageId)`.
+  - [x] Nút **"Xóa ảnh"**: Xác nhận trước khi xóa, gọi `adminApi.deleteImage(imageId)` -> Xóa ảnh khỏi gallery.
 
 ---
 

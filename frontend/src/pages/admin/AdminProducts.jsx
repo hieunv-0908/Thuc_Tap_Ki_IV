@@ -9,9 +9,9 @@ import {
   Trash2,
   AlertTriangle,
   PackageX,
-  Layers,
   X,
   RotateCcw,
+  EyeOff,
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Table from '../../components/ui/Table';
@@ -47,6 +47,8 @@ export default function AdminProducts() {
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
   const [isDeleting, setIsDeleting] = useState(false);
+  const [restoreTarget, setRestoreTarget] = useState(null); // { id, name }
+  const [isRestoring, setIsRestoring] = useState(false);
 
   // Fetch data for user actions (retry, after delete/restore)
   const fetchData = useCallback(async () => {
@@ -126,6 +128,7 @@ export default function AdminProducts() {
   // Overall statistics calculated from full list
   const stats = useMemo(() => {
     const total = products.length;
+    const hidden = products.filter((p) => p.isDeleted === true).length;
     const lowStock = products.filter((p) => {
       const stock = p.totalStock !== undefined ? p.totalStock : (p.stockQuantity ?? p.stock ?? 0);
       return stock > 0 && stock <= 10;
@@ -139,7 +142,7 @@ export default function AdminProducts() {
       return stock > 10;
     }).length;
 
-    return { total, lowStock, outOfStock, inStock };
+    return { total, hidden, lowStock, outOfStock, inStock };
   }, [products]);
 
   // Filter products
@@ -207,6 +210,19 @@ export default function AdminProducts() {
     setCurrentPage(1);
   };
 
+  // Handle Soft Delete (Dừng bán)
+  const handleSoftDelete = async (id, name) => {
+    if (!confirm(`Bạn có chắc muốn dừng bán sản phẩm "${name}"? Sản phẩm sẽ bị ẩn khỏi shop.`)) return;
+    try {
+      await adminApi.deleteProduct(id);
+      toast.success(`Đã dừng bán sản phẩm "${name}".`);
+      await fetchData();
+    } catch (err) {
+      console.error('Lỗi dừng bán sản phẩm:', err);
+      toast.error(err.message || 'Không thể dừng bán sản phẩm. Vui lòng thử lại.');
+    }
+  };
+
   // Handle Delete
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -225,14 +241,19 @@ export default function AdminProducts() {
   };
 
   // Handle Restore
-  const handleRestoreProduct = async (id, name) => {
+  const handleRestoreProduct = async () => {
+    if (!restoreTarget) return;
     try {
-      await adminApi.restoreProduct(id);
-      toast.success(`Đã khôi phục sản phẩm "${name}".`);
+      setIsRestoring(true);
+      await adminApi.restoreProduct(restoreTarget.id);
+      toast.success(`Đã khôi phục sản phẩm "${restoreTarget.name}".`);
+      setRestoreTarget(null);
       await fetchData();
     } catch (err) {
       console.error('Lỗi khôi phục sản phẩm:', err);
       toast.error(err.message || 'Không thể khôi phục sản phẩm. Vui lòng thử lại.');
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -361,6 +382,27 @@ export default function AdminProducts() {
       },
     },
     {
+      key: 'status',
+      header: 'Trạng thái',
+      className: 'whitespace-nowrap',
+      render: (row) => {
+        if (row.isDeleted) {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+              <EyeOff className="size-3" />
+              Đã ẩn
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span className="size-1.5 rounded-full bg-emerald-500 inline-block" />
+            Đang bán
+          </span>
+        );
+      },
+    },
+    {
       key: 'actions',
       header: 'Thao tác',
       headerClassName: 'text-right',
@@ -370,7 +412,7 @@ export default function AdminProducts() {
           {row.isDeleted ? (
             <button
               type="button"
-              onClick={() => handleRestoreProduct(row.id, row.name)}
+              onClick={() => setRestoreTarget({ id: row.id, name: row.name })}
               className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-colors cursor-pointer"
               title="Khôi phục sản phẩm"
               aria-label={`Khôi phục ${row.name}`}
@@ -387,6 +429,15 @@ export default function AdminProducts() {
                 aria-label={`Chỉnh sửa ${row.name}`}
               >
                 <Pencil className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSoftDelete(row.id, row.name)}
+                className="p-1.5 rounded-lg text-ink-muted hover:text-orange-700 hover:bg-orange-50 transition-colors cursor-pointer"
+                title="Dừng bán (ẩn sản phẩm)"
+                aria-label={`Dừng bán ${row.name}`}
+              >
+                <EyeOff className="size-4" />
               </button>
               <button
                 type="button"
@@ -452,7 +503,7 @@ export default function AdminProducts() {
           label="Sắp hết hàng"
           value={stats.lowStock}
           variant="warning"
-          subtext="Tồn kho ≤ 5 chiếc"
+          subtext="Tồn kho ≤ 10 chiếc"
         />
         <StatCard
           icon={PackageX}
@@ -462,11 +513,11 @@ export default function AdminProducts() {
           subtext="Cần nhập thêm hàng"
         />
         <StatCard
-          icon={Layers}
-          label="Đang kinh doanh"
-          value={stats.inStock}
+          icon={EyeOff}
+          label="Đang ẩn"
+          value={stats.hidden}
           variant="secondary"
-          subtext="Tồn kho dồi dào"
+          subtext="Đã xóa mềm (ẩn khỏi shop)"
         />
       </div>
 
@@ -519,8 +570,8 @@ export default function AdminProducts() {
               className="h-10 w-full px-3 rounded-lg border border-line bg-page text-sm text-ink focus:bg-white focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-colors cursor-pointer"
             >
               <option value="ALL">Tất cả tồn kho</option>
-              <option value="IN_STOCK">Còn hàng (&gt; 5)</option>
-              <option value="LOW_STOCK">Sắp hết hàng (≤ 5)</option>
+              <option value="IN_STOCK">Còn hàng (&gt; 10)</option>
+              <option value="LOW_STOCK">Sắp hết hàng (≤ 10)</option>
               <option value="OUT_OF_STOCK">Đã hết hàng (0)</option>
             </select>
           </div>
@@ -590,6 +641,19 @@ export default function AdminProducts() {
         cancelText="Hủy"
         variant="danger"
         loading={isDeleting}
+      />
+
+      {/* Confirm Restore Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(restoreTarget)}
+        onClose={() => !isRestoring && setRestoreTarget(null)}
+        onConfirm={handleRestoreProduct}
+        title="Khôi phục sản phẩm này?"
+        description={`Bạn có chắc chắn muốn khôi phục "${restoreTarget?.name}"? Sản phẩm sẽ hiển thị trở lại trên cửa hàng.`}
+        confirmText="Khôi phục"
+        cancelText="Hủy"
+        variant="primary"
+        loading={isRestoring}
       />
     </div>
   );

@@ -12,6 +12,7 @@ import com.funnyshop.dto.response.ProductVariantResponse;
 import com.funnyshop.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,6 +29,26 @@ public class AdminProductController {
     // ==========================================
     // PHẦN A: QUẢN LÝ SẢN PHẨM GỐC (Base Product)
     // ==========================================
+
+    @GetMapping("/products")
+    public ResponseEntity<ApiResponse<Page<ProductResponse>>> getAllProducts(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Page<ProductResponse> products = productService.getAllProducts(
+                keyword, categoryId, sortBy, sortDir, page, size);
+
+        return ResponseEntity.ok(
+                ApiResponse.<Page<ProductResponse>>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Lấy danh sách tất cả sản phẩm thành công!")
+                        .data(products)
+                        .build());
+    }
 
     @PostMapping("/products")
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
