@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -100,6 +101,27 @@ class AdminOrderControllerTest {
     }
 
     @Test
+    @DisplayName("PATCH /api/v1/admin/orders/{id}/status - Hủy đơn đi qua luồng hoàn kho")
+    void updateOrderStatus_Cancelled_UsesCancelFlow() throws Exception {
+        OrderResponse cancelled = OrderResponse.builder()
+                .id(1L)
+                .userId(2L)
+                .status(OrderStatus.CANCELLED)
+                .build();
+        when(orderService.cancelOrder(1L)).thenReturn(cancelled);
+
+        mockMvc.perform(patch("/api/v1/admin/orders/1/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "status": "CANCELLED"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status", is("CANCELLED")));
+    }
+
+    @Test
     @DisplayName("PUT /api/v1/admin/orders/{id}/status - Chuyển trạng thái sai quy tắc trả về lỗi 400")
     void updateOrderStatus_InvalidTransition_Returns400() throws Exception {
         when(orderService.updateOrderStatus(eq(1L), eq(OrderStatus.COMPLETED)))
@@ -117,5 +139,24 @@ class AdminOrderControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code", is(400)))
                 .andExpect(jsonPath("$.message", is("Không thể chuyển trạng thái từ PENDING sang COMPLETED")));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/admin/orders/{id}/cancel - Hủy đơn và hoàn tồn kho thành công")
+    void cancelOrder_Success() throws Exception {
+        OrderResponse cancelled = OrderResponse.builder()
+                .id(1L)
+                .userId(2L)
+                .customerName("Nguyen Van A")
+                .status(OrderStatus.CANCELLED)
+                .build();
+        when(orderService.cancelOrder(1L)).thenReturn(cancelled);
+
+        mockMvc.perform(patch("/api/v1/admin/orders/1/cancel")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Hủy đơn hàng và hoàn tồn kho thành công!")))
+                .andExpect(jsonPath("$.data.status", is("CANCELLED")));
     }
 }

@@ -52,7 +52,8 @@ public class OrderItemResponse {
             if (variant.getProduct() != null) {
                 prodId = variant.getProduct().getId();
                 prodName = variant.getProduct().getName();
-                prodImg = variant.getProduct().getImageUrl();
+                // Get imageUrl from variant's images instead of product's transient method
+                prodImg = variant.getImageUrl();
             }
         } else if (item.getProduct() != null) {
             prodId = item.getProduct().getId();

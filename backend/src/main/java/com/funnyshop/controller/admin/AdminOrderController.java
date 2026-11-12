@@ -3,6 +3,7 @@ package com.funnyshop.controller.admin;
 import com.funnyshop.dto.request.OrderStatusUpdateRequest;
 import com.funnyshop.dto.response.ApiResponse;
 import com.funnyshop.dto.response.OrderResponse;
+import com.funnyshop.enums.OrderStatus;
 import com.funnyshop.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +42,9 @@ public class AdminOrderController {
             @PathVariable Long id,
             @Valid @RequestBody OrderStatusUpdateRequest request
     ) {
-        OrderResponse updatedOrder = orderService.updateOrderStatus(id, request.getStatus());
+        OrderResponse updatedOrder = request.getStatus() == OrderStatus.CANCELLED
+                ? orderService.cancelOrder(id)
+                : orderService.updateOrderStatus(id, request.getStatus());
 
         return ResponseEntity.ok(
                 ApiResponse.<OrderResponse>builder()
@@ -51,5 +54,17 @@ public class AdminOrderController {
                         .build()
         );
     }
-}
 
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(@PathVariable Long id) {
+        OrderResponse cancelledOrder = orderService.cancelOrder(id);
+
+        return ResponseEntity.ok(
+                ApiResponse.<OrderResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Hủy đơn hàng và hoàn tồn kho thành công!")
+                        .data(cancelledOrder)
+                        .build()
+        );
+    }
+}

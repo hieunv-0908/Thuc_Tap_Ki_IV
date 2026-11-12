@@ -101,7 +101,7 @@ public class OrderServiceImpl implements OrderService {
             Long variantId = entry.getKey();
             Integer quantity = entry.getValue();
 
-            ProductVariant variant = productVariantRepository.findById(variantId)
+            ProductVariant variant = productVariantRepository.findByIdWithImages(variantId)
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể sản phẩm với ID: " + variantId));
 
             if (Boolean.TRUE.equals(variant.getIsDeleted()) ||
@@ -187,7 +187,13 @@ public class OrderServiceImpl implements OrderService {
                 Integer quantity = item.getQuantity();
 
                 if (quantity != null && quantity > 0) {
-                    productVariantRepository.incrementStockAtomic(variantId, quantity);
+                    int updatedRows = productVariantRepository.incrementStockAtomic(variantId, quantity);
+                    if (updatedRows != 1) {
+                        throw new AppException(
+                                "Không thể hoàn tồn kho cho biến thể sản phẩm ID: " + variantId,
+                                HttpStatus.INTERNAL_SERVER_ERROR
+                        );
+                    }
                 }
             }
         }
@@ -197,6 +203,25 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(order);
 
         return OrderResponse.fromEntity(savedOrder);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderResponse cancelOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn hàng với ID: " + orderId
+                ));
+
+        if (order.getStatus() == OrderStatus.SHIPPING) {
+            throw new AppException(
+                    "Không thể hủy đơn hàng đang trong trạng thái giao hàng (SHIPPING). "
+                            + "Đơn hàng đang giao chỉ có thể chuyển sang trạng thái HOÀN THÀNH.",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        return updateOrderStatus(orderId, OrderStatus.CANCELLED);
     }
 
     @Override
