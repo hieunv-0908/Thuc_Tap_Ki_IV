@@ -8,6 +8,7 @@ import com.funnyshop.entity.OrderItem;
 import com.funnyshop.entity.ProductVariant;
 import com.funnyshop.entity.User;
 import com.funnyshop.enums.OrderStatus;
+import com.funnyshop.event.OrderCancelledEvent;
 import com.funnyshop.exception.AppException;
 import com.funnyshop.exception.InsufficientStockException;
 import com.funnyshop.exception.ResourceNotFoundException;
@@ -18,6 +19,7 @@ import com.funnyshop.repository.UserRepository;
 import com.funnyshop.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -28,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -42,6 +45,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -51,7 +55,8 @@ public class OrderServiceImpl implements OrderService {
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin người dùng với ID: " + userId));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Không tìm thấy thông tin người dùng với ID: " + userId));
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new AppException("Danh sách sản phẩm đặt hàng không được để trống!", HttpStatus.BAD_REQUEST);
@@ -71,17 +76,23 @@ public class OrderServiceImpl implements OrderService {
             if (targetVariantId == null && itemReq.getProductId() != null) {
                 // Ngăn chặn gửi nhiều dòng cùng productId mà thiếu variantId (gây gộp nhầm)
                 if (productsWithMissingVariant.contains(itemReq.getProductId())) {
-                    throw new AppException("Vui lòng chọn rõ kích cỡ/màu sắc cho sản phẩm ID: " + itemReq.getProductId(), HttpStatus.BAD_REQUEST);
+                    throw new AppException(
+                            "Vui lòng chọn rõ kích cỡ/màu sắc cho sản phẩm ID: " + itemReq.getProductId(),
+                            HttpStatus.BAD_REQUEST);
                 }
                 productsWithMissingVariant.add(itemReq.getProductId());
 
-                // Tương thích ngược: Lấy biến thể đầu tiên của sản phẩm nếu client cũ chỉ truyền productId
-                List<ProductVariant> variants = productVariantRepository.findByProductIdAndIsDeletedFalse(itemReq.getProductId());
+                // Tương thích ngược: Lấy biến thể đầu tiên của sản phẩm nếu client cũ chỉ
+                // truyền productId
+                List<ProductVariant> variants = productVariantRepository
+                        .findByProductIdAndIsDeletedFalse(itemReq.getProductId());
                 if (variants.isEmpty()) {
-                    throw new ResourceNotFoundException("Không tìm thấy biến thể khả dụng cho sản phẩm ID: " + itemReq.getProductId());
+                    throw new ResourceNotFoundException(
+                            "Không tìm thấy biến thể khả dụng cho sản phẩm ID: " + itemReq.getProductId());
                 }
                 if (variants.size() > 1) {
-                    throw new AppException("Sản phẩm có nhiều biến thể, vui lòng chọn kích cỡ/màu sắc cụ thể!", HttpStatus.BAD_REQUEST);
+                    throw new AppException("Sản phẩm có nhiều biến thể, vui lòng chọn kích cỡ/màu sắc cụ thể!",
+                            HttpStatus.BAD_REQUEST);
                 }
                 targetVariantId = variants.get(0).getId();
             }
@@ -97,7 +108,8 @@ public class OrderServiceImpl implements OrderService {
             variantQuantities.merge(targetVariantId, itemReq.getQuantity(), Integer::sum);
         }
 
-        // Sắp xếp variantId tăng dần (ASC) để triệt tiêu nguy cơ Deadlock giữa các transaction đồng thời
+        // Sắp xếp variantId tăng dần (ASC) để triệt tiêu nguy cơ Deadlock giữa các
+        // transaction đồng thời
         List<Map.Entry<Long, Integer>> sortedEntries = variantQuantities.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .toList();
@@ -121,7 +133,8 @@ public class OrderServiceImpl implements OrderService {
             Integer quantity = entry.getValue();
 
             ProductVariant variant = productVariantRepository.findByIdWithImages(variantId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể sản phẩm với ID: " + variantId));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Không tìm thấy biến thể sản phẩm với ID: " + variantId));
 
             if (Boolean.TRUE.equals(variant.getIsDeleted()) ||
                     (variant.getProduct() != null && Boolean.TRUE.equals(variant.getProduct().getIsDeleted()))) {
@@ -130,8 +143,10 @@ public class OrderServiceImpl implements OrderService {
             }
 
             Long expectedProductId = variantToProductMap.get(variantId);
-            if (expectedProductId != null && variant.getProduct() != null && !variant.getProduct().getId().equals(expectedProductId)) {
-                throw new AppException("Biến thể ID " + variantId + " không thuộc về sản phẩm ID " + expectedProductId, HttpStatus.BAD_REQUEST);
+            if (expectedProductId != null && variant.getProduct() != null
+                    && !variant.getProduct().getId().equals(expectedProductId)) {
+                throw new AppException("Biến thể ID " + variantId + " không thuộc về sản phẩm ID " + expectedProductId,
+                        HttpStatus.BAD_REQUEST);
             }
 
             // Trừ tồn kho nguyên tử trực tiếp ở tầng CSDL
@@ -185,7 +200,8 @@ public class OrderServiceImpl implements OrderService {
             return new PageImpl<>(Collections.emptyList(), pageable, orderPage.getTotalElements());
         }
 
-        // Phase 2: Nạp đầy đủ graph (orderItems -> productVariant -> product) trong 1 query
+        // Phase 2: Nạp đầy đủ graph (orderItems -> productVariant -> product) trong 1
+        // query
         List<Order> fullOrders = orderRepository.findAllWithDetailsByIds(ids);
 
         // Bảo toàn tuyệt đối thứ tự sắp xếp (Sort Order Preservation) của Phase 1
@@ -208,8 +224,7 @@ public class OrderServiceImpl implements OrderService {
         // Khóa đơn hàng để tránh nhiều request cùng xử lý một đơn
         Order order = orderRepository.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Không tìm thấy đơn hàng với ID: " + orderId
-                ));
+                        "Không tìm thấy đơn hàng với ID: " + orderId));
 
         OrderStatus currentStatus = order.getStatus();
 
@@ -218,8 +233,7 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException(
                     "Không thể chuyển trạng thái đơn hàng từ "
                             + currentStatus + " sang " + newStatus,
-                    HttpStatus.BAD_REQUEST
-            );
+                    HttpStatus.BAD_REQUEST);
         }
 
         // Nếu chuyển sang CANCELLED thì tiến hành hoàn kho nguyên tử
@@ -240,8 +254,7 @@ public class OrderServiceImpl implements OrderService {
                     if (updatedRows != 1) {
                         throw new AppException(
                                 "Không thể hoàn tồn kho cho biến thể sản phẩm ID: " + variantId,
-                                HttpStatus.INTERNAL_SERVER_ERROR
-                        );
+                                HttpStatus.INTERNAL_SERVER_ERROR);
                     }
                 }
             }
@@ -257,20 +270,94 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderResponse cancelOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Không tìm thấy đơn hàng với ID: " + orderId
-                ));
+        return cancelOrder(orderId, null, true);
+    }
 
-        if (order.getStatus() == OrderStatus.SHIPPING) {
-            throw new AppException(
-                    "Không thể hủy đơn hàng đang trong trạng thái giao hàng (SHIPPING). "
-                            + "Đơn hàng đang giao chỉ có thể chuyển sang trạng thái HOÀN THÀNH.",
-                    HttpStatus.BAD_REQUEST
-            );
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderResponse cancelOrder(Long orderId, Long currentUserId, boolean isAdmin) {
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn hàng với ID: " + orderId));
+
+        // 1. Kiểm tra quyền sở hữu
+        if (!isAdmin) {
+            if (currentUserId == null || order.getUser() == null || !order.getUser().getId().equals(currentUserId)) {
+                throw new AppException("Bạn không có quyền hủy đơn hàng này!", HttpStatus.FORBIDDEN);
+            }
         }
 
-        return updateOrderStatus(orderId, OrderStatus.CANCELLED);
+        OrderStatus currentStatus = order.getStatus();
+
+        // 2. Chống Double-Click & Lũy đẳng: Nếu đã CANCELLED thì trả 409 CONFLICT
+        if (currentStatus == OrderStatus.CANCELLED) {
+            throw new AppException("Đơn hàng này đã được hủy trước đó!", HttpStatus.CONFLICT);
+        }
+
+        // 3. Kiểm tra trạng thái cho phép hủy
+        if (!isAdmin) {
+            if (currentStatus != OrderStatus.PENDING) {
+                String msg = switch (currentStatus) {
+                    case PROCESSING ->
+                        "Đơn hàng đang được chuẩn bị đóng gói, không thể tự hủy. Vui lòng liên hệ bộ phận hỗ trợ.";
+                    case SHIPPING -> "Đơn hàng đang trong quá trình vận chuyển, không thể hủy.";
+                    case COMPLETED -> "Đơn hàng đã hoàn thành, không thể hủy.";
+                    default -> "Không thể hủy đơn hàng ở trạng thái hiện tại (" + currentStatus + ").";
+                };
+                throw new AppException(msg, HttpStatus.BAD_REQUEST);
+            }
+        } else {
+            if (!currentStatus.canTransitionTo(OrderStatus.CANCELLED)) {
+                throw new AppException(
+                        "Không thể chuyển trạng thái đơn hàng từ " + currentStatus + " sang CANCELLED",
+                        HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        // 4. Hoàn kho nguyên tử phòng vệ (sắp xếp variantId ASC chống Deadlock)
+        List<OrderItem> sortedItems = order.getOrderItems()
+                .stream()
+                .filter(item -> item.getProductVariant() != null && item.getProductVariant().getId() != null)
+                .sorted(Comparator.comparing(item -> item.getProductVariant().getId()))
+                .toList();
+
+        for (OrderItem item : sortedItems) {
+            Long variantId = item.getProductVariant().getId();
+            Integer quantity = item.getQuantity();
+
+            if (quantity == null || quantity <= 0) {
+                log.warn("Bỏ qua hoàn kho cho orderItem ID: {} vì quantity không hợp lệ: {}", item.getId(), quantity);
+                continue;
+            }
+
+            int updatedRows = productVariantRepository.incrementStockAtomic(variantId, quantity);
+            if (updatedRows != 1) {
+                throw new AppException(
+                        "Không thể hoàn tồn kho cho biến thể sản phẩm ID: " + variantId,
+                        HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        }
+
+        // 5. Cập nhật trạng thái CANCELLED
+        order.setStatus(OrderStatus.CANCELLED);
+        Order savedOrder = orderRepository.save(order);
+
+        // 6. Đóng gói Event DTO phẳng (Zero Lazy-Loading Dependency)
+        String userEmail = order.getUser() != null ? order.getUser().getEmail() : null;
+        OrderCancelledEvent event = OrderCancelledEvent.builder()
+                .orderId(savedOrder.getId())
+                .userId(order.getUser() != null ? order.getUser().getId() : null)
+                .customerName(savedOrder.getCustomerName())
+                .userEmail(userEmail)
+                .phone(savedOrder.getPhone())
+                .totalAmount(savedOrder.getTotalAmount())
+                .cancellationSource(isAdmin ? "ADMIN" : "USER")
+                .cancelledAt(LocalDateTime.now())
+                .build();
+
+        eventPublisher.publishEvent(event);
+
+        return OrderResponse.fromEntity(savedOrder);
     }
 
     @Override
@@ -281,9 +368,7 @@ public class OrderServiceImpl implements OrderService {
                 .sorted(
                         Comparator.comparing(
                                 Order::getCreatedAt,
-                                Comparator.nullsLast(Comparator.reverseOrder())
-                        )
-                )
+                                Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(OrderResponse::fromEntity)
                 .toList();
     }

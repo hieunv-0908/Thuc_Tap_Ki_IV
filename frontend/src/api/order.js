@@ -31,4 +31,9 @@ export const orderApi = {
     const res = await apiClient.get(`/api/v1/orders/${id}`);
     return res?.data !== undefined ? res.data : res;
   },
+
+  cancelOrder: async (id) => {
+    const res = await apiClient.patch(`/api/v1/orders/${id}/cancel`);
+    return res?.data !== undefined ? res.data : res;
+  },
 };

@@ -19,6 +19,7 @@ import { OrderBadge } from '../components/ui/Badge';
 import OrderTimeline from '../components/order/OrderTimeline';
 import ErrorState from '../components/ui/ErrorState';
 import Button from '../components/ui/Button';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useCartStore } from '../store/cartStore';
 import { toast } from '../store/toastStore';
 
@@ -33,6 +34,8 @@ export default function OrderDetail() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const fetchOrder = useCallback(async () => {
     setLoading(true);
@@ -116,6 +119,29 @@ export default function OrderDetail() {
     }
   };
 
+  const handleCancelOrder = async () => {
+    if (!order) return;
+    try {
+      setIsCancelling(true);
+      await orderApi.cancelOrder(order.id);
+      toast.success('Hủy đơn hàng thành công!');
+      setShowCancelModal(false);
+      await fetchOrder();
+    } catch (err) {
+      const status = err.response?.status || err.status;
+      const message = err.response?.data?.message || err.message;
+      if (status === 409 && message?.includes('hủy trước đó')) {
+        toast.info('Đơn hàng này đã được hủy trước đó.');
+        setShowCancelModal(false);
+        await fetchOrder();
+      } else {
+        toast.error(message || 'Không thể hủy đơn hàng.');
+      }
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-6 md:py-10 space-y-6">
@@ -190,6 +216,16 @@ export default function OrderDetail() {
           </div>
 
           <div className="flex items-center gap-3 self-start sm:self-auto">
+            {order.status === ORDER_STATUS.PENDING && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCancelModal(true)}
+                className="font-semibold text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+              >
+                Hủy đơn
+              </Button>
+            )}
             {isCompleted && (
               <Button
                 variant="soft"
@@ -367,6 +403,19 @@ export default function OrderDetail() {
           Tiếp tục mua sắm
         </Button>
       </div>
+
+      {/* Modal xác nhận hủy đơn hàng */}
+      <ConfirmDialog
+        isOpen={showCancelModal}
+        onClose={() => !isCancelling && setShowCancelModal(false)}
+        onConfirm={handleCancelOrder}
+        title={`Hủy đơn hàng #${order.id}?`}
+        description="Bạn có chắc chắn muốn hủy đơn hàng này không? Số lượng sản phẩm sẽ được tự động hoàn lại kho và thao tác này không thể hoàn tác."
+        confirmText="Xác nhận hủy đơn"
+        cancelText="Đóng"
+        variant="danger"
+        loading={isCancelling}
+      />
     </div>
   );
 }
