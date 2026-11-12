@@ -276,6 +276,57 @@ class OrderServiceImplTest {
         verify(productVariantRepository, times(1)).decrementStockAtomic(10L, 5);
     }
 
+    @Test
+    @DisplayName("checkout - Ném lỗi BadRequest khi gửi variantId null cho sản phẩm có nhiều biến thể")
+    void checkout_MultipleVariantsWithoutVariantId_ThrowsAppException() {
+        OrderCheckoutRequest request = OrderCheckoutRequest.builder()
+                .fullName("Nguyen Van A")
+                .phone("0912345678")
+                .address("123 Ha Noi")
+                .paymentMethod("COD")
+                .items(List.of(
+                        OrderCheckoutItemRequest.builder().productId(1L).quantity(1).build()
+                ))
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+        when(productVariantRepository.findByProductIdAndIsDeletedFalse(1L))
+                .thenReturn(List.of(sampleVariant1, sampleVariant2));
+
+        AppException ex = assertThrows(
+                AppException.class,
+                () -> orderService.checkout(1L, request)
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("nhiều biến thể"));
+    }
+
+    @Test
+    @DisplayName("checkout - Ném lỗi BadRequest khi variant không thuộc product tương ứng")
+    void checkout_VariantDoesNotBelongToProduct_ThrowsAppException() {
+        OrderCheckoutRequest request = OrderCheckoutRequest.builder()
+                .fullName("Nguyen Van A")
+                .phone("0912345678")
+                .address("123 Ha Noi")
+                .paymentMethod("COD")
+                .items(List.of(
+                        OrderCheckoutItemRequest.builder().productId(999L).variantId(10L).quantity(1).build()
+                ))
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+        when(productVariantRepository.findByIdWithImages(10L)).thenReturn(Optional.of(sampleVariant1));
+
+        AppException ex = assertThrows(
+                AppException.class,
+                () -> orderService.checkout(1L, request)
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("không thuộc về sản phẩm"));
+    }
+
     // ==========================================
     // TESTS FOR STATUS TRANSITIONS & QUERIES
     // ==========================================
@@ -529,5 +580,71 @@ class OrderServiceImplTest {
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
         assertEquals(1L, result.getContent().get(0).getId());
+    }
+
+    // ==========================================
+    // TESTS FOR JPA ENTITY EQUALS/HASHCODE & DTO COMPLETENESS
+    // ==========================================
+
+    @Test
+    @DisplayName("JPA Safety - Hai transient OrderItem (id == null) không bị ghi đè lẫn nhau khi đưa vào Set")
+    void entityEqualsAndHashCode_TransientEntitiesWithNullId_DoNotOverwriteInSet() {
+        OrderItem item1 = OrderItem.builder()
+                .quantity(1)
+                .priceAtOrder(new BigDecimal("100000.00"))
+                .build();
+
+        OrderItem item2 = OrderItem.builder()
+                .quantity(2)
+                .priceAtOrder(new BigDecimal("200000.00"))
+                .build();
+
+        // Hai transient entity chưa có ID thì không bằng nhau trừ khi cùng con trỏ ô nhớ
+        assertNotEquals(item1, item2);
+        assertEquals(item1, item1);
+
+        java.util.Set<OrderItem> itemSet = new java.util.HashSet<>();
+        itemSet.add(item1);
+        itemSet.add(item2);
+
+        // Bảo đảm không bị ghi đè mất phần tử trong HashSet
+        assertEquals(2, itemSet.size());
+    }
+
+    @Test
+    @DisplayName("DTO Completeness - OrderResponse.fromEntity nạp đầy đủ dữ liệu, không bị Silent Data Loss")
+    void orderResponse_CompleteMapping_NoSilentDataLoss() {
+        OrderResponse response = OrderResponse.fromEntity(sampleOrder);
+
+        assertNotNull(response);
+        assertEquals(1L, response.getId());
+        assertEquals(1L, response.getUserId());
+        assertEquals("Nguyen Van A", response.getCustomerName());
+        assertEquals(new BigDecimal("600000.00"), response.getTotalAmount());
+        assertNotNull(response.getItems());
+        assertEquals(1, response.getItems().size());
+
+        var itemResp = response.getItems().get(0);
+        assertEquals(101L, itemResp.getId());
+        assertEquals(10L, itemResp.getVariantId());
+        assertEquals(1L, itemResp.getProductId());
+        assertEquals("Áo Polo Nam Classic", itemResp.getProductName());
+        assertEquals("POLO-BLK-M", itemResp.getSku());
+        assertEquals(2, itemResp.getQuantity());
+        assertEquals(new BigDecimal("300000.00"), itemResp.getPriceAtOrder());
+    }
+
+    @Test
+    @DisplayName("Lombok ToString Safety - toString() không bị đệ quy vòng lặp và an toàn cho Lazy Loading")
+    void orderToString_DoesNotThrowException_AndSafeFromLazy() {
+        String orderStr = assertDoesNotThrow(() -> sampleOrder.toString());
+        assertNotNull(orderStr);
+        assertTrue(orderStr.contains("id=1"));
+        assertTrue(orderStr.contains("customerName=Nguyen Van A"));
+
+        String itemStr = assertDoesNotThrow(() -> sampleOrder.getOrderItems().get(0).toString());
+        assertNotNull(itemStr);
+        assertTrue(itemStr.contains("id=101"));
+        assertTrue(itemStr.contains("quantity=2"));
     }
 }

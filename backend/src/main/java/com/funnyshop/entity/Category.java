@@ -1,10 +1,7 @@
 package com.funnyshop.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 
 import java.time.LocalDateTime;
@@ -17,17 +14,21 @@ import java.time.LocalDateTime;
         }
 )
 @SQLDelete(sql = "UPDATE categories SET is_deleted = true WHERE id = ?")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true)
 public class Category {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @ToString.Include
     private Long id;
 
     @Column(nullable = false, length = 100)
+    @ToString.Include
     private String name;
 
     @Column(columnDefinition = "TEXT")
@@ -35,6 +36,7 @@ public class Category {
 
     @Column(name = "is_deleted", nullable = false)
     @Builder.Default
+    @ToString.Include
     private Boolean isDeleted = false;
 
     @Column(name = "created_at", updatable = false)
@@ -55,5 +57,20 @@ public class Category {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || org.hibernate.Hibernate.getClass(this) != org.hibernate.Hibernate.getClass(o)) {
+            return false;
+        }
+        Category other = (Category) o;
+        return id != null && id.equals(other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return org.hibernate.Hibernate.getClass(this).hashCode();
     }
 }

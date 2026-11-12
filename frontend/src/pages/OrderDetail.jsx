@@ -72,9 +72,19 @@ export default function OrderDetail() {
   const handleReorder = () => {
     if (!order || !order.items) return;
     let addedCount = 0;
+    let hasLegacyItems = false;
+    let legacyProduct = null;
+
     order.items.forEach((item) => {
+      // Nếu sản phẩm trong đơn cũ không có variantId (tạo trước khi có biến thể)
+      if (!item.variantId) {
+        hasLegacyItems = true;
+        legacyProduct = item;
+        return;
+      }
+
       const variantPayload = {
-        variantId: item.variantId || item.id,
+        variantId: item.variantId,
         productId: item.productId,
         name: item.name || item.productName,
         sku: item.sku,
@@ -88,9 +98,21 @@ export default function OrderDetail() {
       if (ok) addedCount++;
     });
 
-    if (addedCount > 0) {
-      toast.success('Đã thêm sản phẩm vào giỏ hàng');
+    if (addedCount > 0 && hasLegacyItems) {
+      toast.warning(
+        `Đã thêm ${addedCount} sản phẩm vào giỏ; một số sản phẩm cũ cần chọn lại phân loại.`
+      );
       navigate('/cart');
+    } else if (addedCount > 0) {
+      toast.success(`Đã thêm ${addedCount} sản phẩm vào giỏ hàng`);
+      navigate('/cart');
+    } else if (hasLegacyItems) {
+      toast.warning(
+        `Sản phẩm '${legacyProduct?.name || 'trong đơn'}' đã có phân loại kích cỡ/màu sắc mới. Vui lòng chọn lại biến thể.`
+      );
+      if (legacyProduct?.productId) {
+        navigate(`/products/${legacyProduct.productId}`);
+      }
     }
   };
 
@@ -282,7 +304,7 @@ export default function OrderDetail() {
         <div className="divide-y divide-line">
           {items.map((item, idx) => (
             <div
-              key={item.productId || idx}
+              key={item.id || item.variantId || `${item.productId}-${item.sku || idx}`}
               className="py-3.5 first:pt-0 last:pb-0 flex items-center justify-between gap-4"
             >
               <div className="flex items-center gap-3.5 min-w-0 flex-1">

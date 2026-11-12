@@ -54,6 +54,10 @@ public class OrderItemResponse {
                 prodName = variant.getProduct().getName();
                 // Get imageUrl from variant's images instead of product's transient method
                 prodImg = variant.getImageUrl();
+            } else if (item.getProduct() != null) {
+                prodId = item.getProduct().getId();
+                prodName = item.getProduct().getName();
+                prodImg = item.getProduct().getImageUrl();
             }
         } else if (item.getProduct() != null) {
             prodId = item.getProduct().getId();

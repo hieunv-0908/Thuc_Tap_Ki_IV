@@ -17,7 +17,7 @@ export default function CartItem({
   const { product, quantity } = item;
   const [imgError, setImgError] = useState(false);
 
-  const itemId = item.variantId || item.id;
+  const itemId = item.cartItemId || item.variantId || item.id;
   const productDetailId = item.productId || product?.id;
   const itemName = item.name || product?.name || 'Sản phẩm';
   const itemPrice = item.price ?? product?.price ?? 0;
