@@ -2,14 +2,17 @@ package com.funnyshop.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.funnyshop.entity.OrderItem;
+import com.funnyshop.entity.Product;
 import com.funnyshop.entity.ProductVariant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 
+@Slf4j
 @Data
 @Builder
 @NoArgsConstructor
@@ -42,28 +45,57 @@ public class OrderItemResponse {
         String color = null;
         String size = null;
 
-        ProductVariant variant = item.getProductVariant();
-        if (variant != null) {
-            varId = variant.getId();
-            sku = variant.getSku();
-            color = variant.getColor();
-            size = variant.getSize();
+        try {
+            ProductVariant variant = item.getProductVariant();
+            if (variant != null) {
+                varId = variant.getId();
+                try { sku = variant.getSku(); } catch (Exception ignored) {}
+                try { color = variant.getColor(); } catch (Exception ignored) {}
+                try { size = variant.getSize(); } catch (Exception ignored) {}
 
-            if (variant.getProduct() != null) {
-                prodId = variant.getProduct().getId();
-                prodName = variant.getProduct().getName();
-                // Get imageUrl from variant's images instead of product's transient method
-                prodImg = variant.getImageUrl();
-            } else if (item.getProduct() != null) {
-                prodId = item.getProduct().getId();
-                prodName = item.getProduct().getName();
-                prodImg = item.getProduct().getImageUrl();
+                try {
+                    Product variantProduct = variant.getProduct();
+                    if (variantProduct != null) {
+                        prodId = variantProduct.getId();
+                        prodName = variantProduct.getName();
+                    }
+                } catch (Exception ex) {
+                    log.warn("Không thể tải thông tin Product cha của variant ID: {} tại OrderItem ID: {}. Lỗi: {}",
+                            varId, item.getId(), ex.getMessage());
+                }
+
+                try {
+                    prodImg = variant.getImageUrl();
+                } catch (Exception ex) {
+                    log.warn("Không thể tải ảnh của variant ID: {} tại OrderItem ID: {}. Lỗi: {}",
+                            varId, item.getId(), ex.getMessage());
+                }
             }
-        } else if (item.getProduct() != null) {
-            prodId = item.getProduct().getId();
-            prodName = item.getProduct().getName();
-            prodImg = item.getProduct().getImageUrl();
+
+            // Fallback sang Product trực tiếp trên OrderItem (cho dữ liệu cũ tạo trước khi có variant)
+            if (prodName == null || prodId == null) {
+                try {
+                    Product directProduct = item.getProduct();
+                    if (directProduct != null) {
+                        if (prodId == null) prodId = directProduct.getId();
+                        if (prodName == null) prodName = directProduct.getName();
+                        if (prodImg == null) {
+                            try {
+                                prodImg = directProduct.getImageUrl();
+                            } catch (Exception ignored) {}
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.warn("Không thể tải thông tin Product trực tiếp tại OrderItem ID: {}. Lỗi: {}",
+                            item.getId(), ex.getMessage());
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Phát hiện dữ liệu mồ côi hoặc lỗi truy cập entity tại OrderItem ID: {}, Order ID: {}. Chi tiết: {}",
+                    item.getId(), (item.getOrder() != null ? item.getOrder().getId() : null), ex.getMessage());
         }
+
+        String finalName = (prodName != null && !prodName.isBlank()) ? prodName : "Sản phẩm không khả dụng";
 
         return OrderItemResponse.builder()
                 .id(item.getId())
@@ -72,8 +104,8 @@ public class OrderItemResponse {
                 .sku(sku)
                 .color(color)
                 .size(size)
-                .name(prodName)
-                .productName(prodName)
+                .name(finalName)
+                .productName(finalName)
                 .imageUrl(prodImg)
                 .quantity(item.getQuantity())
                 .price(item.getPriceAtOrder())
