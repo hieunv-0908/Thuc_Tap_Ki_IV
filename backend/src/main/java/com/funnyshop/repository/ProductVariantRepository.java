@@ -19,6 +19,9 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     Optional<ProductVariant> findBySku(String sku);
 
+    @Query("SELECT pv FROM ProductVariant pv LEFT JOIN FETCH pv.images LEFT JOIN FETCH pv.product WHERE pv.id = :id")
+    Optional<ProductVariant> findByIdWithImages(@Param("id") Long id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT pv FROM ProductVariant pv WHERE pv.id = :id")
     Optional<ProductVariant> findByIdForUpdate(@Param("id") Long id);

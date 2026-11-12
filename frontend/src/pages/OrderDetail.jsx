@@ -73,14 +73,18 @@ export default function OrderDetail() {
     if (!order || !order.items) return;
     let addedCount = 0;
     order.items.forEach((item) => {
-      const product = {
-        id: item.productId || item.id,
-        name: item.name,
-        price: item.price,
+      const variantPayload = {
+        variantId: item.variantId || item.id,
+        productId: item.productId,
+        name: item.name || item.productName,
+        sku: item.sku,
+        color: item.color,
+        size: item.size,
+        price: item.price ?? item.priceAtOrder,
         imageUrl: item.imageUrl,
-        stock: 99,
+        stockQuantity: 99,
       };
-      const ok = addItem(product, item.quantity || 1);
+      const ok = addItem(variantPayload, item.quantity || 1);
       if (ok) addedCount++;
     });
 

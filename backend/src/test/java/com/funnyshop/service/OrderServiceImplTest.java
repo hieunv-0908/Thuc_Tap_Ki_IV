@@ -138,8 +138,8 @@ class OrderServiceImplTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productVariantRepository.findById(10L)).thenReturn(Optional.of(sampleVariant1));
-        when(productVariantRepository.findById(20L)).thenReturn(Optional.of(sampleVariant2));
+        when(productVariantRepository.findByIdWithImages(10L)).thenReturn(Optional.of(sampleVariant1));
+        when(productVariantRepository.findByIdWithImages(20L)).thenReturn(Optional.of(sampleVariant2));
 
         when(productVariantRepository.decrementStockAtomic(10L, 2)).thenReturn(1);
         when(productVariantRepository.decrementStockAtomic(20L, 1)).thenReturn(1);
@@ -186,7 +186,7 @@ class OrderServiceImplTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productVariantRepository.findById(20L)).thenReturn(Optional.of(sampleVariant2));
+        when(productVariantRepository.findByIdWithImages(20L)).thenReturn(Optional.of(sampleVariant2));
         when(productVariantRepository.decrementStockAtomic(20L, 6)).thenReturn(0);
 
         AppException ex = assertThrows(
@@ -213,7 +213,7 @@ class OrderServiceImplTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productVariantRepository.findById(999L)).thenReturn(Optional.empty());
+        when(productVariantRepository.findByIdWithImages(999L)).thenReturn(Optional.empty());
 
         assertThrows(
                 ResourceNotFoundException.class,
@@ -238,7 +238,7 @@ class OrderServiceImplTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productVariantRepository.findById(10L)).thenReturn(Optional.of(sampleVariant1));
+        when(productVariantRepository.findByIdWithImages(10L)).thenReturn(Optional.of(sampleVariant1));
 
         AppException ex = assertThrows(
                 AppException.class,
@@ -265,7 +265,7 @@ class OrderServiceImplTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productVariantRepository.findById(10L)).thenReturn(Optional.of(sampleVariant1));
+        when(productVariantRepository.findByIdWithImages(10L)).thenReturn(Optional.of(sampleVariant1));
         when(productVariantRepository.decrementStockAtomic(10L, 5)).thenReturn(1);
 
         when(orderRepository.save(any(Order.class)))
@@ -375,6 +375,100 @@ class OrderServiceImplTest {
 
         verify(productVariantRepository, times(1)).incrementStockAtomic(10L, 2);
         verify(orderRepository).save(sampleOrder);
+    }
+
+    @Test
+    @DisplayName("updateOrderStatus - Không đánh dấu hủy nếu không thể hoàn tồn kho")
+    void updateOrderStatus_CancelOrder_StockRollbackFailureDoesNotCancelOrder() {
+        sampleOrder.getOrderItems().add(OrderItem.builder()
+                .id(102L)
+                .productVariant(sampleVariant2)
+                .quantity(3)
+                .priceAtOrder(new BigDecimal("320000.00"))
+                .build());
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
+        when(productVariantRepository.incrementStockAtomic(10L, 2)).thenReturn(1);
+        when(productVariantRepository.incrementStockAtomic(20L, 3)).thenReturn(0);
+
+        AppException ex = assertThrows(
+                AppException.class,
+                () -> orderService.updateOrderStatus(1L, OrderStatus.CANCELLED)
+        );
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, ex.getStatus());
+        assertEquals(OrderStatus.PENDING, sampleOrder.getStatus());
+        verify(productVariantRepository).incrementStockAtomic(10L, 2);
+        verify(productVariantRepository).incrementStockAtomic(20L, 3);
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("cancelOrder - Hủy đơn và hoàn tồn kho qua luồng admin")
+    void cancelOrder_Success() {
+        sampleOrder.getOrderItems().add(OrderItem.builder()
+                .id(102L)
+                .productVariant(sampleVariant2)
+                .quantity(3)
+                .priceAtOrder(new BigDecimal("320000.00"))
+                .build());
+        when(orderRepository.findById(1L))
+                .thenReturn(Optional.of(sampleOrder));
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
+        when(productVariantRepository.incrementStockAtomic(10L, 2)).thenReturn(1);
+        when(productVariantRepository.incrementStockAtomic(20L, 3)).thenReturn(1);
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderResponse response = orderService.cancelOrder(1L);
+
+        assertEquals(OrderStatus.CANCELLED, response.getStatus());
+        verify(productVariantRepository).incrementStockAtomic(10L, 2);
+        verify(productVariantRepository).incrementStockAtomic(20L, 3);
+        verify(orderRepository).save(sampleOrder);
+    }
+
+    @Test
+    @DisplayName("cancelOrder - Ném lỗi khi cố hủy đơn đang ở trạng thái SHIPPING")
+    void cancelOrder_ShippingStatus_ThrowsAppException() {
+        sampleOrder.setStatus(OrderStatus.SHIPPING);
+        when(orderRepository.findById(1L))
+                .thenReturn(Optional.of(sampleOrder));
+
+        AppException ex = assertThrows(
+                AppException.class,
+                () -> orderService.cancelOrder(1L)
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("SHIPPING"));
+        assertTrue(ex.getMessage().contains("Không thể hủy"));
+
+        verify(orderRepository, never()).findByIdForUpdate(any());
+        verify(productVariantRepository, never()).incrementStockAtomic(any(), any());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("updateOrderStatus - Ném lỗi khi cố chuyển SHIPPING sang CANCELLED")
+    void updateOrderStatus_ShippingToCancelled_ThrowsAppException() {
+        sampleOrder.setStatus(OrderStatus.SHIPPING);
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
+
+        AppException ex = assertThrows(
+                AppException.class,
+                () -> orderService.updateOrderStatus(1L, OrderStatus.CANCELLED)
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("Không thể chuyển trạng thái"));
+        assertTrue(ex.getMessage().contains("SHIPPING"));
+        assertTrue(ex.getMessage().contains("CANCELLED"));
+
+        verify(productVariantRepository, never()).incrementStockAtomic(any(), any());
+        verify(orderRepository, never()).save(any(Order.class));
     }
 
     // ==========================================

@@ -9,24 +9,38 @@ export const useCartStore = create(
       addItem: (itemOrProduct, quantity = 1) => {
         if (!itemOrProduct) return false;
 
-        // Định danh duy nhất theo biến thể (hoặc id sản phẩm nếu không có biến thể)
-        const variantId =
+        // Nếu truyền vào là Product và có danh sách variants, lấy biến thể đầu tiên còn hàng
+        let targetVariant = null;
+        if (itemOrProduct.variantId) {
+          targetVariant = itemOrProduct;
+        } else if (Array.isArray(itemOrProduct.variants) && itemOrProduct.variants.length > 0) {
+          targetVariant =
+            itemOrProduct.variants.find((v) => !v.isDeleted && (v.stockQuantity > 0 || v.stock > 0)) ||
+            itemOrProduct.variants.find((v) => !v.isDeleted) ||
+            itemOrProduct.variants[0];
+        }
+
+        const rawProduct = itemOrProduct.product || itemOrProduct;
+        const resolvedVariantId =
+          targetVariant?.variantId ||
+          targetVariant?.id ||
           itemOrProduct.variantId ||
-          itemOrProduct.variants?.[0]?.id ||
           itemOrProduct.id;
 
         const maxStock =
+          targetVariant?.stockQuantity ??
+          targetVariant?.stock ??
           itemOrProduct.stockQuantity ??
           itemOrProduct.stock ??
-          itemOrProduct.product?.stockQuantity ??
-          itemOrProduct.product?.stock ??
+          rawProduct.stockQuantity ??
+          rawProduct.stock ??
           0;
 
         if (maxStock <= 0) return false;
 
         const currentItems = get().items;
         const existingIndex = currentItems.findIndex(
-          (item) => (item.variantId || item.product?.id) === variantId
+          (item) => String(item.variantId) === String(resolvedVariantId)
         );
 
         if (existingIndex > -1) {
@@ -42,20 +56,22 @@ export const useCartStore = create(
           set({ items: updatedItems });
         } else {
           const validQty = Math.min(quantity, maxStock);
-          const rawProduct = itemOrProduct.product || itemOrProduct;
           const newItem = {
-            variantId,
+            id: resolvedVariantId,
+            variantId: resolvedVariantId,
             productId: itemOrProduct.productId || rawProduct.id,
             product: rawProduct,
             name: itemOrProduct.name || rawProduct.name,
-            sku: itemOrProduct.sku,
-            color: itemOrProduct.color,
-            size: itemOrProduct.size,
-            price: itemOrProduct.price ?? rawProduct.price ?? 0,
+            sku: targetVariant?.sku || itemOrProduct.sku || rawProduct.sku || '',
+            color: targetVariant?.color || itemOrProduct.color || '',
+            size: targetVariant?.size || itemOrProduct.size || '',
+            price: Number(targetVariant?.price ?? itemOrProduct.price ?? rawProduct.price ?? 0),
             imageUrl:
+              targetVariant?.imageUrl ||
               itemOrProduct.imageUrl ||
               itemOrProduct.image ||
-              rawProduct.imageUrl,
+              rawProduct.imageUrl ||
+              '',
             stock: maxStock,
             quantity: validQty,
           };
@@ -64,41 +80,35 @@ export const useCartStore = create(
         return true;
       },
 
-      updateQuantity: (id, quantity) => {
+      updateQuantity: (variantId, quantity) => {
         const currentItems = get().items;
         const target = currentItems.find(
-          (item) =>
-            item.variantId === id ||
-            item.product?.id === id ||
-            item.productId === id
+          (item) => String(item.variantId) === String(variantId) || String(item.id) === String(variantId)
         );
         if (!target) return;
 
         if (quantity <= 0) {
-          get().removeItem(id);
+          get().removeItem(variantId);
           return;
         }
 
-        const maxStock = target.stock || target.product?.stock || 1;
+        const maxStock = target.stock || target.stockQuantity || 1;
         const validQty = Math.min(quantity, maxStock);
         set({
           items: currentItems.map((item) =>
-            item.variantId === id ||
-            item.product?.id === id ||
-            item.productId === id
+            String(item.variantId) === String(variantId) || String(item.id) === String(variantId)
               ? { ...item, quantity: validQty }
               : item
           ),
         });
       },
 
-      removeItem: (id) => {
+      removeItem: (variantId) => {
         set({
           items: get().items.filter(
             (item) =>
-              item.variantId !== id &&
-              item.product?.id !== id &&
-              item.productId !== id
+              String(item.variantId) !== String(variantId) &&
+              String(item.id) !== String(variantId)
           ),
         });
       },
@@ -108,13 +118,13 @@ export const useCartStore = create(
       },
 
       getTotalCount: () => {
-        return get().items.reduce((total, item) => total + item.quantity, 0);
+        return get().items.reduce((total, item) => total + (item.quantity || 0), 0);
       },
 
       getTotalPrice: () => {
         return get().items.reduce((total, item) => {
-          const unitPrice = item.price ?? item.product?.price ?? 0;
-          return total + unitPrice * item.quantity;
+          const unitPrice = Number(item.price) || 0;
+          return total + unitPrice * (item.quantity || 0);
         }, 0);
       },
     }),

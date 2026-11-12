@@ -15,7 +15,7 @@ public enum OrderStatus {
         return switch (this) {
             case PENDING -> next == PROCESSING || next == CANCELLED;
             case PROCESSING -> next == SHIPPING || next == CANCELLED;
-            case SHIPPING -> next == COMPLETED || next == CANCELLED;
+            case SHIPPING -> next == COMPLETED;
             case COMPLETED, CANCELLED -> false;
         };
     }

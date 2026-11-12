@@ -104,7 +104,7 @@ export default function Cart() {
         <div className="lg:col-span-2 space-y-3.5">
           {items.map((item) => (
             <CartItem
-              key={item.product.id}
+              key={item.variantId || item.id || `${item.productId}-${item.sku}`}
               item={item}
               onUpdateQuantity={updateQuantity}
               onRemove={removeItem}
