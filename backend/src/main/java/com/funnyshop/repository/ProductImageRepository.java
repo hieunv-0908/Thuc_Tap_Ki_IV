@@ -16,7 +16,7 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
 
     List<ProductImage> findByVariantId(Long variantId);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Modifying(flushAutomatically = true)
     @Query("UPDATE ProductImage pi SET pi.isPrimary = false WHERE pi.product.id = :productId")
     int resetPrimaryByProductId(@Param("productId") Long productId);
 }

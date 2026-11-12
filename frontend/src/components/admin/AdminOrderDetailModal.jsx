@@ -94,7 +94,7 @@ export default function AdminOrderDetailModal({ isOpen, onClose, order }) {
             {items.map((item, idx) => {
               const itemTotal = (item.price || 0) * (item.quantity || 1);
               return (
-                <div key={item.productId || idx} className="p-3.5 flex items-center gap-3.5">
+                <div key={item.id || item.variantId || `${item.productId}-${item.sku || idx}`} className="p-3.5 flex items-center gap-3.5">
                   <img
                     src={item.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200'}
                     alt={item.productName || item.name}
@@ -107,6 +107,11 @@ export default function AdminOrderDetailModal({ isOpen, onClose, order }) {
                     <p className="text-sm font-semibold text-ink line-clamp-1">
                       {item.productName || item.name}
                     </p>
+                    {(item.color || item.size || item.sku) && (
+                      <p className="text-[11px] text-ink-subtle mt-0.5">
+                        Phân loại: {[item.color, item.size].filter(Boolean).join(' - ')} {item.sku ? `(SKU: ${item.sku})` : ''}
+                      </p>
+                    )}
                     <p className="text-xs text-ink-muted mt-0.5">
                       Đơn giá: {formatCurrency(item.price)} × {item.quantity}
                     </p>

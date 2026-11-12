@@ -32,7 +32,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
      *
      * @return số dòng bị ảnh hưởng (1 nếu thành công, 0 nếu không đủ hàng hoặc id sai)
      */
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Modifying(flushAutomatically = true)
     @Query(value = "UPDATE product_variants " +
                    "SET stock_quantity = stock_quantity - :qty, updated_at = NOW() " +
                    "WHERE id = :variantId " +
@@ -46,7 +46,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
      *
      * @return số dòng bị ảnh hưởng
      */
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Modifying(flushAutomatically = true)
     @Query(value = "UPDATE product_variants " +
                    "SET stock_quantity = stock_quantity + :qty, updated_at = NOW() " +
                    "WHERE id = :variantId",

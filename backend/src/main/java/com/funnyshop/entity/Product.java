@@ -1,10 +1,7 @@
 package com.funnyshop.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.SQLDelete;
 
@@ -26,29 +23,35 @@ import java.util.Objects;
         }
 )
 @SQLDelete(sql = "UPDATE products SET is_deleted = true WHERE id = ?")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true)
 public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @ToString.Include
     private Long id;
 
     @Column(nullable = false, length = 200)
+    @ToString.Include
     private String name;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
     @Column(length = 100)
+    @ToString.Include
     private String brand;
 
     @Column(length = 100)
     private String material;
 
     @Column(name = "gender_type", length = 50)
+    @ToString.Include
     private String genderType; // MEN, WOMEN, UNISEX
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -57,6 +60,7 @@ public class Product {
 
     @Column(name = "is_deleted", nullable = false)
     @Builder.Default
+    @ToString.Include
     private Boolean isDeleted = false;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -122,5 +126,20 @@ public class Product {
                 .findFirst()
                 .map(ProductImage::getImageUrl)
                 .orElseGet(() -> images.get(0).getImageUrl());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || org.hibernate.Hibernate.getClass(this) != org.hibernate.Hibernate.getClass(o)) {
+            return false;
+        }
+        Product other = (Product) o;
+        return id != null && id.equals(other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return org.hibernate.Hibernate.getClass(this).hashCode();
     }
 }

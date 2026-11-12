@@ -1,11 +1,7 @@
 package com.funnyshop.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -17,31 +13,34 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_images_variant", columnList = "variant_id")
         }
 )
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true)
 public class ProductImage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @ToString.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
-    @ToString.Exclude
     private Product product;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id")
-    @ToString.Exclude
     private ProductVariant variant;
 
     @Column(name = "image_url", nullable = false, length = 500)
+    @ToString.Include
     private String imageUrl;
 
     @Column(name = "is_primary", nullable = false)
     @Builder.Default
+    @ToString.Include
     private Boolean isPrimary = false;
 
     @Column(name = "created_at", updatable = false)
@@ -54,5 +53,19 @@ public class ProductImage {
             this.isPrimary = false;
         }
     }
-}
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || org.hibernate.Hibernate.getClass(this) != org.hibernate.Hibernate.getClass(o)) {
+            return false;
+        }
+        ProductImage other = (ProductImage) o;
+        return id != null && id.equals(other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return org.hibernate.Hibernate.getClass(this).hashCode();
+    }
+}

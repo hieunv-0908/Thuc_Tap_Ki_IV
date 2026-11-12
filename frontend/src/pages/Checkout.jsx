@@ -118,7 +118,7 @@ export default function Checkout() {
         phone: formData.phone.trim(),
         address: formData.address.trim(),
         items: items.map((i) => ({
-          variantId: i.variantId || (i.product?.variants?.[0]?.id) || undefined,
+          variantId: i.variantId || undefined,
           productId: i.productId || i.product?.id,
           quantity: i.quantity,
         })),
@@ -443,10 +443,10 @@ export default function Checkout() {
                 const img = item.imageUrl || item.product?.imageUrl;
                 const name = item.name || item.product?.name;
                 const price = item.price ?? item.product?.price ?? 0;
-                const itemId = item.variantId || item.product?.id || item.productId;
+                const itemKey = item.cartItemId || (item.variantId ? `var-${item.variantId}` : `prod-${item.productId || item.product?.id}`);
 
                 return (
-                  <div key={itemId} className="pt-2.5 first:pt-0 flex items-center gap-3">
+                  <div key={itemKey} className="pt-2.5 first:pt-0 flex items-center gap-3">
                     <div className="relative size-12 rounded-lg border border-line bg-gray-50 overflow-hidden shrink-0 flex items-center justify-center">
                       <img
                         src={img}

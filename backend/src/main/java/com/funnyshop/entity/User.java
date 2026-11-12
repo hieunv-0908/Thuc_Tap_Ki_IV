@@ -1,11 +1,7 @@
-
 package com.funnyshop.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,26 +18,32 @@ import java.util.List;
                 @Index(name = "email", columnList = "email", unique = true)
         }
 )
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true)
 public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @ToString.Include
     private Long id;
 
     @Column(nullable = false, unique = true, length = 50)
+    @ToString.Include
     private String username;
 
     @Column(nullable = false, unique = true, length = 100)
+    @ToString.Include
     private String email;
 
     @Column(nullable = false, length = 255)
     private String password;
 
     @Column(name = "full_name", length = 100)
+    @ToString.Include
     private String fullName;
 
     @Column(length = 20)
@@ -50,11 +52,13 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
+    @ToString.Include
     private Role role = Role.CUSTOMER;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
+    @ToString.Include
     private Status status = Status.ACTIVE;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -96,5 +100,20 @@ public class User implements UserDetails {
 
     public enum Status {
         ACTIVE, INACTIVE, BANNED
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || org.hibernate.Hibernate.getClass(this) != org.hibernate.Hibernate.getClass(o)) {
+            return false;
+        }
+        User other = (User) o;
+        return id != null && id.equals(other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return org.hibernate.Hibernate.getClass(this).hashCode();
     }
 }
