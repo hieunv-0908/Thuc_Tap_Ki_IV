@@ -37,6 +37,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -574,12 +575,60 @@ class OrderServiceImplTest {
     void getAllOrders_Success() {
         when(orderRepository.findAllOrders(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(sampleOrder)));
+        when(orderRepository.findAllWithDetailsByIds(anyList()))
+                .thenReturn(List.of(sampleOrder));
 
         Page<OrderResponse> result = orderService.getAllOrders(0, 10);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
         assertEquals(1L, result.getContent().get(0).getId());
+    }
+
+    @Test
+    @DisplayName("getAllOrders - Bảo toàn tuyệt đối thứ tự sắp xếp (Sort Order Preservation)")
+    void getAllOrders_PreservesSortOrder() {
+        Order order1 = Order.builder().id(10L).customerName("User 10").status(OrderStatus.PENDING).totalAmount(BigDecimal.TEN).build();
+        Order order2 = Order.builder().id(20L).customerName("User 20").status(OrderStatus.PENDING).totalAmount(BigDecimal.TEN).build();
+        Order order3 = Order.builder().id(30L).customerName("User 30").status(OrderStatus.PENDING).totalAmount(BigDecimal.TEN).build();
+
+        // Phase 1 trả về thứ tự [30, 20, 10] (createdAt DESC)
+        when(orderRepository.findAllOrders(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(order3, order2, order1)));
+
+        // Phase 2 MySQL WHERE IN có thể trả về xáo trộn [10, 30, 20]
+        when(orderRepository.findAllWithDetailsByIds(anyList()))
+                .thenReturn(List.of(order1, order3, order2));
+
+        Page<OrderResponse> result = orderService.getAllOrders(0, 10);
+
+        assertNotNull(result);
+        assertEquals(3, result.getTotalElements());
+        // Thứ tự kết quả trả về PHẢI là [30, 20, 10]
+        assertEquals(30L, result.getContent().get(0).getId());
+        assertEquals(20L, result.getContent().get(1).getId());
+        assertEquals(10L, result.getContent().get(2).getId());
+    }
+
+    @Test
+    @DisplayName("OrderItemResponse - Dữ liệu mồ côi (product/variant bị xóa) vẫn map an toàn không văng Exception")
+    void fromEntity_OrphanedData_HandlesGracefullyWithoutException() {
+        OrderItem orphanedItem = OrderItem.builder()
+                .id(999L)
+                .quantity(2)
+                .priceAtOrder(new BigDecimal("150000.00"))
+                .productVariant(null)
+                .product(null)
+                .build();
+
+        OrderItemResponse response = OrderItemResponse.fromEntity(orphanedItem);
+
+        assertNotNull(response);
+        assertEquals(999L, response.getId());
+        assertEquals("Sản phẩm không khả dụng", response.getProductName());
+        assertNull(response.getImageUrl());
+        assertEquals(2, response.getQuantity());
+        assertEquals(new BigDecimal("150000.00"), response.getPriceAtOrder());
     }
 
     // ==========================================

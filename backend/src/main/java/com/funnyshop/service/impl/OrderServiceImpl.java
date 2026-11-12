@@ -19,6 +19,7 @@ import com.funnyshop.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -28,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -170,7 +173,32 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return orderRepository.findAllOrders(pageable).map(OrderResponse::fromEntity);
+
+        // Phase 1: Lấy phân trang và danh sách IDs theo đúng thứ tự createdAt DESC
+        Page<Order> orderPage = orderRepository.findAllOrders(pageable);
+
+        List<Long> ids = orderPage.getContent().stream()
+                .map(Order::getId)
+                .toList();
+
+        if (ids.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, orderPage.getTotalElements());
+        }
+
+        // Phase 2: Nạp đầy đủ graph (orderItems -> productVariant -> product) trong 1 query
+        List<Order> fullOrders = orderRepository.findAllWithDetailsByIds(ids);
+
+        // Bảo toàn tuyệt đối thứ tự sắp xếp (Sort Order Preservation) của Phase 1
+        Map<Long, Order> orderMap = fullOrders.stream()
+                .collect(Collectors.toMap(Order::getId, Function.identity(), (existing, replacing) -> existing));
+
+        List<OrderResponse> responses = ids.stream()
+                .map(orderMap::get)
+                .filter(Objects::nonNull)
+                .map(OrderResponse::fromEntity)
+                .toList();
+
+        return new PageImpl<>(responses, pageable, orderPage.getTotalElements());
     }
 
     @Override

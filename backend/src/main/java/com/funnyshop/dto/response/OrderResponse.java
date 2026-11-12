@@ -7,12 +7,15 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
+@Slf4j
 @Data
 @Builder
 @NoArgsConstructor
@@ -39,9 +42,17 @@ public class OrderResponse {
             return null;
         }
 
-        List<OrderItemResponse> items = order.getOrderItems() != null
-                ? order.getOrderItems().stream().map(OrderItemResponse::fromEntity).toList()
-                : Collections.emptyList();
+        List<OrderItemResponse> items = Collections.emptyList();
+        try {
+            if (order.getOrderItems() != null) {
+                items = order.getOrderItems().stream()
+                        .map(OrderItemResponse::fromEntity)
+                        .filter(Objects::nonNull)
+                        .toList();
+            }
+        } catch (Exception ex) {
+            log.warn("Không thể tải danh sách orderItems cho Order ID: {}. Lỗi: {}", order.getId(), ex.getMessage());
+        }
 
         Long uid = order.getUser() != null ? order.getUser().getId() : null;
 
