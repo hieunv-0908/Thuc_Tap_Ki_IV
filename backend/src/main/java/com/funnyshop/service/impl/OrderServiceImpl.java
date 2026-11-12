@@ -54,8 +54,11 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException("Danh sách sản phẩm đặt hàng không được để trống!", HttpStatus.BAD_REQUEST);
         }
 
-        // Gộp số lượng theo variantId
+        // Gộp số lượng theo variantId và kiểm tra tính hợp lệ
         Map<Long, Integer> variantQuantities = new HashMap<>();
+        Map<Long, Long> variantToProductMap = new HashMap<>();
+        Set<Long> productsWithMissingVariant = new HashSet<>();
+
         for (OrderCheckoutItemRequest itemReq : request.getItems()) {
             if (itemReq.getQuantity() == null || itemReq.getQuantity() <= 0) {
                 throw new AppException("Số lượng đặt mua không hợp lệ!", HttpStatus.BAD_REQUEST);
@@ -63,16 +66,29 @@ public class OrderServiceImpl implements OrderService {
 
             Long targetVariantId = itemReq.getVariantId();
             if (targetVariantId == null && itemReq.getProductId() != null) {
+                // Ngăn chặn gửi nhiều dòng cùng productId mà thiếu variantId (gây gộp nhầm)
+                if (productsWithMissingVariant.contains(itemReq.getProductId())) {
+                    throw new AppException("Vui lòng chọn rõ kích cỡ/màu sắc cho sản phẩm ID: " + itemReq.getProductId(), HttpStatus.BAD_REQUEST);
+                }
+                productsWithMissingVariant.add(itemReq.getProductId());
+
                 // Tương thích ngược: Lấy biến thể đầu tiên của sản phẩm nếu client cũ chỉ truyền productId
                 List<ProductVariant> variants = productVariantRepository.findByProductIdAndIsDeletedFalse(itemReq.getProductId());
                 if (variants.isEmpty()) {
                     throw new ResourceNotFoundException("Không tìm thấy biến thể khả dụng cho sản phẩm ID: " + itemReq.getProductId());
+                }
+                if (variants.size() > 1) {
+                    throw new AppException("Sản phẩm có nhiều biến thể, vui lòng chọn kích cỡ/màu sắc cụ thể!", HttpStatus.BAD_REQUEST);
                 }
                 targetVariantId = variants.get(0).getId();
             }
 
             if (targetVariantId == null) {
                 throw new AppException("Thông tin sản phẩm hoặc biến thể không được để trống!", HttpStatus.BAD_REQUEST);
+            }
+
+            if (itemReq.getProductId() != null) {
+                variantToProductMap.put(targetVariantId, itemReq.getProductId());
             }
 
             variantQuantities.merge(targetVariantId, itemReq.getQuantity(), Integer::sum);
@@ -108,6 +124,11 @@ public class OrderServiceImpl implements OrderService {
                     (variant.getProduct() != null && Boolean.TRUE.equals(variant.getProduct().getIsDeleted()))) {
                 String name = variant.getProduct() != null ? variant.getProduct().getName() : "Sản phẩm";
                 throw new AppException("Sản phẩm '" + name + "' đã ngừng kinh doanh!", HttpStatus.BAD_REQUEST);
+            }
+
+            Long expectedProductId = variantToProductMap.get(variantId);
+            if (expectedProductId != null && variant.getProduct() != null && !variant.getProduct().getId().equals(expectedProductId)) {
+                throw new AppException("Biến thể ID " + variantId + " không thuộc về sản phẩm ID " + expectedProductId, HttpStatus.BAD_REQUEST);
             }
 
             // Trừ tồn kho nguyên tử trực tiếp ở tầng CSDL

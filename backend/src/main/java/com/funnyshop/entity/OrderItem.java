@@ -1,10 +1,9 @@
 package com.funnyshop.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,14 +16,17 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_order_items_variant_id", columnList = "product_variant_id")
         }
 )
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true)
 public class OrderItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @ToString.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -36,13 +38,16 @@ public class OrderItem {
     private Product product;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_variant_id", nullable = false)
+    @JoinColumn(name = "product_variant_id", nullable = true)
+    @NotFound(action = NotFoundAction.IGNORE)
     private ProductVariant productVariant;
 
     @Column(nullable = false)
+    @ToString.Include
     private Integer quantity;
 
     @Column(name = "price_at_order", nullable = false, precision = 12, scale = 2)
+    @ToString.Include
     private BigDecimal priceAtOrder;
 
     @Column(name = "created_at", updatable = false)
@@ -68,5 +73,20 @@ public class OrderItem {
             return product;
         }
         return productVariant != null ? productVariant.getProduct() : null;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || org.hibernate.Hibernate.getClass(this) != org.hibernate.Hibernate.getClass(o)) {
+            return false;
+        }
+        OrderItem other = (OrderItem) o;
+        return id != null && id.equals(other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return org.hibernate.Hibernate.getClass(this).hashCode();
     }
 }

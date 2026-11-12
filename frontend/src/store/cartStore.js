@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 export const useCartStore = create(
   persist(
     (set, get) => ({
-      items: [], // [{ variantId, productId, product, name, color, size, sku, price, imageUrl, stock, quantity }]
+      items: [], // [{ cartItemId, id, variantId, productId, product, name, color, size, sku, price, imageUrl, stock, quantity }]
 
       addItem: (itemOrProduct, quantity = 1) => {
         if (!itemOrProduct) return false;
@@ -21,11 +21,9 @@ export const useCartStore = create(
         }
 
         const rawProduct = itemOrProduct.product || itemOrProduct;
-        const resolvedVariantId =
-          targetVariant?.variantId ||
-          targetVariant?.id ||
-          itemOrProduct.variantId ||
-          itemOrProduct.id;
+        const targetVariantId = targetVariant?.id || targetVariant?.variantId || itemOrProduct.variantId || null;
+        const resolvedId = targetVariantId || rawProduct.id;
+        const cartItemId = targetVariantId ? `var-${targetVariantId}` : `prod-${rawProduct.id}`;
 
         const maxStock =
           targetVariant?.stockQuantity ??
@@ -40,7 +38,9 @@ export const useCartStore = create(
 
         const currentItems = get().items;
         const existingIndex = currentItems.findIndex(
-          (item) => String(item.variantId) === String(resolvedVariantId)
+          (item) =>
+            (item.cartItemId && item.cartItemId === cartItemId) ||
+            (targetVariantId && String(item.variantId) === String(targetVariantId))
         );
 
         if (existingIndex > -1) {
@@ -50,6 +50,7 @@ export const useCartStore = create(
           const updatedItems = [...currentItems];
           updatedItems[existingIndex] = {
             ...updatedItems[existingIndex],
+            cartItemId,
             quantity: newQty,
             stock: maxStock,
           };
@@ -57,8 +58,9 @@ export const useCartStore = create(
         } else {
           const validQty = Math.min(quantity, maxStock);
           const newItem = {
-            id: resolvedVariantId,
-            variantId: resolvedVariantId,
+            cartItemId,
+            id: resolvedId,
+            variantId: targetVariantId,
             productId: itemOrProduct.productId || rawProduct.id,
             product: rawProduct,
             name: itemOrProduct.name || rawProduct.name,
@@ -80,36 +82,45 @@ export const useCartStore = create(
         return true;
       },
 
-      updateQuantity: (variantId, quantity) => {
+      updateQuantity: (identifier, quantity) => {
         const currentItems = get().items;
+        const idStr = String(identifier);
         const target = currentItems.find(
-          (item) => String(item.variantId) === String(variantId) || String(item.id) === String(variantId)
+          (item) =>
+            item.cartItemId === idStr ||
+            String(item.variantId) === idStr ||
+            String(item.id) === idStr
         );
         if (!target) return;
 
         if (quantity <= 0) {
-          get().removeItem(variantId);
+          get().removeItem(identifier);
           return;
         }
 
         const maxStock = target.stock || target.stockQuantity || 1;
         const validQty = Math.min(quantity, maxStock);
+        const targetCartItemId = target.cartItemId || (target.variantId ? `var-${target.variantId}` : `prod-${target.productId || target.id}`);
+
         set({
-          items: currentItems.map((item) =>
-            String(item.variantId) === String(variantId) || String(item.id) === String(variantId)
-              ? { ...item, quantity: validQty }
-              : item
-          ),
+          items: currentItems.map((item) => {
+            const itemKey = item.cartItemId || (item.variantId ? `var-${item.variantId}` : `prod-${item.productId || item.id}`);
+            return itemKey === targetCartItemId ? { ...item, quantity: validQty } : item;
+          }),
         });
       },
 
-      removeItem: (variantId) => {
+      removeItem: (identifier) => {
+        const idStr = String(identifier);
         set({
-          items: get().items.filter(
-            (item) =>
-              String(item.variantId) !== String(variantId) &&
-              String(item.id) !== String(variantId)
-          ),
+          items: get().items.filter((item) => {
+            const itemKey = item.cartItemId || (item.variantId ? `var-${item.variantId}` : `prod-${item.productId || item.id}`);
+            return (
+              itemKey !== idStr &&
+              String(item.variantId) !== idStr &&
+              String(item.id) !== idStr
+            );
+          }),
         });
       },
 
@@ -130,6 +141,27 @@ export const useCartStore = create(
     }),
     {
       name: 'funnyshop_cart',
+      merge: (persistedState, currentState) => {
+        const rawItems = Array.isArray(persistedState?.items) ? persistedState.items : [];
+        const sanitizedItems = rawItems
+          .filter((item) => item && (item.variantId || item.productId || item.product?.id || item.id))
+          .map((item) => {
+            const variantId = item.variantId || null;
+            const prodId = item.productId || item.product?.id || (variantId ? null : item.id);
+            const cartItemId = item.cartItemId || (variantId ? `var-${variantId}` : `prod-${prodId}`);
+            return {
+              ...item,
+              variantId,
+              productId: prodId || item.productId,
+              cartItemId,
+            };
+          });
+        return {
+          ...currentState,
+          ...persistedState,
+          items: sanitizedItems,
+        };
+      },
     }
   )
 );
