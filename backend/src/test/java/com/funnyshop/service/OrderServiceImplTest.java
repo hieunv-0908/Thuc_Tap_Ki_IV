@@ -138,8 +138,8 @@ class OrderServiceImplTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productVariantRepository.findById(10L)).thenReturn(Optional.of(sampleVariant1));
-        when(productVariantRepository.findById(20L)).thenReturn(Optional.of(sampleVariant2));
+        when(productVariantRepository.findByIdWithImages(10L)).thenReturn(Optional.of(sampleVariant1));
+        when(productVariantRepository.findByIdWithImages(20L)).thenReturn(Optional.of(sampleVariant2));
 
         when(productVariantRepository.decrementStockAtomic(10L, 2)).thenReturn(1);
         when(productVariantRepository.decrementStockAtomic(20L, 1)).thenReturn(1);
@@ -186,7 +186,7 @@ class OrderServiceImplTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productVariantRepository.findById(20L)).thenReturn(Optional.of(sampleVariant2));
+        when(productVariantRepository.findByIdWithImages(20L)).thenReturn(Optional.of(sampleVariant2));
         when(productVariantRepository.decrementStockAtomic(20L, 6)).thenReturn(0);
 
         AppException ex = assertThrows(
@@ -213,7 +213,7 @@ class OrderServiceImplTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productVariantRepository.findById(999L)).thenReturn(Optional.empty());
+        when(productVariantRepository.findByIdWithImages(999L)).thenReturn(Optional.empty());
 
         assertThrows(
                 ResourceNotFoundException.class,
@@ -238,7 +238,7 @@ class OrderServiceImplTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productVariantRepository.findById(10L)).thenReturn(Optional.of(sampleVariant1));
+        when(productVariantRepository.findByIdWithImages(10L)).thenReturn(Optional.of(sampleVariant1));
 
         AppException ex = assertThrows(
                 AppException.class,
@@ -265,7 +265,7 @@ class OrderServiceImplTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
-        when(productVariantRepository.findById(10L)).thenReturn(Optional.of(sampleVariant1));
+        when(productVariantRepository.findByIdWithImages(10L)).thenReturn(Optional.of(sampleVariant1));
         when(productVariantRepository.decrementStockAtomic(10L, 5)).thenReturn(1);
 
         when(orderRepository.save(any(Order.class)))
