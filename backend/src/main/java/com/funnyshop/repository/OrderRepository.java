@@ -38,4 +38,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query(value = "SELECT o FROM Order o LEFT JOIN FETCH o.user",
             countQuery = "SELECT count(o) FROM Order o")
     Page<Order> findAllOrders(Pageable pageable);
+
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.user " +
+           "LEFT JOIN FETCH o.orderItems oi " +
+           "LEFT JOIN FETCH oi.productVariant pv " +
+           "LEFT JOIN FETCH pv.product " +
+           "WHERE o.id IN :ids")
+    List<Order> findAllWithDetailsByIds(@Param("ids") List<Long> ids);
 }
