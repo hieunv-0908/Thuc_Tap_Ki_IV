@@ -12,6 +12,7 @@ public interface OrderService {
     Page<OrderResponse> getAllOrders(int page, int size);
     OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus);
     OrderResponse cancelOrder(Long orderId);
+    OrderResponse cancelOrder(Long orderId, Long currentUserId, boolean isAdmin);
     Page<OrderResponse> getMyOrders(Long userId, int page, int size);
     List<OrderResponse> getMyOrdersList(Long userId);
     OrderResponse getOrderById(Long orderId, Long currentUserId, boolean isAdmin);

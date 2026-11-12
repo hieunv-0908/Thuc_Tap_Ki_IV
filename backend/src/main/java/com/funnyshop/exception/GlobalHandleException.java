@@ -83,6 +83,19 @@ public class GlobalHandleException {
         return ResponseEntity.status(status).body(response);
     }
 
+    @ExceptionHandler({
+            org.springframework.dao.PessimisticLockingFailureException.class,
+            org.springframework.dao.CannotAcquireLockException.class
+    })
+    public ResponseEntity<ApiResponse<Object>> handleLockTimeoutException(Exception ex) {
+        log.warn("Xung đột khóa bản ghi hoặc Lock Timeout: {}", ex.getMessage());
+        ApiResponse<Object> response = ApiResponse.builder()
+                .code(HttpStatus.CONFLICT.value())
+                .message("Đơn hàng đang được hệ thống xử lý, vui lòng thử lại sau ít giây.")
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleGeneralException(Exception ex) {
         log.error("Unhandled Exception: ", ex);

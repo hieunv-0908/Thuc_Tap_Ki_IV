@@ -10,6 +10,8 @@ import Table from '../components/ui/Table';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import Button from '../components/ui/Button';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { toast } from '../store/toastStore';
 
 /**
  * Orders history page complying with Design.md 7.6 (v2.0)
@@ -22,6 +24,8 @@ export default function Orders() {
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // fetchOrders: dùng cho retry
   const fetchOrders = useCallback(async () => {
@@ -44,6 +48,29 @@ export default function Orders() {
   const handleRetry = useCallback(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    try {
+      setIsCancelling(true);
+      await orderApi.cancelOrder(cancelTarget.id);
+      toast.success(`Hủy đơn hàng #${cancelTarget.id} thành công!`);
+      setCancelTarget(null);
+      await fetchOrders();
+    } catch (err) {
+      const status = err.response?.status || err.status;
+      const message = err.response?.data?.message || err.message;
+      if (status === 409 && message?.includes('hủy trước đó')) {
+        toast.info('Đơn hàng này đã được hủy trước đó.');
+        setCancelTarget(null);
+        await fetchOrders();
+      } else {
+        toast.error(message || 'Không thể hủy đơn hàng.');
+      }
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -155,14 +182,26 @@ export default function Orders() {
       className: 'text-right',
       headerClassName: 'text-right',
       render: (row) => (
-        <Button
-          variant="outline"
-          size="sm"
-          rightIcon={ArrowRight}
-          onClick={() => navigate(`/orders/${row.id}`)}
-        >
-          Xem
-        </Button>
+        <div className="flex items-center justify-end gap-2">
+          {row.status === ORDER_STATUS.PENDING && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 font-medium"
+              onClick={() => setCancelTarget(row)}
+            >
+              Hủy
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            rightIcon={ArrowRight}
+            onClick={() => navigate(`/orders/${row.id}`)}
+          >
+            Xem
+          </Button>
+        </div>
       ),
     },
   ];
@@ -349,17 +388,32 @@ export default function Orders() {
                       </span>
                     </div>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      rightIcon={ArrowRight}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/orders/${order.id}`);
-                      }}
-                    >
-                      Chi tiết
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {order.status === ORDER_STATUS.PENDING && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 font-medium"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCancelTarget(order);
+                          }}
+                        >
+                          Hủy
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        rightIcon={ArrowRight}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/orders/${order.id}`);
+                        }}
+                      >
+                        Chi tiết
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
@@ -367,6 +421,19 @@ export default function Orders() {
           </div>
         </>
       )}
+
+      {/* Confirm Dialog Hủy đơn hàng */}
+      <ConfirmDialog
+        isOpen={Boolean(cancelTarget)}
+        onClose={() => !isCancelling && setCancelTarget(null)}
+        onConfirm={handleConfirmCancel}
+        title={`Hủy đơn hàng #${cancelTarget?.id}?`}
+        description={`Bạn có chắc chắn muốn hủy đơn hàng #${cancelTarget?.id}? Số lượng sản phẩm trong đơn sẽ được tự động hoàn lại vào kho hàng.`}
+        confirmText="Xác nhận hủy đơn"
+        cancelText="Đóng"
+        variant="danger"
+        loading={isCancelling}
+      />
     </div>
   );
 }
