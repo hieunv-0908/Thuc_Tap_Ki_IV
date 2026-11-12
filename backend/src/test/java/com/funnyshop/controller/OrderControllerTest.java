@@ -30,6 +30,7 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -226,5 +227,63 @@ class OrderControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code", is(403)))
                 .andExpect(jsonPath("$.message", is("Bạn không có quyền truy cập đơn hàng này!")));
+    }
+
+    // ==========================================
+    // TESTS FOR CANCEL ORDER
+    // ==========================================
+
+    @Test
+    @DisplayName("PATCH /api/v1/orders/{id}/cancel - Customer hủy đơn PENDING thành công trả về 200 OK")
+    void cancelOrder_OwnOrder_Success() throws Exception {
+        sampleOrder.setStatus(OrderStatus.CANCELLED);
+        when(orderService.cancelOrder(eq(10L), eq(2L), eq(false))).thenReturn(sampleOrder);
+
+        mockMvc.perform(patch("/api/v1/orders/10/cancel")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Hủy đơn hàng và hoàn tồn kho thành công!")))
+                .andExpect(jsonPath("$.data.id", is(10)))
+                .andExpect(jsonPath("$.data.status", is("CANCELLED")));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/orders/{id}/cancel - Hủy đơn của người khác trả về 403 Forbidden")
+    void cancelOrder_OtherOrder_ThrowsForbidden() throws Exception {
+        when(orderService.cancelOrder(eq(99L), eq(2L), eq(false)))
+                .thenThrow(new AppException("Bạn không có quyền hủy đơn hàng này!", HttpStatus.FORBIDDEN));
+
+        mockMvc.perform(patch("/api/v1/orders/99/cancel")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is(403)))
+                .andExpect(jsonPath("$.message", is("Bạn không có quyền hủy đơn hàng này!")));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/orders/{id}/cancel - Đơn đã hủy từ trước trả về 409 Conflict")
+    void cancelOrder_AlreadyCancelled_ThrowsConflict() throws Exception {
+        when(orderService.cancelOrder(eq(10L), eq(2L), eq(false)))
+                .thenThrow(new AppException("Đơn hàng này đã được hủy trước đó!", HttpStatus.CONFLICT));
+
+        mockMvc.perform(patch("/api/v1/orders/10/cancel")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code", is(409)))
+                .andExpect(jsonPath("$.message", is("Đơn hàng này đã được hủy trước đó!")));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/orders/{id}/cancel - Hủy đơn PROCESSING trả về 400 Bad Request")
+    void cancelOrder_ProcessingStatus_ThrowsBadRequest() throws Exception {
+        when(orderService.cancelOrder(eq(10L), eq(2L), eq(false)))
+                .thenThrow(new AppException("Đơn hàng đang được chuẩn bị đóng gói, không thể tự hủy.", HttpStatus.BAD_REQUEST));
+
+        mockMvc.perform(patch("/api/v1/orders/10/cancel")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is(400)))
+                .andExpect(jsonPath("$.message", is("Đơn hàng đang được chuẩn bị đóng gói, không thể tự hủy.")));
     }
 }

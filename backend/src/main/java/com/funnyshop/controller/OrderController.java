@@ -102,6 +102,25 @@ public class OrderController {
         );
     }
 
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(
+            @PathVariable Long id,
+            HttpServletRequest request
+    ) {
+        Long currentUserId = getCurrentUserId(request);
+        boolean isAdmin = isCurrentUserAdmin();
+
+        OrderResponse response = orderService.cancelOrder(id, currentUserId, isAdmin);
+
+        return ResponseEntity.ok(
+                ApiResponse.<OrderResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Hủy đơn hàng và hoàn tồn kho thành công!")
+                        .data(response)
+                        .build()
+        );
+    }
+
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<OrderResponse>> updateOrderStatus(
