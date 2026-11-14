@@ -92,37 +92,32 @@ async function _callRefreshApi() {
     throw new Error('NO_REFRESH_TOKEN');
   }
 
-  try {
-    // Dùng axios trực tiếp (không qua apiClient) để tránh interceptor retry vô hạn
-    const response = await axios.post(
-      `${getBaseUrl()}/api/v1/auth/refresh`,
-      { refreshToken },
-      {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 10000,
-      }
-    );
-
-    // Backend trả về ApiResponse<AuthResponse>: response.data = { code, message, data: { accessToken, refreshToken, ... } }
-    const responseData = response.data;
-    const newAccessToken = responseData?.data?.accessToken || responseData?.accessToken;
-    const newRefreshToken = responseData?.data?.refreshToken || responseData?.refreshToken;
-
-    if (!newAccessToken) {
-      throw new Error('INVALID_REFRESH_RESPONSE');
+  // Dùng axios trực tiếp (không qua apiClient) để tránh interceptor retry vô hạn
+  const response = await axios.post(
+    `${getBaseUrl()}/api/v1/auth/refresh`,
+    { refreshToken },
+    {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 10000,
     }
+  );
 
-    // Cập nhật cặp token mới vào Zustand store (tự động đồng bộ localStorage qua persist)
-    store.setTokens({
-      token: newAccessToken,
-      refreshToken: newRefreshToken,
-    });
+  // Backend trả về ApiResponse<AuthResponse>: response.data = { code, message, data: { accessToken, refreshToken, ... } }
+  const responseData = response.data;
+  const newAccessToken = responseData?.data?.accessToken || responseData?.accessToken;
+  const newRefreshToken = responseData?.data?.refreshToken || responseData?.refreshToken;
 
-    return newAccessToken;
-  } catch (err) {
-    // Ném lỗi để tầng gọi (axios interceptor) xử lý logout + redirect
-    throw err;
+  if (!newAccessToken) {
+    throw new Error('INVALID_REFRESH_RESPONSE');
   }
+
+  // Cập nhật cặp token mới vào Zustand store (tự động đồng bộ localStorage qua persist)
+  store.setTokens({
+    token: newAccessToken,
+    refreshToken: newRefreshToken,
+  });
+
+  return newAccessToken;
 }
 
 /**
