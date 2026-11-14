@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import { toast } from '../store/toastStore';
+import { jwtHelper } from '../utils/jwtHelper';
+import { acquireValidToken, isNoAuthEndpoint, logoutApiFireAndForget } from './tokenRefresher';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '',
@@ -10,67 +12,143 @@ const apiClient = axios.create({
   },
 });
 
-// Request Interceptor: Attach JWT Token
+// ================================================================
+// Hàng đợi (Queue) dùng cho Reactive Fallback trong 1 tab
+// (Đa tab đã được xử lý bởi Web Locks trong tokenRefresher.js)
+// ================================================================
+let isRefreshing = false;
+let failedQueue = [];
+
+/**
+ * Giải phóng toàn bộ promise trong hàng đợi.
+ * @param {Error|null} error - Lỗi (nếu refresh thất bại), hoặc null nếu thành công
+ * @param {string|null} token - Access Token mới (nếu refresh thành công)
+ */
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = []; // Reset queue sau khi xử lý xong
+};
+
+// ================================================================
+// 1. REQUEST INTERCEPTOR — PROACTIVE REFRESH
+// Kiểm tra token sắp hết hạn trước khi gửi request.
+// Giải quyết lỗ hổng upload file lớn / form dài bị đứt giữa chừng.
+// ================================================================
 apiClient.interceptors.request.use(
-  (config) => {
-    // Không gửi token cho các endpoint auth (login, register)
-    const isAuthEndpoint = config.url?.includes('/auth/');
-    if (isAuthEndpoint) {
+  async (config) => {
+    // Nếu là endpoint trong Whitelist công khai -> Xóa Authorization header, không refresh
+    if (isNoAuthEndpoint(config.url)) {
       if (config.headers?.Authorization) {
         delete config.headers.Authorization;
       }
-    } else {
-      let token = useAuthStore.getState().token;
-      if (!token) {
+      return config;
+    }
+
+    let token = useAuthStore.getState().token;
+
+    // PROACTIVE CHECK: Token còn hạn dưới 60 giây và có refreshToken -> Gia hạn TRƯỚC khi gửi request
+    if (token && jwtHelper.isTokenExpiringSoon(token, 60)) {
+      const hasRefreshToken = !!useAuthStore.getState().refreshToken;
+      if (hasRefreshToken) {
         try {
-          const raw = localStorage.getItem('funnyshop_auth');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            token = parsed?.state?.token;
-          }
-        } catch {
-          // Ignore parse errors
-        }
-      }
-      if (token) {
-        if (typeof config.headers?.set === 'function') {
-          config.headers.set('Authorization', `Bearer ${token}`);
-        } else {
-          config.headers = config.headers || {};
-          config.headers.Authorization = `Bearer ${token}`;
+          token = await acquireValidToken();
+        } catch (err) {
+          // Nếu proactive refresh thất bại, để request đi với token cũ
+          // Response Interceptor sẽ bắt lỗi 401 và xử lý tiếp
+          console.warn('[ProactiveRefresh] Không thể gia hạn token trước:', err?.message);
         }
       }
     }
+
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Handle 401 Unauthorized
+// ================================================================
+// 2. RESPONSE INTERCEPTOR — REACTIVE FALLBACK
+// Lưới an toàn khi token hết hạn đột ngột (máy ngủ, chuyển mạng).
+// ================================================================
 apiClient.interceptors.response.use(
   (response) => response.data,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+
     if (error.response) {
       const { status, data } = error.response;
 
-      if (status === 401) {
-        const store = useAuthStore.getState();
-        const wasAuthenticated = store.isAuthenticated;
-        const isAuthEndpoint = error.config?.url?.includes('/auth/');
-        // Chỉ logout nếu chính endpoint xác thực phiên /users/me báo token không hợp lệ
-        // Tránh việc các endpoint nghiệp vụ chưa hoàn thiện hoặc chưa map làm mất phiên đăng nhập của Admin
-        const isProfileCheck = error.config?.url?.includes('/users/me');
+      // Điều kiện kích hoạt Auto Refresh:
+      //   1. HTTP 401 Unauthorized
+      //   2. Không phải endpoint trong Whitelist (tránh nhầm: sai mật khẩu -> 401 -> không refresh)
+      //   3. Chưa từng retry request này (tránh vòng lặp vô tận)
+      if (
+        status === 401 &&
+        !originalRequest?._retry &&
+        !isNoAuthEndpoint(originalRequest?.url)
+      ) {
+        // Nếu đã có 1 request khác đang chờ refresh -> đưa request này vào hàng đợi
+        if (isRefreshing) {
+          return new Promise(function (resolve, reject) {
+            failedQueue.push({ resolve, reject });
+          })
+            .then((token) => {
+              originalRequest.headers['Authorization'] = 'Bearer ' + token;
+              return apiClient(originalRequest);
+            })
+            .catch((err) => Promise.reject(err));
+        }
 
-        if (!isAuthEndpoint && wasAuthenticated && isProfileCheck) {
-          useAuthStore.getState().logout();
-          toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-          if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
-            window.location.href = '/login';
-          }
+        // Đánh dấu request đầu tiên bắt đầu luồng refresh
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        // Kiểm tra có refreshToken không
+        const store = useAuthStore.getState();
+        if (!store.refreshToken) {
+          isRefreshing = false;
+          _handleSessionExpired('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          return Promise.reject(error);
+        }
+
+        try {
+          // Lấy token mới (có bảo vệ đa tab bởi Web Locks trong acquireValidToken)
+          const newAccessToken = await acquireValidToken();
+
+          // Giải phóng hàng đợi với token mới
+          processQueue(null, newAccessToken);
+
+          // Retry lại request gốc với token mới
+          originalRequest.headers['Authorization'] = 'Bearer ' + newAccessToken;
+          return apiClient(originalRequest);
+        } catch (refreshErr) {
+          // Refresh thất bại hoàn toàn (Refresh Token hết hạn / bị thu hồi)
+          processQueue(refreshErr, null);
+
+          // Fire-and-forget: Thông báo Backend dọn dẹp token (không await, không block)
+          const currentStore = useAuthStore.getState();
+          logoutApiFireAndForget(currentStore.token, currentStore.refreshToken);
+
+          // Xóa state cục bộ và redirect về Login
+          _handleSessionExpired('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+
+          return Promise.reject(refreshErr);
+        } finally {
+          isRefreshing = false;
         }
       }
 
-      // Standardize error message
+      // Chuẩn hóa lỗi trả về cho các component
       const formattedError = {
         status,
         message: data?.message || 'Đã có lỗi xảy ra từ máy chủ.',
@@ -79,11 +157,27 @@ apiClient.interceptors.response.use(
       return Promise.reject(formattedError);
     }
 
+    // Lỗi mạng (không nhận được response)
     return Promise.reject({
       status: 0,
       message: error.message || 'Không thể kết nối đến máy chủ.',
     });
   }
 );
+
+/**
+ * (Private) Xử lý đăng xuất phiên hết hạn: xóa state, toast và redirect về /login.
+ * Lưu lại returnUrl để sau khi đăng nhập lại sẽ điều hướng về đúng trang.
+ */
+function _handleSessionExpired(message) {
+  useAuthStore.getState().logout();
+  toast.error(message);
+
+  const { pathname, search } = window.location;
+  if (!pathname.includes('/login') && !pathname.includes('/register')) {
+    const returnUrl = encodeURIComponent(pathname + search);
+    window.location.href = `/login?redirect=${returnUrl}`;
+  }
+}
 
 export default apiClient;

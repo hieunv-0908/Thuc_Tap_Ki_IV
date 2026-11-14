@@ -7,7 +7,7 @@ export const authApi = {
   /**
    * Đăng nhập
    * BE nhận: { username, password }
-   * BE trả:  { code, message, data: { accessToken, tokenType, expiresIn, user } }
+   * BE trả:  { code, message, data: { accessToken, refreshToken, tokenType, expiresIn, user } }
    */
   login: async ({username, password}) => {
     // if (isMock) {
@@ -20,13 +20,15 @@ export const authApi = {
       console.log('[login] Nhận response thành công =>', res);
 
       // axios interceptor đã unwrap response.data, nên:
-      // res = { code: 200, message: "...", data: { accessToken: "...", user: {...} } }
+      // res = { code: 200, message: "...", data: { accessToken: "...", refreshToken: "...", user: {...} } }
       const token = res?.data?.accessToken || res?.accessToken;
+      const refreshToken = res?.data?.refreshToken || res?.refreshToken;
       const user = res?.data?.user || res?.user;
-      console.log('[login] Extracted token & user =>', {token, user});
+      console.log('[login] Extracted token & user =>', {token, refreshToken, user});
 
       return {
         token,
+        refreshToken,
         user,
       };
     } catch (error) {

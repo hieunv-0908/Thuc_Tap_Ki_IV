@@ -97,7 +97,7 @@ export default function Login() {
         password: formData.password,
       });
 
-      loginToStore(res.token, res.user);
+      loginToStore(res.token, res.refreshToken, res.user);
       toast.success(`Chào mừng ${res.user?.fullName || res.user?.username || 'bạn'} trở lại!`);
 
       // Role-based redirect
