@@ -15,10 +15,10 @@ server:
 jwt:
   # Chuỗi Secret Key tối thiểu 256 bits (32 chars) cho HMAC-SHA256
   secret: 404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971
-  # Thời hạn Access Token: 180000 ms = 3 phút (Chế độ TEST LOCAL - đổi lại 1800000 khi deploy)
-  access-expiration: 180000
+  # Thời hạn Access Token: 1800000 ms = 30 phút
+  access-expiration: 1800000
   # Giữ backward-compatible với jwt.expiration cũ nếu có
-  expiration: 180000
+  expiration: 1800000
   # Thời hạn Refresh Token: 604800000 ms = 7 ngày
   refresh-expiration: 604800000
 
