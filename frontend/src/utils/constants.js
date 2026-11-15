@@ -130,78 +130,7 @@ export const CATEGORY_META = {
     border: 'border-primary-200',
     text: 'text-primary-700',
   },
-  // Fallbacks for legacy/general categories
-  'Áo thun': {
-    emoji: '👕',
-    bg: 'bg-primary-50',
-    sticker: 'bg-primary-100',
-    border: 'border-primary-200',
-    text: 'text-primary-700',
-  },
-  'Áo thun & Polo': {
-    emoji: '👕',
-    bg: 'bg-primary-50',
-    sticker: 'bg-primary-100',
-    border: 'border-primary-200',
-    text: 'text-primary-700',
-  },
-  'Áo sơ mi': {
-    emoji: '👔',
-    bg: 'bg-secondary-50',
-    sticker: 'bg-secondary-100',
-    border: 'border-secondary-200',
-    text: 'text-secondary-700',
-  },
-  'Áo sơ mi & Áo kiểu': {
-    emoji: '👔',
-    bg: 'bg-secondary-50',
-    sticker: 'bg-secondary-100',
-    border: 'border-secondary-200',
-    text: 'text-secondary-700',
-  },
-  'Quần': {
-    emoji: '👖',
-    bg: 'bg-primary-50',
-    sticker: 'bg-primary-200',
-    border: 'border-primary-200',
-    text: 'text-primary-700',
-  },
-  'Quần & Chân váy': {
-    emoji: '👖',
-    bg: 'bg-primary-50',
-    sticker: 'bg-primary-200',
-    border: 'border-primary-200',
-    text: 'text-primary-700',
-  },
-  'Váy đầm': {
-    emoji: '👗',
-    bg: 'bg-secondary-50',
-    sticker: 'bg-secondary-200',
-    border: 'border-secondary-200',
-    text: 'text-secondary-700',
-  },
-  'Váy & Đầm': {
-    emoji: '👗',
-    bg: 'bg-secondary-50',
-    sticker: 'bg-secondary-200',
-    border: 'border-secondary-200',
-    text: 'text-secondary-700',
-  },
-  'Áo khoác': {
-    emoji: '🧥',
-    bg: 'bg-primary-50',
-    sticker: 'bg-primary-100',
-    border: 'border-primary-200',
-    text: 'text-primary-700',
-  },
-  'Áo khoác & Hoodie': {
-    emoji: '🧥',
-    bg: 'bg-primary-50',
-    sticker: 'bg-primary-100',
-    border: 'border-primary-200',
-    text: 'text-primary-700',
-  },
-  // Fallbacks for legacy/general categories
+  // Fallbacks for legacy/general categories — entries above already cover all variants
 };
 
 export const DEFAULT_CATEGORY_META = {

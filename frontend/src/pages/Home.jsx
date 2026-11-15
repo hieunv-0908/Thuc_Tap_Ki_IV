@@ -56,7 +56,6 @@ export default function Home() {
 
   // Newsletter state (UI only)
   const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [newsletterSubmitted, setNewsletterSubmitted] = useState(false);
 
   // High-performance Lerp physics spotlight for side flanks (Zero React re-renders)
   const leftGlowRef = useRef(null);
@@ -330,11 +329,7 @@ export default function Home() {
       track.removeEventListener('touchstart', onEnter);
       track.removeEventListener('touchend', onLeave);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFilteringOrSearching, hasManyCategories, marqueeItems.length]);
-
-  // Scroll horizontal carousel
-  const [isCarouselPaused, setIsCarouselPaused] = useState(false);
 
   const scrollCarousel = (direction) => {
     if (carouselRef.current) {
@@ -350,6 +345,7 @@ export default function Home() {
     // Retry until DOM is ready (data loads async so ref may attach after first render)
     let retryCount = 0;
     let rafId = null;
+    let cleanupFn = null;
 
     const start = () => {
       const container = carouselRef.current;
@@ -420,8 +416,7 @@ export default function Home() {
 
       rafId = requestAnimationFrame(animate);
 
-      // Store cleanup on container so we can call it on unmount
-      container._cleanupCarousel = () => {
+      cleanupFn = () => {
         cancelAnimationFrame(rafId);
         container.removeEventListener('wheel', handleWheel);
         container.removeEventListener('mouseenter', onEnter);
@@ -435,12 +430,10 @@ export default function Home() {
 
     return () => {
       cancelAnimationFrame(rafId);
-      const container = carouselRef.current;
-      if (container?._cleanupCarousel) {
-        container._cleanupCarousel();
+      if (cleanupFn) {
+        cleanupFn();
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFilteringOrSearching, featuredProducts.length]);
 
   // Newsletter submission handler (UI mock)
@@ -450,7 +443,6 @@ export default function Home() {
       toast.warning('Vui lòng nhập địa chỉ email hợp lệ');
       return;
     }
-    setNewsletterSubmitted(true);
     toast.success('Cảm ơn bạn đã đăng ký nhận bản tin thời trang FunnyShop!');
     setNewsletterEmail('');
   };

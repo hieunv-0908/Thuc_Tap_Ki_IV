@@ -29,7 +29,11 @@ export default function ProductCard({ product, onClick }) {
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
-  const activeVariants = product?.variants?.filter((v) => !v.isDeleted) || [];
+  const variants = product?.variants;
+  const activeVariants = useMemo(
+    () => variants?.filter((v) => !v.isDeleted) || [],
+    [variants]
+  );
   const hasMultipleVariants = activeVariants.length > 1;
 
   // Extract available sizes for fashion card badge list 🔹 (Design.md 6.11)
