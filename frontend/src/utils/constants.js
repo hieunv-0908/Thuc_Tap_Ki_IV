@@ -56,49 +56,156 @@ export const SORT_OPTIONS = [
 export const FREE_SHIP_THRESHOLD = 300000;
 
 /**
- * Category metadata mapping per Design.md 2.7.4
+ * Category metadata mapping per Design.md 2.7.4 (v2.1 Fashion)
  * Matches category name / slug to icon emoji, card bg and sticker bg
  */
 export const CATEGORY_META = {
-  'Đồ chơi': {
-    emoji: '🧩',
-    bg: 'bg-secondary-50',
-    sticker: 'bg-secondary-100',
-    border: 'border-secondary-200',
-    text: 'text-secondary-700',
-  },
-  'Quà tặng': {
-    emoji: '🎁',
+  'Áo thun': {
+    emoji: '👕',
     bg: 'bg-primary-50',
     sticker: 'bg-primary-100',
     border: 'border-primary-200',
     text: 'text-primary-700',
   },
-  'Phụ kiện': {
-    emoji: '🔑',
-    bg: 'bg-secondary-50',
-    sticker: 'bg-secondary-200',
-    border: 'border-secondary-200',
-    text: 'text-secondary-700',
-  },
-  'Văn phòng phẩm': {
-    emoji: '✏️',
+  'Áo thun & Polo': {
+    emoji: '👕',
     bg: 'bg-primary-50',
-    sticker: 'bg-primary-200',
+    sticker: 'bg-primary-100',
     border: 'border-primary-200',
     text: 'text-primary-700',
   },
-  'Gối & thú bông': {
-    emoji: '🧸',
+  'Áo sơ mi': {
+    emoji: '👔',
     bg: 'bg-secondary-50',
     sticker: 'bg-secondary-100',
     border: 'border-secondary-200',
     text: 'text-secondary-700',
   },
+  'Áo sơ mi & Áo kiểu': {
+    emoji: '👔',
+    bg: 'bg-secondary-50',
+    sticker: 'bg-secondary-100',
+    border: 'border-secondary-200',
+    text: 'text-secondary-700',
+  },
+  'Quần': {
+    emoji: '👖',
+    bg: 'bg-primary-50',
+    sticker: 'bg-primary-200',
+    border: 'border-primary-200',
+    text: 'text-primary-700',
+  },
+  'Quần & Chân váy': {
+    emoji: '👖',
+    bg: 'bg-primary-50',
+    sticker: 'bg-primary-200',
+    border: 'border-primary-200',
+    text: 'text-primary-700',
+  },
+  'Váy đầm': {
+    emoji: '👗',
+    bg: 'bg-secondary-50',
+    sticker: 'bg-secondary-200',
+    border: 'border-secondary-200',
+    text: 'text-secondary-700',
+  },
+  'Váy & Đầm': {
+    emoji: '👗',
+    bg: 'bg-secondary-50',
+    sticker: 'bg-secondary-200',
+    border: 'border-secondary-200',
+    text: 'text-secondary-700',
+  },
+  'Áo khoác': {
+    emoji: '🧥',
+    bg: 'bg-primary-50',
+    sticker: 'bg-primary-100',
+    border: 'border-primary-200',
+    text: 'text-primary-700',
+  },
+  'Áo khoác & Hoodie': {
+    emoji: '🧥',
+    bg: 'bg-primary-50',
+    sticker: 'bg-primary-100',
+    border: 'border-primary-200',
+    text: 'text-primary-700',
+  },
+  // Fallbacks for legacy/general categories
+  'Áo thun': {
+    emoji: '👕',
+    bg: 'bg-primary-50',
+    sticker: 'bg-primary-100',
+    border: 'border-primary-200',
+    text: 'text-primary-700',
+  },
+  'Áo thun & Polo': {
+    emoji: '👕',
+    bg: 'bg-primary-50',
+    sticker: 'bg-primary-100',
+    border: 'border-primary-200',
+    text: 'text-primary-700',
+  },
+  'Áo sơ mi': {
+    emoji: '👔',
+    bg: 'bg-secondary-50',
+    sticker: 'bg-secondary-100',
+    border: 'border-secondary-200',
+    text: 'text-secondary-700',
+  },
+  'Áo sơ mi & Áo kiểu': {
+    emoji: '👔',
+    bg: 'bg-secondary-50',
+    sticker: 'bg-secondary-100',
+    border: 'border-secondary-200',
+    text: 'text-secondary-700',
+  },
+  'Quần': {
+    emoji: '👖',
+    bg: 'bg-primary-50',
+    sticker: 'bg-primary-200',
+    border: 'border-primary-200',
+    text: 'text-primary-700',
+  },
+  'Quần & Chân váy': {
+    emoji: '👖',
+    bg: 'bg-primary-50',
+    sticker: 'bg-primary-200',
+    border: 'border-primary-200',
+    text: 'text-primary-700',
+  },
+  'Váy đầm': {
+    emoji: '👗',
+    bg: 'bg-secondary-50',
+    sticker: 'bg-secondary-200',
+    border: 'border-secondary-200',
+    text: 'text-secondary-700',
+  },
+  'Váy & Đầm': {
+    emoji: '👗',
+    bg: 'bg-secondary-50',
+    sticker: 'bg-secondary-200',
+    border: 'border-secondary-200',
+    text: 'text-secondary-700',
+  },
+  'Áo khoác': {
+    emoji: '🧥',
+    bg: 'bg-primary-50',
+    sticker: 'bg-primary-100',
+    border: 'border-primary-200',
+    text: 'text-primary-700',
+  },
+  'Áo khoác & Hoodie': {
+    emoji: '🧥',
+    bg: 'bg-primary-50',
+    sticker: 'bg-primary-100',
+    border: 'border-primary-200',
+    text: 'text-primary-700',
+  },
+  // Fallbacks for legacy/general categories
 };
 
 export const DEFAULT_CATEGORY_META = {
-  emoji: '🎈',
+  emoji: '🏷️',
   bg: 'bg-primary-50',
   sticker: 'bg-primary-100',
   border: 'border-primary-200',
@@ -108,20 +215,45 @@ export const DEFAULT_CATEGORY_META = {
 export function getCategoryMeta(name) {
   if (!name) return DEFAULT_CATEGORY_META;
   const lower = name.toLowerCase();
-  if (lower.includes('đồ chơi') || lower.includes('lego') || lower.includes('game')) {
-    return CATEGORY_META['Đồ chơi'];
+
+  // Fashion categories mapping (Design.md 2.7.4)
+  if (lower.includes('áo thun') || lower.includes('polo') || lower.includes('t-shirt') || lower.includes('tee')) {
+    return CATEGORY_META['Áo thun & Polo'];
   }
-  if (lower.includes('quà tặng') || lower.includes('lưu niệm')) {
-    return CATEGORY_META['Quà tặng'];
+  if (lower.includes('sơ mi') || lower.includes('áo kiểu') || lower.includes('shirt')) {
+    return CATEGORY_META['Áo sơ mi & Áo kiểu'];
   }
-  if (lower.includes('phụ kiện') || lower.includes('điện thoại') || lower.includes('móc khóa')) {
-    return CATEGORY_META['Phụ kiện'];
+  if (lower.includes('quần') || lower.includes('chân váy') || lower.includes('jeans') || lower.includes('kaki') || lower.includes('short')) {
+    return CATEGORY_META['Quần & Chân váy'];
   }
-  if (lower.includes('văn phòng phẩm') || lower.includes('sách') || lower.includes('vở') || lower.includes('bút')) {
-    return CATEGORY_META['Văn phòng phẩm'];
+  if (lower.includes('váy') || lower.includes('đầm') || lower.includes('dress') || lower.includes('skirt')) {
+    return CATEGORY_META['Váy & Đầm'];
   }
-  if (lower.includes('gối') || lower.includes('thú bông') || lower.includes('gấu') || lower.includes('gia dụng')) {
-    return CATEGORY_META['Gối & thú bông'];
+  if (lower.includes('khoác') || lower.includes('hoodie') || lower.includes('jacket') || lower.includes('sweater') || lower.includes('cardigan')) {
+    return CATEGORY_META['Áo khoác & Hoodie'];
   }
+
+  // Fallback mappings
+
+  // Fashion categories mapping (Design.md 2.7.4)
+  if (lower.includes('áo thun') || lower.includes('polo') || lower.includes('t-shirt') || lower.includes('tee')) {
+    return CATEGORY_META['Áo thun & Polo'];
+  }
+  if (lower.includes('sơ mi') || lower.includes('áo kiểu') || lower.includes('shirt')) {
+    return CATEGORY_META['Áo sơ mi & Áo kiểu'];
+  }
+  if (lower.includes('quần') || lower.includes('chân váy') || lower.includes('jeans') || lower.includes('kaki') || lower.includes('short')) {
+    return CATEGORY_META['Quần & Chân váy'];
+  }
+  if (lower.includes('váy') || lower.includes('đầm') || lower.includes('dress') || lower.includes('skirt')) {
+    return CATEGORY_META['Váy & Đầm'];
+  }
+  if (lower.includes('khoác') || lower.includes('hoodie') || lower.includes('jacket') || lower.includes('sweater') || lower.includes('cardigan')) {
+    return CATEGORY_META['Áo khoác & Hoodie'];
+  }
+
+  // Fallback mappings
+
+
   return DEFAULT_CATEGORY_META;
 }

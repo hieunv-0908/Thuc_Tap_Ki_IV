@@ -18,12 +18,14 @@ import { toast } from '../../store/toastStore';
 import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import ThemeToggle from '../ui/ThemeToggle';
+import BrandLogo from '../ui/BrandLogo';
 
 const QUICK_SEARCH_CHIPS = [
-  { label: 'Gấu bông Capybara', emoji: '🧸' },
-  { label: 'Đồ chơi vui nhộn', emoji: '🧩' },
-  { label: 'Hộp quà bất ngờ', emoji: '🎁' },
-  { label: 'Móc khóa độc lạ', emoji: '🔑' },
+  { label: 'Áo thun Boxy', emoji: '👕' },
+  { label: 'Áo sơ mi', emoji: '👔' },
+  { label: 'Quần jeans & Váy', emoji: '👖' },
+  { label: 'Váy đầm', emoji: '👗' },
+  { label: 'Áo khoác Hoodie', emoji: '🧥' },
 ];
 
 /**
@@ -147,16 +149,10 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
 
             <Link
               to="/"
-              className="group flex items-center gap-1.5 text-xl font-bold tracking-tight select-none"
+              className="group flex items-center py-1 transition-opacity hover:opacity-90"
+              aria-label="Về trang chủ FunnyShop"
             >
-              <span
-                className="text-2xl inline-block -rotate-12 group-hover:rotate-0 transition-transform duration-200"
-                aria-hidden="true"
-              >
-                🎈
-              </span>
-              <span className="text-primary-700">Funny</span>
-              <span className="text-secondary-500">Shop</span>
+              <BrandLogo />
             </Link>
           </div>
 
@@ -171,7 +167,7 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}
-                placeholder="Tìm sản phẩm quà tặng, gối ôm, đồ chơi..."
+                placeholder="Tìm áo thun, quần jeans, váy đầm..."
                 className="h-11 w-full rounded-full border border-line bg-gray-100 pl-11 pr-24 text-sm text-ink placeholder:text-ink-subtle focus:bg-white focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all"
               />
               <Search className="size-4 text-ink-subtle absolute left-4 pointer-events-none" />
@@ -356,7 +352,7 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm kiếm sản phẩm..."
+                placeholder="Tìm áo thun, quần jeans, váy đầm..."
                 autoFocus
                 className="h-10 w-full rounded-lg border border-line bg-gray-50 pl-10 pr-20 text-sm text-ink placeholder:text-ink-subtle focus:bg-white focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200"
               />
@@ -384,17 +380,11 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
           >
             {/* Top Greeting Panel: bg-gradient-to-r from-primary-50 to-secondary-50 */}
             <div className="bg-gradient-to-r from-primary-50 to-secondary-50 p-5 border-b border-line flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl" aria-hidden="true">🎈</span>
-                <div>
-                  <div className="font-bold text-base text-ink">
-                    <span className="text-primary-700">Funny</span>
-                    <span className="text-secondary-500">Shop</span>
-                  </div>
-                  <p className="text-xs text-ink-muted">
-                    {isAuthenticated ? `Chào, ${user?.fullName}!` : 'Chào bạn đến với shop!'}
-                  </p>
-                </div>
+              <div>
+                <BrandLogo size="sm" />
+                <p className="text-xs text-ink-muted mt-2">
+                  {isAuthenticated ? `Chào, ${user?.fullName}!` : 'Chào mừng bạn đến với FunnyShop!'}
+                </p>
               </div>
               <button
                 type="button"
