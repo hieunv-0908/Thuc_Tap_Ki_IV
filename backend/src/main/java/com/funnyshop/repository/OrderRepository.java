@@ -51,4 +51,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "LEFT JOIN FETCH pv.product " +
            "WHERE o.id IN :ids")
     List<Order> findAllWithDetailsByIds(@Param("ids") List<Long> ids);
+
+    @Query("SELECT o FROM Order o " +
+           "LEFT JOIN FETCH o.user " +
+           "LEFT JOIN FETCH o.orderItems oi " +
+           "LEFT JOIN FETCH oi.productVariant pv " +
+           "LEFT JOIN FETCH pv.product " +
+           "WHERE o.idempotencyKey = :key")
+    Optional<Order> findWithItemsByIdempotencyKey(@Param("key") String key);
+
+    Optional<Order> findByIdempotencyKey(String idempotencyKey);
 }

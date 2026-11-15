@@ -18,6 +18,7 @@ public class OrderCancelledEvent {
     private final String phone;
     private final BigDecimal totalAmount;
     private final String cancellationSource; // "USER" | "ADMIN"
+    private final String cancelReason;
     private final LocalDateTime cancelledAt;
 }
 

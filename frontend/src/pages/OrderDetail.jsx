@@ -19,7 +19,7 @@ import { OrderBadge } from '../components/ui/Badge';
 import OrderTimeline from '../components/order/OrderTimeline';
 import ErrorState from '../components/ui/ErrorState';
 import Button from '../components/ui/Button';
-import ConfirmDialog from '../components/ui/ConfirmDialog';
+import CancelOrderModal from '../components/order/CancelOrderModal';
 import { useCartStore } from '../store/cartStore';
 import { toast } from '../store/toastStore';
 
@@ -32,17 +32,22 @@ export default function OrderDetail() {
   const addItem = useCartStore((s) => s.addItem);
 
   const [order, setOrder] = useState(null);
+  const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
   const fetchOrder = useCallback(async () => {
-    setLoading(true);
-    setError(null);
     try {
-      const data = await orderApi.getOrderById(id);
-      setOrder(data);
+      setLoading(true);
+      setError(null);
+      const [orderData, timelineData] = await Promise.all([
+        orderApi.getOrderById(id),
+        orderApi.getOrderTimeline(id).catch(() => []),
+      ]);
+      setOrder(orderData);
+      setTimeline(Array.isArray(timelineData) ? timelineData : []);
     } catch (err) {
       setError(err.message || 'Không tìm thấy thông tin đơn hàng.');
     } finally {
@@ -54,11 +59,14 @@ export default function OrderDetail() {
     if (!id) return;
 
     let isMounted = true;
-    orderApi
-      .getOrderById(id)
-      .then((data) => {
+    Promise.all([
+      orderApi.getOrderById(id),
+      orderApi.getOrderTimeline(id).catch(() => []),
+    ])
+      .then(([orderData, timelineData]) => {
         if (!isMounted) return;
-        setOrder(data);
+        setOrder(orderData);
+        setTimeline(Array.isArray(timelineData) ? timelineData : []);
         setLoading(false);
       })
       .catch((err) => {
@@ -119,11 +127,11 @@ export default function OrderDetail() {
     }
   };
 
-  const handleCancelOrder = async () => {
+  const handleCancelOrder = async (reason) => {
     if (!order) return;
     try {
       setIsCancelling(true);
-      await orderApi.cancelOrder(order.id);
+      await orderApi.cancelOrder(order.id, reason);
       toast.success('Hủy đơn hàng thành công!');
       setShowCancelModal(false);
       await fetchOrder();
@@ -252,7 +260,11 @@ export default function OrderDetail() {
         <h3 className="text-xs font-bold uppercase tracking-wider text-ink-muted mb-2">
           Tiến trình xử lý đơn hàng
         </h3>
-        <OrderTimeline status={order.status} />
+        <OrderTimeline
+          status={order.status}
+          cancelReason={order.cancelReason}
+          timeline={timeline}
+        />
       </div>
 
       {/* Two side-by-side cards from md: Delivery Info & Price Summary */}
@@ -384,6 +396,46 @@ export default function OrderDetail() {
         </div>
       </div>
 
+      {/* Lịch sử trạng thái đơn hàng (Timeline Audit Trail) */}
+      {timeline && timeline.length > 0 && (
+        <div className="bg-white rounded-2xl border border-line p-5 sm:p-6 shadow-soft space-y-4">
+          <div className="flex items-center gap-2 border-b border-line pb-3">
+            <Calendar className="size-4.5 text-primary-700" />
+            <h3 className="text-base font-bold text-ink">
+              Lịch sử trạng thái đơn hàng ({timeline.length})
+            </h3>
+          </div>
+          <div className="space-y-3">
+            {timeline.map((step, idx) => (
+              <div
+                key={step.id || idx}
+                className="flex items-start gap-3 p-3 rounded-xl bg-gray-50/70 border border-line text-sm"
+              >
+                <div className="size-2 rounded-full bg-primary-600 mt-2 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <OrderBadge status={step.newStatus} />
+                      <span className="text-xs text-ink-muted">
+                        bởi <strong className="text-ink">{step.changedBy || 'Hệ thống'}</strong>
+                      </span>
+                    </div>
+                    <span className="text-xs text-ink-subtle">
+                      {formatDate(step.createdAt)}
+                    </span>
+                  </div>
+                  {step.note && (
+                    <p className="text-xs text-ink-muted mt-1.5 bg-white p-2 rounded-lg border border-line">
+                      💬 <strong className="text-ink">Ghi chú / Lý do:</strong> {step.note}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Bottom Navigation */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
         <Button
@@ -404,16 +456,12 @@ export default function OrderDetail() {
         </Button>
       </div>
 
-      {/* Modal xác nhận hủy đơn hàng */}
-      <ConfirmDialog
+      {/* Modal chọn lý do và xác nhận hủy đơn hàng */}
+      <CancelOrderModal
         isOpen={showCancelModal}
         onClose={() => !isCancelling && setShowCancelModal(false)}
         onConfirm={handleCancelOrder}
-        title={`Hủy đơn hàng #${order.id}?`}
-        description="Bạn có chắc chắn muốn hủy đơn hàng này không? Số lượng sản phẩm sẽ được tự động hoàn lại kho và thao tác này không thể hoàn tác."
-        confirmText="Xác nhận hủy đơn"
-        cancelText="Đóng"
-        variant="danger"
+        orderId={order?.id}
         loading={isCancelling}
       />
     </div>

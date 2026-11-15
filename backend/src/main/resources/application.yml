@@ -3,6 +3,8 @@ spring:
     name: funnyshop
   profiles:
     active: dev
+  jpa:
+    open-in-view: false
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -13,8 +15,8 @@ server:
   port: 8080
 
 jwt:
-  # Chuỗi Secret Key tối thiểu 256 bits (32 chars) cho HMAC-SHA256
-  secret: 404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971
+  # Chuỗi Secret Key tối thiểu 256 bits (32 chars) cho HMAC-SHA256 (có thể override qua biến môi trường JWT_SECRET)
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971}
   # Thời hạn Access Token: 1800000 ms = 30 phút
   access-expiration: 1800000
   # Giữ backward-compatible với jwt.expiration cũ nếu có

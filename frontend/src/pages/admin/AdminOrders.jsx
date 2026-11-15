@@ -13,10 +13,11 @@ import {
 import Table from '../../components/ui/Table';
 import Pagination from '../../components/ui/Pagination';
 import { OrderBadge } from '../../components/ui/Badge';
-import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import CancelOrderModal from '../../components/order/CancelOrderModal';
 import StatCard from '../../components/admin/StatCard';
 import AdminOrderDetailModal from '../../components/admin/AdminOrderDetailModal';
 import { adminApi } from '../../api/admin';
+import { orderApi } from '../../api/order';
 import { toast } from '../../store/toastStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
@@ -165,12 +166,12 @@ export default function AdminOrders() {
   };
 
   // Confirm cancel order
-  const handleConfirmCancel = async () => {
+  const handleConfirmCancel = async (reason) => {
     if (!cancelTarget) return;
 
     try {
       setIsCancelling(true);
-      await adminApi.updateOrderStatus(cancelTarget.id, ORDER_STATUS.CANCELLED);
+      await orderApi.cancelOrder(cancelTarget.id, reason);
       toast.success(
         `Đã hủy đơn hàng #${cancelTarget.id}. Số lượng tồn kho đã được hoàn lại.`
       );
@@ -468,16 +469,12 @@ export default function AdminOrders() {
         order={selectedOrder}
       />
 
-      {/* Confirm Cancel Order Dialog */}
-      <ConfirmDialog
+      {/* Cancel Order Modal with Reason selection */}
+      <CancelOrderModal
         isOpen={Boolean(cancelTarget)}
         onClose={() => !isCancelling && setCancelTarget(null)}
         onConfirm={handleConfirmCancel}
-        title="Hủy đơn hàng này?"
-        description={`Bạn có chắc chắn muốn hủy đơn hàng #${cancelTarget?.id}? Số lượng sản phẩm trong đơn sẽ được tự động hoàn lại vào kho hàng.`}
-        confirmText="Xác nhận hủy đơn"
-        cancelText="Đóng"
-        variant="danger"
+        orderId={cancelTarget?.id}
         loading={isCancelling}
       />
     </div>

@@ -5,12 +5,20 @@ import apiClient from './axios';
 // const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const orderApi = {
-  createOrder: async ({ fullName, phone, address, items }) => {
+  createOrder: async ({ fullName, phone, address, paymentMethod = 'COD', items, idempotencyKey }) => {
     // if (isMock) {
     //   const user = useAuthStore.getState().user;
     //   return await mockEngine.createOrder(user?.id, { fullName, phone, address, items });
     // }
-    const res = await apiClient.post('/api/v1/orders', { fullName, phone, address, items });
+    const headers = {};
+    if (idempotencyKey) {
+      headers['X-Idempotency-Key'] = idempotencyKey;
+    }
+    const res = await apiClient.post(
+      '/api/v1/orders',
+      { fullName, phone, address, paymentMethod, items, idempotencyKey },
+      { headers }
+    );
     return res?.data !== undefined ? res.data : res;
   },
 
@@ -32,8 +40,14 @@ export const orderApi = {
     return res?.data !== undefined ? res.data : res;
   },
 
-  cancelOrder: async (id) => {
-    const res = await apiClient.patch(`/api/v1/orders/${id}/cancel`);
+  cancelOrder: async (id, reason) => {
+    const payload = reason ? { reason } : {};
+    const res = await apiClient.patch(`/api/v1/orders/${id}/cancel`, payload);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  getOrderTimeline: async (id) => {
+    const res = await apiClient.get(`/api/v1/orders/${id}/timeline`);
     return res?.data !== undefined ? res.data : res;
   },
 };

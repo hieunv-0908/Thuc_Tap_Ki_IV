@@ -42,6 +42,13 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdOrder, setCreatedOrder] = useState(null);
 
+  // Sinh Idempotency Key theo vòng đời trang Checkout (chống tạo đơn trùng khi click đúp/lag mạng)
+  const [idempotencyKey, setIdempotencyKey] = useState(() => {
+    return typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'order-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+  });
+
   const totalPrice = getTotalPrice();
   const totalCount = getTotalCount();
 
@@ -117,6 +124,8 @@ export default function Checkout() {
         fullName: formData.fullName.trim(),
         phone: formData.phone.trim(),
         address: formData.address.trim(),
+        paymentMethod: 'COD',
+        idempotencyKey,
         items: items.map((i) => ({
           variantId: i.variantId || undefined,
           productId: i.productId || i.product?.id,
@@ -127,6 +136,10 @@ export default function Checkout() {
       const result = await orderApi.createOrder(orderPayload);
       clearCart();
       setCreatedOrder(result);
+      // Reset cấp key mới cho phiên tiếp theo
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        setIdempotencyKey(crypto.randomUUID());
+      }
       toast.success('Đặt hàng thành công!');
     } catch (err) {
       setServerError(

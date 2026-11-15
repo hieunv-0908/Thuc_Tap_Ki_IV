@@ -12,10 +12,10 @@
 
 | Phase | Nội dung | Trạng thái |
 |---|---|---|
-| 0 | Khởi tạo & rà soát | ☐ |
-| 1 | Nền tảng (cấu hình, services, store, utils) | ☐ |
-| 2 | Component dùng chung & Layout | ☐ |
-| 3 | Auth & Hồ sơ | ☐ |
+| 0 | Khởi tạo & rà soát | ☑ |
+| 1 | Nền tảng (cấu hình, services, store, utils) | ☑ |
+| 2 | Component dùng chung & Layout | ☑ |
+| 3 | Auth & Hồ sơ | ☑ |
 | 4 | Catalog (Trang chủ, Chi tiết) | ☑ |
 | 5 | Cart, Checkout, Order History | ☑ |
 | 6 | Admin | ☑ |
@@ -102,14 +102,14 @@
 
 ## Phase 3 – Auth & Hồ sơ
 
-- [ ] Trang Login: validate từng ô, hiện/ẩn mật khẩu, lỗi server (FR-01)
-- [ ] Trang Register: Họ tên, Email, Mật khẩu, Xác nhận mật khẩu (FR-01)
-- [ ] Lưu JWT, điều hướng theo role (Customer → `/`, Admin → `/admin/products`)
-- [ ] Quay lại `/checkout` sau khi đăng nhập nếu bị chuyển hướng từ đó
-- [ ] Menu user trên Navbar: Hồ sơ, Đơn hàng của tôi, Quản trị (ADMIN), Đăng xuất
-- [ ] Trang Profile: cập nhật họ tên, email; đổi mật khẩu (mục 2.1)
-- [ ] Xử lý token hết hạn đúng luồng (NFR-05)
-- [ ] Commit: `feat(frontend): xác thực và hồ sơ`
+- [x] Trang Login: validate từng ô, hiện/ẩn mật khẩu, lỗi server (FR-01)
+- [x] Trang Register: Họ tên, Email, Mật khẩu, Xác nhận mật khẩu (FR-01)
+- [x] Lưu JWT, điều hướng theo role (Customer → `/`, Admin → `/admin/products`)
+- [x] Quay lại `/checkout` sau khi đăng nhập nếu bị chuyển hướng từ đó
+- [x] Menu user trên Navbar: Hồ sơ, Đơn hàng của tôi, Quản trị (ADMIN), Đăng xuất
+- [x] Trang Profile: cập nhật họ tên, email; đổi mật khẩu (mục 2.1)
+- [x] Xử lý token hết hạn đúng luồng (NFR-05) (Tích hợp Auto Refresh Token & Web Locks đa tab)
+- [x] Commit: `feat(frontend): xác thực và hồ sơ`
 
 ## Phase 4 – Catalog (Trang chủ, Chi tiết)
 

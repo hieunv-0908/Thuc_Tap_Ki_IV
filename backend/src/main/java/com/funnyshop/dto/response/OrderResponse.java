@@ -33,6 +33,7 @@ public class OrderResponse {
     private BigDecimal totalPrice;
     private String paymentMethod;
     private OrderStatus status;
+    private String cancelReason;
     private List<OrderItemResponse> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
