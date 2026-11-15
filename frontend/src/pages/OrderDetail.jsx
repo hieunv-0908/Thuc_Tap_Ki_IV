@@ -39,9 +39,9 @@ export default function OrderDetail() {
   const [isCancelling, setIsCancelling] = useState(false);
 
   const fetchOrder = useCallback(async () => {
-    setLoading(true);
-    setError(null);
     try {
+      setLoading(true);
+      setError(null);
       const [orderData, timelineData] = await Promise.all([
         orderApi.getOrderById(id),
         orderApi.getOrderTimeline(id).catch(() => []),
@@ -57,8 +57,28 @@ export default function OrderDetail() {
 
   useEffect(() => {
     if (!id) return;
-    fetchOrder();
-  }, [id, fetchOrder]);
+
+    let isMounted = true;
+    Promise.all([
+      orderApi.getOrderById(id),
+      orderApi.getOrderTimeline(id).catch(() => []),
+    ])
+      .then(([orderData, timelineData]) => {
+        if (!isMounted) return;
+        setOrder(orderData);
+        setTimeline(Array.isArray(timelineData) ? timelineData : []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setError(err.message || 'Không tìm thấy thông tin đơn hàng.');
+        setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   const handleReorder = () => {
     if (!order || !order.items) return;
