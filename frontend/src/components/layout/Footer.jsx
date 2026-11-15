@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Phone, Mail, MapPin, Clock, Truck, ShieldCheck, Heart } from 'lucide-react';
+import BrandLogo from '../ui/BrandLogo';
 
 /**
  * Footer component complying with Design.md 6.14 (v2.0)
@@ -16,14 +17,12 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
           {/* Column 1: Thương hiệu */}
           <div className="space-y-4">
-            <Link to="/" className="inline-flex items-center gap-1.5 text-xl font-bold tracking-tight select-none">
-              <span className="text-2xl" aria-hidden="true">🎈</span>
-              <span className="text-primary-400">Funny</span>
-              <span className="text-secondary-300">Shop</span>
+            <Link to="/" className="inline-flex items-center transition-opacity hover:opacity-90" aria-label="Về trang chủ FunnyShop">
+              <BrandLogo onDark={true} />
             </Link>
 
             <p className="text-sm text-gray-300 leading-relaxed">
-              Thiên đường quà tặng độc đáo, gấu bông và đồ chơi sáng tạo. Mang niềm vui và tiếng cười đến mọi người mỗi ngày!
+              Thời trang trẻ trung, năng động và chuẩn form dáng Việt. Tự tin thể hiện phong cách riêng của bạn mỗi ngày!
             </p>
 
             {/* Social round buttons */}
@@ -46,37 +45,37 @@ export default function Footer() {
           {/* Column 2: Danh mục nổi bật kèm emoji */}
           <div className="space-y-3">
             <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-              Danh mục nổi bật
+              Danh mục thời trang
             </h3>
             <ul className="space-y-2.5 text-sm text-gray-300">
               <li>
-                <Link to="/?category=3" className="hover:text-white hover:underline underline-offset-4 transition-colors flex items-center gap-2">
-                  <span>🧩</span>
-                  <span>Đồ chơi & Quà tặng vui</span>
+                <Link to="/?q=Áo+thun" className="hover:text-white hover:underline underline-offset-4 transition-colors flex items-center gap-2">
+                  <span>👕</span>
+                  <span>Áo thun & Polo</span>
                 </Link>
               </li>
               <li>
-                <Link to="/?category=1" className="hover:text-white hover:underline underline-offset-4 transition-colors flex items-center gap-2">
-                  <span>🔑</span>
-                  <span>Phụ kiện & Điện thoại</span>
+                <Link to="/?q=Sơ+mi" className="hover:text-white hover:underline underline-offset-4 transition-colors flex items-center gap-2">
+                  <span>👔</span>
+                  <span>Áo sơ mi & Áo kiểu</span>
                 </Link>
               </li>
               <li>
-                <Link to="/?category=2" className="hover:text-white hover:underline underline-offset-4 transition-colors flex items-center gap-2">
-                  <span>🎁</span>
-                  <span>Thời trang & Quà tặng</span>
+                <Link to="/?q=Quần" className="hover:text-white hover:underline underline-offset-4 transition-colors flex items-center gap-2">
+                  <span>👖</span>
+                  <span>Quần & Chân váy</span>
                 </Link>
               </li>
               <li>
-                <Link to="/?category=4" className="hover:text-white hover:underline underline-offset-4 transition-colors flex items-center gap-2">
-                  <span>🧸</span>
-                  <span>Gối ôm & Gia dụng xinh</span>
+                <Link to="/?q=Váy" className="hover:text-white hover:underline underline-offset-4 transition-colors flex items-center gap-2">
+                  <span>👗</span>
+                  <span>Váy & Đầm</span>
                 </Link>
               </li>
               <li>
-                <Link to="/?category=5" className="hover:text-white hover:underline underline-offset-4 transition-colors flex items-center gap-2">
-                  <span>✏️</span>
-                  <span>Sách & Văn phòng phẩm</span>
+                <Link to="/?q=Khoác" className="hover:text-white hover:underline underline-offset-4 transition-colors flex items-center gap-2">
+                  <span>🧥</span>
+                  <span>Áo khoác & Hoodie</span>
                 </Link>
               </li>
             </ul>
@@ -94,7 +93,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <ShieldCheck className="size-4 text-emerald-400 shrink-0" />
-                <span>Đổi trả thuận tiện</span>
+                <span>Đổi size linh hoạt trong 7 ngày</span>
               </li>
               <li className="flex items-center gap-2">
                 <Clock className="size-4 text-amber-400 shrink-0" />

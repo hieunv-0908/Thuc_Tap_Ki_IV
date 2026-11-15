@@ -20,14 +20,14 @@ export default function AnnouncementBar() {
 
   if (dismissed) return null;
 
-  const content = '🚚 Giao hàng COD toàn quốc · 🎁 Quà tặng vui nhộn mỗi ngày · ⚡ Đổi trả tiện lợi';
+  const content = '🚚 Miễn phí giao hàng toàn quốc · ↩ Đổi size miễn phí trong 7 ngày · ✨ Stylist AI tư vấn 24/7';
 
   return (
     <div className="relative z-50 h-9 w-full bg-secondary-700 text-white text-xs sm:text-sm font-medium flex items-center justify-between px-3 sm:px-4 overflow-hidden select-none">
       {/* Decorative sparkle left */}
       <div className="hidden md:flex items-center gap-1.5 opacity-80">
         <Sparkles className="size-3.5 text-secondary-300" />
-        <span>FunnyShop Deal Hot</span>
+        <span>FunnyShop Fashion</span>
       </div>
 
       {/* Marquee on mobile, static on desktop */}
