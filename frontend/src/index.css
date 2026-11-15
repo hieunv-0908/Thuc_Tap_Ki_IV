@@ -55,6 +55,7 @@
   --animate-float-slow: float 8s ease-in-out infinite;
   --animate-pop:        pop 300ms ease-out;
   --animate-marquee:    marquee 30s linear infinite;
+  --animate-marquee-smooth: marquee-smooth 42s linear infinite;
 
   @keyframes float {
     0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -68,6 +69,23 @@
   @keyframes marquee {
     from { transform: translateX(0); }
     to   { transform: translateX(-50%); }
+  }
+  @keyframes marquee-smooth {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    100% {
+      transform: translate3d(-100%, 0, 0);
+    }
+  }
+}
+
+@layer utilities {
+  .pause-marquee:hover,
+  .group:hover .pause-marquee,
+  .pause-marquee:active,
+  .group:active .pause-marquee {
+    animation-play-state: paused !important;
   }
 }
 

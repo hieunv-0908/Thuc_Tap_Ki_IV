@@ -28,8 +28,8 @@ export function Spinner({ size = 'md', className = '' }) {
 export function ProductCardSkeleton() {
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-line bg-white shadow-soft p-3 sm:p-4">
-      {/* Square image skeleton with chip placeholder */}
-      <div className="relative aspect-square w-full rounded-lg bg-gray-200 animate-pulse mb-3 overflow-hidden">
+      {/* 3:4 Vertical Fashion image skeleton with chip placeholder */}
+      <div className="relative aspect-[3/4] w-full rounded-lg bg-gray-200 animate-pulse mb-3 overflow-hidden">
         <Skeleton className="absolute bottom-2 left-2 h-5 w-20 rounded-full" />
       </div>
       {/* Name skeleton lines */}

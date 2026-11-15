@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Star, ShoppingCart, Heart, Flame, Check } from 'lucide-react';
+import { Shirt, Star, ShoppingCart, Heart, Flame, Check } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getCategoryMeta } from '../../utils/constants';
 import { useCartStore } from '../../store/cartStore';
@@ -29,8 +29,24 @@ export default function ProductCard({ product, onClick }) {
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
-  const activeVariants = product?.variants?.filter((v) => !v.isDeleted) || [];
+  const variants = product?.variants;
+  const activeVariants = useMemo(
+    () => variants?.filter((v) => !v.isDeleted) || [],
+    [variants]
+  );
   const hasMultipleVariants = activeVariants.length > 1;
+
+  // Extract available sizes for fashion card badge list 🔹 (Design.md 6.11)
+  const displaySizes = useMemo(() => {
+    if (Array.isArray(product?.sizes) && product.sizes.length > 0) {
+      return product.sizes;
+    }
+    if (activeVariants.length > 0) {
+      const sizes = [...new Set(activeVariants.map((v) => v.size).filter(Boolean))];
+      if (sizes.length > 0) return sizes;
+    }
+    return [];
+  }, [product, activeVariants]);
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
@@ -100,12 +116,12 @@ export default function ProductCard({ product, onClick }) {
           : 'hover:-translate-y-1 hover:border-primary-200 hover:shadow-brand motion-reduce:hover:translate-y-0'
       }`}
     >
-      {/* Square Image container */}
-      <div className="relative aspect-square w-full overflow-hidden bg-primary-50 flex items-center justify-center">
+      {/* Aspect 3:4 Vertical Fashion Image container */}
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-primary-50 flex items-center justify-center">
         {imgError ? (
           <div className="w-full h-full bg-primary-50 flex flex-col items-center justify-center text-primary-400 gap-1.5 p-4 text-center">
-            <Package className="size-10" aria-hidden="true" />
-            <span className="text-xs font-medium text-ink-subtle">Ảnh minh họa</span>
+            <Shirt className="size-10" aria-hidden="true" />
+            <span className="text-xs font-medium text-ink-subtle">Trang phục</span>
           </div>
         ) : (
           <img
@@ -113,7 +129,7 @@ export default function ProductCard({ product, onClick }) {
             alt={product.name}
             loading="lazy"
             onError={() => setImgError(true)}
-            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+            className={`w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105 ${
               isOutOfStock ? 'opacity-60 grayscale' : ''
             }`}
           />
@@ -181,6 +197,23 @@ export default function ProductCard({ product, onClick }) {
           >
             {product.name}
           </h3>
+
+          {/* Dải size 🔹 (Design.md 6.11) */}
+          {displaySizes.length > 0 && (
+            <div className="flex items-center gap-1 flex-wrap mt-1.5">
+              {displaySizes.slice(0, 4).map((s) => (
+                <span
+                  key={s}
+                  className="rounded border border-line bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-ink-muted"
+                >
+                  {s}
+                </span>
+              ))}
+              {displaySizes.length > 4 && (
+                <span className="text-[10px] text-ink-subtle">+{displaySizes.length - 4}</span>
+              )}
+            </div>
+          )}
 
           {/* Meta row: rating ★ + sold count 🔹 */}
           <div className="flex items-center gap-2 text-xs text-ink-muted mt-2">
