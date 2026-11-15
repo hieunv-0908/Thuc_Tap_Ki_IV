@@ -3,16 +3,21 @@ package com.funnyshop.service.impl;
 import com.funnyshop.dto.request.OrderCheckoutItemRequest;
 import com.funnyshop.dto.request.OrderCheckoutRequest;
 import com.funnyshop.dto.response.OrderResponse;
+import com.funnyshop.dto.response.OrderStatusHistoryResponse;
 import com.funnyshop.entity.Order;
 import com.funnyshop.entity.OrderItem;
+import com.funnyshop.entity.OrderStatusHistory;
 import com.funnyshop.entity.ProductVariant;
 import com.funnyshop.entity.User;
 import com.funnyshop.enums.OrderStatus;
 import com.funnyshop.event.OrderCancelledEvent;
+import com.funnyshop.event.OrderCreatedEvent;
+import com.funnyshop.event.OrderItemEventDto;
 import com.funnyshop.exception.AppException;
 import com.funnyshop.exception.InsufficientStockException;
 import com.funnyshop.exception.ResourceNotFoundException;
 import com.funnyshop.repository.OrderRepository;
+import com.funnyshop.repository.OrderStatusHistoryRepository;
 import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.repository.ProductVariantRepository;
 import com.funnyshop.repository.UserRepository;
@@ -27,6 +32,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -45,11 +51,19 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
+    private final OrderStatusHistoryRepository orderStatusHistoryRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderResponse checkout(Long userId, OrderCheckoutRequest request) {
+        String key = (request != null) ? request.getIdempotencyKey() : null;
+        return checkout(userId, request, key);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderResponse checkout(Long userId, OrderCheckoutRequest request, String idempotencyKey) {
         if (userId == null) {
             throw new AppException("Vui lòng đăng nhập để thực hiện đặt hàng!", HttpStatus.UNAUTHORIZED);
         }
@@ -114,6 +128,12 @@ public class OrderServiceImpl implements OrderService {
                 .sorted(Map.Entry.comparingByKey())
                 .toList();
 
+        String finalIdempotencyKey = (idempotencyKey != null && !idempotencyKey.isBlank())
+                ? idempotencyKey.trim()
+                : (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()
+                        ? request.getIdempotencyKey().trim()
+                        : null);
+
         Order order = Order.builder()
                 .user(user)
                 .customerName(request.getFullName().trim())
@@ -123,6 +143,7 @@ public class OrderServiceImpl implements OrderService {
                         ? request.getPaymentMethod().trim()
                         : "COD")
                 .status(OrderStatus.PENDING)
+                .idempotencyKey(finalIdempotencyKey)
                 .orderItems(new ArrayList<>())
                 .build();
 
@@ -137,9 +158,11 @@ public class OrderServiceImpl implements OrderService {
                             "Không tìm thấy biến thể sản phẩm với ID: " + variantId));
 
             if (Boolean.TRUE.equals(variant.getIsDeleted()) ||
-                    (variant.getProduct() != null && Boolean.TRUE.equals(variant.getProduct().getIsDeleted()))) {
+                    (variant.getProduct() != null && Boolean.TRUE.equals(variant.getProduct().getIsDeleted())) ||
+                    (variant.getProduct() != null && variant.getProduct().getCategory() != null
+                            && Boolean.TRUE.equals(variant.getProduct().getCategory().getIsDeleted()))) {
                 String name = variant.getProduct() != null ? variant.getProduct().getName() : "Sản phẩm";
-                throw new AppException("Sản phẩm '" + name + "' đã ngừng kinh doanh!", HttpStatus.BAD_REQUEST);
+                throw new AppException("Sản phẩm '" + name + "' đã ngừng kinh doanh hoặc danh mục không khả dụng!", HttpStatus.BAD_REQUEST);
             }
 
             Long expectedProductId = variantToProductMap.get(variantId);
@@ -174,6 +197,47 @@ public class OrderServiceImpl implements OrderService {
 
         order.setTotalAmount(totalAmount);
         Order savedOrder = orderRepository.save(order);
+
+        // Ghi nhận lịch sử trạng thái ban đầu của đơn hàng (Audit Trail)
+        OrderStatusHistory initialHistory = OrderStatusHistory.builder()
+                .order(savedOrder)
+                .oldStatus(null)
+                .newStatus(OrderStatus.PENDING)
+                .changedBy(user.getUsername() != null ? user.getUsername() : user.getEmail())
+                .note("Đơn hàng được tạo thành công")
+                .build();
+        orderStatusHistoryRepository.save(initialHistory);
+
+        // Đóng gói Event DTO phẳng (Zero Lazy-Loading Dependency) để gửi email xác nhận ở thread nền
+        List<OrderItemEventDto> eventItems = savedOrder.getOrderItems().stream()
+                .map(item -> OrderItemEventDto.builder()
+                        .variantId(item.getProductVariant() != null ? item.getProductVariant().getId() : null)
+                        .productName(item.getProduct() != null ? item.getProduct().getName()
+                                : (item.getProductVariant() != null && item.getProductVariant().getProduct() != null
+                                        ? item.getProductVariant().getProduct().getName()
+                                        : "Sản phẩm"))
+                        .color(item.getProductVariant() != null ? item.getProductVariant().getColor() : "")
+                        .size(item.getProductVariant() != null ? item.getProductVariant().getSize() : "")
+                        .quantity(item.getQuantity())
+                        .price(item.getPriceAtOrder())
+                        .build())
+                .toList();
+
+        String userEmail = user.getEmail();
+        OrderCreatedEvent createdEvent = OrderCreatedEvent.builder()
+                .orderId(savedOrder.getId())
+                .userId(user.getId())
+                .customerName(savedOrder.getCustomerName())
+                .userEmail(userEmail)
+                .phone(savedOrder.getPhone())
+                .shippingAddress(savedOrder.getShippingAddress())
+                .totalAmount(savedOrder.getTotalAmount())
+                .paymentMethod(savedOrder.getPaymentMethod())
+                .createdAt(savedOrder.getCreatedAt() != null ? savedOrder.getCreatedAt() : LocalDateTime.now())
+                .items(eventItems)
+                .build();
+
+        eventPublisher.publishEvent(createdEvent);
 
         return OrderResponse.fromEntity(savedOrder);
     }
@@ -212,6 +276,7 @@ public class OrderServiceImpl implements OrderService {
                 .map(orderMap::get)
                 .filter(Objects::nonNull)
                 .map(OrderResponse::fromEntity)
+                .peek(this::enrichCancelReason)
                 .toList();
 
         return new PageImpl<>(responses, pageable, orderPage.getTotalElements());
@@ -264,18 +329,34 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(newStatus);
         Order savedOrder = orderRepository.save(order);
 
+        // Ghi nhận lịch sử chuyển trạng thái đơn hàng
+        OrderStatusHistory updateHistory = OrderStatusHistory.builder()
+                .order(savedOrder)
+                .oldStatus(currentStatus)
+                .newStatus(newStatus)
+                .changedBy("ADMIN")
+                .note("Quản trị viên cập nhật trạng thái từ " + currentStatus + " sang " + newStatus)
+                .build();
+        orderStatusHistoryRepository.save(updateHistory);
+
         return OrderResponse.fromEntity(savedOrder);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderResponse cancelOrder(Long orderId) {
-        return cancelOrder(orderId, null, true);
+        return cancelOrder(orderId, null, true, null);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderResponse cancelOrder(Long orderId, Long currentUserId, boolean isAdmin) {
+        return cancelOrder(orderId, currentUserId, isAdmin, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderResponse cancelOrder(Long orderId, Long currentUserId, boolean isAdmin, String reason) {
         Order order = orderRepository.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Không tìm thấy đơn hàng với ID: " + orderId));
@@ -342,22 +423,63 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.CANCELLED);
         Order savedOrder = orderRepository.save(order);
 
+        // Chuẩn hóa lý do hủy đơn
+        String normalizedReason = (reason != null && !reason.trim().isEmpty()) ? reason.trim() : null;
+        if (normalizedReason != null && normalizedReason.length() > 255) {
+            normalizedReason = normalizedReason.substring(0, 255);
+        }
+
+        String historyNote;
+        if (normalizedReason != null) {
+            historyNote = normalizedReason;
+        } else {
+            historyNote = isAdmin ? "Quản trị viên hủy đơn hàng" : "Khách hàng tự hủy đơn hàng";
+        }
+
+        // Lấy thông tin user an toàn (Zero Lazy-Loading Dependency, chống LazyInitializationException khi tắt OSIV)
+        Long orderUserId = (order.getUser() != null) ? order.getUser().getId() : currentUserId;
+        String actor = isAdmin ? "ADMIN" : "USER";
+        String userEmail = null;
+
+        if (orderUserId != null) {
+            Optional<User> userOpt = userRepository.findById(orderUserId);
+            if (userOpt.isPresent()) {
+                User u = userOpt.get();
+                if (!isAdmin) {
+                    actor = (u.getUsername() != null && !u.getUsername().isBlank()) ? u.getUsername() : u.getEmail();
+                }
+                userEmail = u.getEmail();
+            }
+        }
+
+        // Ghi nhận lịch sử hủy đơn hàng
+        OrderStatusHistory cancelHistory = OrderStatusHistory.builder()
+                .order(savedOrder)
+                .oldStatus(currentStatus)
+                .newStatus(OrderStatus.CANCELLED)
+                .changedBy(actor)
+                .note(historyNote)
+                .build();
+        orderStatusHistoryRepository.save(cancelHistory);
+
         // 6. Đóng gói Event DTO phẳng (Zero Lazy-Loading Dependency)
-        String userEmail = order.getUser() != null ? order.getUser().getEmail() : null;
         OrderCancelledEvent event = OrderCancelledEvent.builder()
                 .orderId(savedOrder.getId())
-                .userId(order.getUser() != null ? order.getUser().getId() : null)
+                .userId(orderUserId)
                 .customerName(savedOrder.getCustomerName())
                 .userEmail(userEmail)
                 .phone(savedOrder.getPhone())
                 .totalAmount(savedOrder.getTotalAmount())
                 .cancellationSource(isAdmin ? "ADMIN" : "USER")
+                .cancelReason(normalizedReason)
                 .cancelledAt(LocalDateTime.now())
                 .build();
 
         eventPublisher.publishEvent(event);
 
-        return OrderResponse.fromEntity(savedOrder);
+        OrderResponse response = OrderResponse.fromEntity(savedOrder);
+        response.setCancelReason(normalizedReason != null ? normalizedReason : historyNote);
+        return response;
     }
 
     @Override
@@ -370,6 +492,7 @@ public class OrderServiceImpl implements OrderService {
                                 Order::getCreatedAt,
                                 Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(OrderResponse::fromEntity)
+                .peek(this::enrichCancelReason)
                 .toList();
     }
 
@@ -390,7 +513,11 @@ public class OrderServiceImpl implements OrderService {
         );
 
         return orderRepository.findByUserId(userId, pageable)
-                .map(OrderResponse::fromEntity);
+                .map(OrderResponse::fromEntity)
+                .map(res -> {
+                    enrichCancelReason(res);
+                    return res;
+                });
     }
 
     @Override
@@ -402,6 +529,32 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException("Bạn không có quyền xem thông tin đơn hàng này!", HttpStatus.FORBIDDEN);
         }
 
-        return OrderResponse.fromEntity(order);
+        OrderResponse response = OrderResponse.fromEntity(order);
+        enrichCancelReason(response);
+        return response;
+    }
+
+    private void enrichCancelReason(OrderResponse response) {
+        if (response != null && response.getStatus() == OrderStatus.CANCELLED && response.getId() != null) {
+            orderStatusHistoryRepository.findByOrderIdOrderByCreatedAtAsc(response.getId()).stream()
+                    .filter(h -> h.getNewStatus() == OrderStatus.CANCELLED)
+                    .reduce((first, second) -> second)
+                    .ifPresent(h -> response.setCancelReason(h.getNote()));
+        }
+    }
+
+    @Override
+    public List<OrderStatusHistoryResponse> getOrderTimeline(Long orderId, Long currentUserId, boolean isAdmin) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với ID: " + orderId));
+
+        if (!isAdmin && (order.getUser() == null || !order.getUser().getId().equals(currentUserId))) {
+            throw new AppException("Bạn không có quyền xem thông tin dòng thời gian của đơn hàng này!", HttpStatus.FORBIDDEN);
+        }
+
+        return orderStatusHistoryRepository.findByOrderIdOrderByCreatedAtAsc(orderId)
+                .stream()
+                .map(OrderStatusHistoryResponse::fromEntity)
+                .toList();
     }
 }

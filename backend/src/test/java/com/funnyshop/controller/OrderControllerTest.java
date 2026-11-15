@@ -7,6 +7,7 @@ import com.funnyshop.enums.OrderStatus;
 import com.funnyshop.exception.AppException;
 import com.funnyshop.exception.GlobalHandleException;
 import com.funnyshop.security.JwtTokenProvider;
+import com.funnyshop.service.OrderOrchestrator;
 import com.funnyshop.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,6 +43,9 @@ class OrderControllerTest {
 
     @Mock
     private OrderService orderService;
+
+    @Mock
+    private OrderOrchestrator orderOrchestrator;
 
     @Mock
     private JwtTokenProvider jwtTokenProvider;
@@ -87,7 +91,7 @@ class OrderControllerTest {
     @Test
     @DisplayName("POST /api/v1/orders/checkout - Tạo đơn hàng COD thành công trả về 201 Created")
     void checkout_Success_Returns201() throws Exception {
-        when(orderService.checkout(eq(2L), any(OrderCheckoutRequest.class))).thenReturn(sampleOrder);
+        when(orderOrchestrator.processCheckout(eq(2L), any(OrderCheckoutRequest.class), any())).thenReturn(sampleOrder);
 
         String json = """
             {
@@ -119,7 +123,7 @@ class OrderControllerTest {
     @Test
     @DisplayName("POST /api/v1/orders - Alias endpoint tạo đơn hàng thành công trả về 201 Created")
     void checkout_AliasEndpoint_Returns201() throws Exception {
-        when(orderService.checkout(eq(2L), any(OrderCheckoutRequest.class))).thenReturn(sampleOrder);
+        when(orderOrchestrator.processCheckout(eq(2L), any(OrderCheckoutRequest.class), any())).thenReturn(sampleOrder);
 
         String json = """
             {
@@ -237,7 +241,7 @@ class OrderControllerTest {
     @DisplayName("PATCH /api/v1/orders/{id}/cancel - Customer hủy đơn PENDING thành công trả về 200 OK")
     void cancelOrder_OwnOrder_Success() throws Exception {
         sampleOrder.setStatus(OrderStatus.CANCELLED);
-        when(orderService.cancelOrder(eq(10L), eq(2L), eq(false))).thenReturn(sampleOrder);
+        when(orderService.cancelOrder(eq(10L), eq(2L), eq(false), any())).thenReturn(sampleOrder);
 
         mockMvc.perform(patch("/api/v1/orders/10/cancel")
                         .contentType(MediaType.APPLICATION_JSON))
@@ -249,9 +253,31 @@ class OrderControllerTest {
     }
 
     @Test
+    @DisplayName("PATCH /api/v1/orders/{id}/cancel - Customer hủy đơn kèm lý do thành công trả về 200 OK")
+    void cancelOrder_WithReason_Success() throws Exception {
+        sampleOrder.setStatus(OrderStatus.CANCELLED);
+        when(orderService.cancelOrder(eq(10L), eq(2L), eq(false), eq("Tôi muốn đổi kích cỡ sản phẩm"))).thenReturn(sampleOrder);
+
+        String json = """
+            {
+                "reason": "Tôi muốn đổi kích cỡ sản phẩm"
+            }
+            """;
+
+        mockMvc.perform(patch("/api/v1/orders/10/cancel")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Hủy đơn hàng và hoàn tồn kho thành công!")))
+                .andExpect(jsonPath("$.data.id", is(10)))
+                .andExpect(jsonPath("$.data.status", is("CANCELLED")));
+    }
+
+    @Test
     @DisplayName("PATCH /api/v1/orders/{id}/cancel - Hủy đơn của người khác trả về 403 Forbidden")
     void cancelOrder_OtherOrder_ThrowsForbidden() throws Exception {
-        when(orderService.cancelOrder(eq(99L), eq(2L), eq(false)))
+        when(orderService.cancelOrder(eq(99L), eq(2L), eq(false), any()))
                 .thenThrow(new AppException("Bạn không có quyền hủy đơn hàng này!", HttpStatus.FORBIDDEN));
 
         mockMvc.perform(patch("/api/v1/orders/99/cancel")
@@ -264,7 +290,7 @@ class OrderControllerTest {
     @Test
     @DisplayName("PATCH /api/v1/orders/{id}/cancel - Đơn đã hủy từ trước trả về 409 Conflict")
     void cancelOrder_AlreadyCancelled_ThrowsConflict() throws Exception {
-        when(orderService.cancelOrder(eq(10L), eq(2L), eq(false)))
+        when(orderService.cancelOrder(eq(10L), eq(2L), eq(false), any()))
                 .thenThrow(new AppException("Đơn hàng này đã được hủy trước đó!", HttpStatus.CONFLICT));
 
         mockMvc.perform(patch("/api/v1/orders/10/cancel")
@@ -277,7 +303,7 @@ class OrderControllerTest {
     @Test
     @DisplayName("PATCH /api/v1/orders/{id}/cancel - Hủy đơn PROCESSING trả về 400 Bad Request")
     void cancelOrder_ProcessingStatus_ThrowsBadRequest() throws Exception {
-        when(orderService.cancelOrder(eq(10L), eq(2L), eq(false)))
+        when(orderService.cancelOrder(eq(10L), eq(2L), eq(false), any()))
                 .thenThrow(new AppException("Đơn hàng đang được chuẩn bị đóng gói, không thể tự hủy.", HttpStatus.BAD_REQUEST));
 
         mockMvc.perform(patch("/api/v1/orders/10/cancel")
@@ -285,5 +311,18 @@ class OrderControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code", is(400)))
                 .andExpect(jsonPath("$.message", is("Đơn hàng đang được chuẩn bị đóng gói, không thể tự hủy.")));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/orders/{id}/timeline - Lấy dòng thời gian trạng thái đơn hàng thành công trả về 200")
+    void getOrderTimeline_Success_Returns200() throws Exception {
+        when(orderService.getOrderTimeline(eq(10L), eq(2L), eq(false))).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/orders/10/timeline")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Lấy dòng thời gian trạng thái đơn hàng thành công!")))
+                .andExpect(jsonPath("$.data", hasSize(0)));
     }
 }

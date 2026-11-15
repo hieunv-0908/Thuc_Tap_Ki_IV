@@ -15,9 +15,11 @@ import com.funnyshop.exception.AppException;
 import com.funnyshop.exception.InsufficientStockException;
 import com.funnyshop.exception.ResourceNotFoundException;
 import com.funnyshop.repository.OrderRepository;
+import com.funnyshop.repository.OrderStatusHistoryRepository;
 import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.repository.ProductVariantRepository;
 import com.funnyshop.repository.UserRepository;
+import com.funnyshop.entity.OrderStatusHistory;
 import com.funnyshop.service.impl.OrderServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -56,6 +58,9 @@ class OrderServiceImplTest {
 
         @Mock
         private ProductVariantRepository productVariantRepository;
+
+        @Mock
+        private OrderStatusHistoryRepository orderStatusHistoryRepository;
 
         @Mock
         private UserRepository userRepository;
@@ -509,6 +514,33 @@ class OrderServiceImplTest {
         verify(productVariantRepository, times(1)).incrementStockAtomic(10L, 2);
         verify(orderRepository, times(1)).save(sampleOrder);
         verify(eventPublisher, times(1)).publishEvent(any(OrderCancelledEvent.class));
+    }
+
+    @Test
+    @DisplayName("cancelOrder (User) - Thành công với lý do hủy được lưu vào OrderStatusHistory và Event")
+    void cancelOrder_UserWithReason_Success() {
+        when(orderRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(sampleOrder));
+        when(productVariantRepository.incrementStockAtomic(10L, 2)).thenReturn(1);
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        String customReason = "Tôi muốn đổi kích cỡ sản phẩm khác";
+        OrderResponse response = orderService.cancelOrder(1L, 1L, false, customReason);
+
+        assertNotNull(response);
+        assertEquals(OrderStatus.CANCELLED, response.getStatus());
+
+        ArgumentCaptor<OrderStatusHistory> historyCaptor = ArgumentCaptor.forClass(OrderStatusHistory.class);
+        verify(orderStatusHistoryRepository, times(1)).save(historyCaptor.capture());
+        assertEquals(customReason, historyCaptor.getValue().getNote());
+        assertEquals(OrderStatus.CANCELLED, historyCaptor.getValue().getNewStatus());
+
+        ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
+        assertTrue(eventCaptor.getValue() instanceof OrderCancelledEvent);
+        OrderCancelledEvent event = (OrderCancelledEvent) eventCaptor.getValue();
+        assertEquals(customReason, event.getCancelReason());
     }
 
     @Test

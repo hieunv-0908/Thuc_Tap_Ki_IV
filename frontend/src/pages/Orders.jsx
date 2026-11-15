@@ -10,7 +10,7 @@ import Table from '../components/ui/Table';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import Button from '../components/ui/Button';
-import ConfirmDialog from '../components/ui/ConfirmDialog';
+import CancelOrderModal from '../components/order/CancelOrderModal';
 import { toast } from '../store/toastStore';
 
 /**
@@ -49,11 +49,11 @@ export default function Orders() {
     fetchOrders();
   }, [fetchOrders]);
 
-  const handleConfirmCancel = async () => {
+  const handleConfirmCancel = async (reason) => {
     if (!cancelTarget) return;
     try {
       setIsCancelling(true);
-      await orderApi.cancelOrder(cancelTarget.id);
+      await orderApi.cancelOrder(cancelTarget.id, reason);
       toast.success(`Hủy đơn hàng #${cancelTarget.id} thành công!`);
       setCancelTarget(null);
       await fetchOrders();
@@ -422,16 +422,12 @@ export default function Orders() {
         </>
       )}
 
-      {/* Confirm Dialog Hủy đơn hàng */}
-      <ConfirmDialog
+      {/* Modal chọn lý do và xác nhận hủy đơn hàng */}
+      <CancelOrderModal
         isOpen={Boolean(cancelTarget)}
         onClose={() => !isCancelling && setCancelTarget(null)}
         onConfirm={handleConfirmCancel}
-        title={`Hủy đơn hàng #${cancelTarget?.id}?`}
-        description={`Bạn có chắc chắn muốn hủy đơn hàng #${cancelTarget?.id}? Số lượng sản phẩm trong đơn sẽ được tự động hoàn lại vào kho hàng.`}
-        confirmText="Xác nhận hủy đơn"
-        cancelText="Đóng"
-        variant="danger"
+        orderId={cancelTarget?.id}
         loading={isCancelling}
       />
     </div>
