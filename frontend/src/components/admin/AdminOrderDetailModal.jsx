@@ -1,11 +1,50 @@
-import { User, Phone, MapPin, Calendar, CreditCard, Package } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+  User,
+  Phone,
+  MapPin,
+  Calendar,
+  CreditCard,
+  Package,
+  AlertTriangle,
+  Clock,
+  History,
+} from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { OrderBadge } from '../ui/Badge';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
+import { orderApi } from '../../api/order';
 
 export default function AdminOrderDetailModal({ isOpen, onClose, order }) {
+  const [timeline, setTimeline] = useState([]);
+  const [loadingTimeline, setLoadingTimeline] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !order?.id) {
+      setTimeline([]);
+      return;
+    }
+    let isMounted = true;
+    setLoadingTimeline(true);
+    orderApi
+      .getOrderTimeline(order.id)
+      .then((data) => {
+        if (isMounted) setTimeline(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (isMounted) setTimeline([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingTimeline(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, order?.id]);
+
   if (!order) return null;
 
   const items = order.items || [];
@@ -14,6 +53,9 @@ export default function AdminOrderDetailModal({ isOpen, onClose, order }) {
     0
   );
   const totalPrice = order.totalPrice || subtotal;
+
+  const cancelledRecord = timeline.find((t) => t.newStatus === 'CANCELLED');
+  const displayCancelReason = order.cancelReason || cancelledRecord?.note;
 
   return (
     <Modal
@@ -43,6 +85,42 @@ export default function AdminOrderDetailModal({ isOpen, onClose, order }) {
             </div>
           </div>
         </div>
+
+        {/* Cancel Banner (nếu đơn hàng bị hủy) */}
+        {order.status === 'CANCELLED' && (
+          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-900">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="size-5 text-red-600 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h5 className="font-bold text-sm text-red-800">Đơn hàng đã bị hủy</h5>
+                  {cancelledRecord?.createdAt && (
+                    <div className="flex items-center gap-1 text-xs text-red-600">
+                      <Clock className="size-3.5" />
+                      <span>{formatDate(cancelledRecord.createdAt)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {displayCancelReason && (
+                  <div className="mt-2 p-2.5 rounded-lg bg-white/90 border border-red-200 text-xs sm:text-sm">
+                    <span className="font-semibold text-red-800 block text-[11px] uppercase tracking-wider mb-0.5">
+                      Lý do hủy đơn:
+                    </span>
+                    <p className="font-medium text-ink leading-relaxed">
+                      "{displayCancelReason}"
+                    </p>
+                    {cancelledRecord?.changedBy && (
+                      <span className="block text-xs text-ink-muted mt-1">
+                        Người thực hiện: <strong className="text-ink">{cancelledRecord.changedBy}</strong>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Customer & Shipping Information */}
         <div className="rounded-xl border border-line p-4 space-y-3">
@@ -94,7 +172,10 @@ export default function AdminOrderDetailModal({ isOpen, onClose, order }) {
             {items.map((item, idx) => {
               const itemTotal = (item.price || 0) * (item.quantity || 1);
               return (
-                <div key={item.id || item.variantId || `${item.productId}-${item.sku || idx}`} className="p-3.5 flex items-center gap-3.5">
+                <div
+                  key={item.id || item.variantId || `${item.productId}-${item.sku || idx}`}
+                  className="p-3.5 flex items-center gap-3.5"
+                >
                   <img
                     src={item.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200'}
                     alt={item.productName || item.name}
@@ -109,7 +190,8 @@ export default function AdminOrderDetailModal({ isOpen, onClose, order }) {
                     </p>
                     {(item.color || item.size || item.sku) && (
                       <p className="text-[11px] text-ink-subtle mt-0.5">
-                        Phân loại: {[item.color, item.size].filter(Boolean).join(' - ')} {item.sku ? `(SKU: ${item.sku})` : ''}
+                        Phân loại: {[item.color, item.size].filter(Boolean).join(' - ')}{' '}
+                        {item.sku ? `(SKU: ${item.sku})` : ''}
                       </p>
                     )}
                     <p className="text-xs text-ink-muted mt-0.5">
@@ -143,6 +225,42 @@ export default function AdminOrderDetailModal({ isOpen, onClose, order }) {
           </div>
         </div>
 
+        {/* Timeline History (Audit Trail) */}
+        {timeline && timeline.length > 0 && (
+          <div className="rounded-xl border border-line p-4 space-y-3">
+            <h4 className="text-sm font-semibold text-ink flex items-center gap-2">
+              <History className="size-4 text-primary-700" />
+              Lịch sử trạng thái đơn hàng ({timeline.length})
+            </h4>
+            <div className="space-y-2.5">
+              {timeline.map((step, idx) => (
+                <div
+                  key={step.id || idx}
+                  className="flex items-start gap-3 p-2.5 rounded-lg bg-gray-50/70 border border-line text-xs"
+                >
+                  <div className="size-2 rounded-full bg-primary-600 mt-1.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <OrderBadge status={step.newStatus} />
+                        <span className="text-ink-muted">
+                          bởi <strong className="text-ink">{step.changedBy || 'Hệ thống'}</strong>
+                        </span>
+                      </div>
+                      <span className="text-ink-subtle">{formatDate(step.createdAt)}</span>
+                    </div>
+                    {step.note && (
+                      <p className="text-ink-muted mt-1 bg-white p-1.5 rounded border border-line">
+                        💬 <strong className="text-ink">Ghi chú:</strong> {step.note}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Footer actions */}
         <div className="flex justify-end pt-2">
           <Button variant="outline" onClick={onClose}>
@@ -153,4 +271,3 @@ export default function AdminOrderDetailModal({ isOpen, onClose, order }) {
     </Modal>
   );
 }
-

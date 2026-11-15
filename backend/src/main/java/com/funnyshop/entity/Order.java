@@ -21,6 +21,11 @@ import java.util.List;
                 @Index(
                         name = "idx_orders_user_created",
                         columnList = "user_id, created_at"
+                ),
+                @Index(
+                        name = "idx_orders_idempotency_key",
+                        columnList = "idempotency_key",
+                        unique = true
                 )
         }
 )
@@ -66,6 +71,9 @@ public class Order {
     @Builder.Default
     @ToString.Include
     private OrderStatus status = OrderStatus.PENDING;
+
+    @Column(name = "idempotency_key", length = 64, unique = true)
+    private String idempotencyKey;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @BatchSize(size = 30)

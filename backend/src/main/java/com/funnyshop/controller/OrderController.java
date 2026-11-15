@@ -1,10 +1,13 @@
 package com.funnyshop.controller;
 
+import com.funnyshop.dto.request.OrderCancelRequest;
 import com.funnyshop.dto.request.OrderCheckoutRequest;
 import com.funnyshop.dto.response.ApiResponse;
 import com.funnyshop.dto.response.OrderResponse;
+import com.funnyshop.dto.response.OrderStatusHistoryResponse;
 import com.funnyshop.entity.User;
 import com.funnyshop.security.JwtTokenProvider;
+import com.funnyshop.service.OrderOrchestrator;
 import com.funnyshop.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -27,6 +30,7 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final OrderOrchestrator orderOrchestrator;
     private final JwtTokenProvider jwtTokenProvider;
 
     private Long getCurrentUserId(HttpServletRequest request) {
@@ -55,10 +59,11 @@ public class OrderController {
     @PostMapping({"/checkout", ""})
     public ResponseEntity<ApiResponse<OrderResponse>> checkout(
             @Valid @RequestBody OrderCheckoutRequest checkoutRequest,
+            @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKeyHeader,
             HttpServletRequest request
     ) {
         Long currentUserId = getCurrentUserId(request);
-        OrderResponse response = orderService.checkout(currentUserId, checkoutRequest);
+        OrderResponse response = orderOrchestrator.processCheckout(currentUserId, checkoutRequest, idempotencyKeyHeader);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 ApiResponse.<OrderResponse>builder()
@@ -105,18 +110,39 @@ public class OrderController {
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(
             @PathVariable Long id,
+            @Valid @RequestBody(required = false) OrderCancelRequest cancelRequest,
             HttpServletRequest request
     ) {
         Long currentUserId = getCurrentUserId(request);
         boolean isAdmin = isCurrentUserAdmin();
+        String reason = cancelRequest != null ? cancelRequest.getReason() : null;
 
-        OrderResponse response = orderService.cancelOrder(id, currentUserId, isAdmin);
+        OrderResponse response = orderService.cancelOrder(id, currentUserId, isAdmin, reason);
 
         return ResponseEntity.ok(
                 ApiResponse.<OrderResponse>builder()
                         .code(HttpStatus.OK.value())
                         .message("Hủy đơn hàng và hoàn tồn kho thành công!")
                         .data(response)
+                        .build()
+        );
+    }
+
+    @GetMapping("/{id}/timeline")
+    public ResponseEntity<ApiResponse<List<OrderStatusHistoryResponse>>> getOrderTimeline(
+            @PathVariable Long id,
+            HttpServletRequest request
+    ) {
+        Long currentUserId = getCurrentUserId(request);
+        boolean isAdmin = isCurrentUserAdmin();
+
+        List<OrderStatusHistoryResponse> timeline = orderService.getOrderTimeline(id, currentUserId, isAdmin);
+
+        return ResponseEntity.ok(
+                ApiResponse.<List<OrderStatusHistoryResponse>>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Lấy dòng thời gian trạng thái đơn hàng thành công!")
+                        .data(timeline)
                         .build()
         );
     }

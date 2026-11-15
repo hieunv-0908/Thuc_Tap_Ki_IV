@@ -36,6 +36,9 @@ public class OrderCheckoutRequest {
     @Builder.Default
     private String paymentMethod = "COD";
 
+    @Size(max = 64, message = "Idempotency key không được vượt quá 64 ký tự")
+    private String idempotencyKey;
+
     @NotEmpty(message = "Danh sách sản phẩm đặt hàng không được để trống")
     private List<@Valid OrderCheckoutItemRequest> items;
 }
