@@ -226,9 +226,10 @@ export const useCartStore = create((set, get) => ({
     }
 
     const rawProduct = itemOrProduct.product || itemOrProduct;
+    const prodId = rawProduct.id || itemOrProduct.productId || itemOrProduct.id;
     const targetVariantId = targetVariant?.id || targetVariant?.variantId || itemOrProduct.variantId || null;
-    const resolvedId = targetVariantId || rawProduct.id;
-    const cartItemId = targetVariantId ? `var-${targetVariantId}` : `prod-${rawProduct.id}`;
+    const resolvedId = targetVariantId || prodId;
+    const cartItemId = targetVariantId ? `var-${targetVariantId}` : `prod-${prodId}`;
 
     const maxStock =
       targetVariant?.stockQuantity ??
@@ -333,6 +334,28 @@ export const useCartStore = create((set, get) => ({
         itemKey !== idStr &&
         String(item.variantId) !== idStr &&
         String(item.id) !== idStr
+      );
+    });
+
+    set({ items: updatedItems });
+    saveCartToStorage(get().activeCartKey, updatedItems);
+  },
+
+  /**
+   * Xóa danh sách các sản phẩm khỏi giỏ hàng (dùng khi chỉ thanh toán một phần giỏ hàng)
+   */
+  removeItems: (identifiers = []) => {
+    if (!Array.isArray(identifiers) || identifiers.length === 0) return;
+    const idSet = new Set(identifiers.map((id) => String(id)));
+    const updatedItems = get().items.filter((item) => {
+      const itemKey =
+        item.cartItemId ||
+        (item.variantId ? `var-${item.variantId}` : `prod-${item.productId || item.id}`);
+      return (
+        !idSet.has(itemKey) &&
+        !idSet.has(String(item.variantId)) &&
+        !idSet.has(String(item.id)) &&
+        !idSet.has(String(item.productId))
       );
     });
 

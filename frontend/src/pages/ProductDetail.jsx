@@ -30,6 +30,7 @@ import EmptyState from '../components/ui/EmptyState';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getCategoryMeta } from '../utils/constants';
 import { useCartStore } from '../store/cartStore';
+import { useAuthStore } from '../store/authStore';
 import { toast } from '../store/toastStore';
 
 export default function ProductDetail() {
@@ -241,9 +242,14 @@ export default function ProductDetail() {
     }
   };
 
-  // Buy now handler
+  // Buy now handler (Mua ngay trực tiếp món này, KHÔNG gộp vào giỏ hàng chung)
   const handleBuyNow = () => {
     if (!product || isOutOfStock) return;
+
+    if (quantity > currentStock) {
+      toast.warning(`Chỉ còn ${currentStock} sản phẩm trong kho`);
+      return;
+    }
 
     const activeVariants = product.variants?.filter((v) => !v.isDeleted) || [];
     if (activeVariants.length > 0 && !selectedVariant) {
@@ -252,8 +258,10 @@ export default function ProductDetail() {
     }
 
     const targetVariant = selectedVariant || activeVariants[0];
-    const cartPayload = targetVariant
+    const directItem = targetVariant
       ? {
+          cartItemId: `direct-var-${targetVariant.id}`,
+          id: targetVariant.id,
           variantId: targetVariant.id,
           productId: product.id,
           product,
@@ -261,28 +269,43 @@ export default function ProductDetail() {
           sku: targetVariant.sku,
           color: targetVariant.color,
           size: targetVariant.size,
-          price: targetVariant.price,
+          price: Number(targetVariant.price ?? 0),
           imageUrl: currentImage || targetVariant.imageUrl || product.imageUrl,
-          stockQuantity: targetVariant.stockQuantity,
+          stock: targetVariant.stockQuantity,
+          quantity,
         }
       : {
-          variantId: product.id,
+          cartItemId: `direct-prod-${product.id}`,
+          id: product.id,
+          variantId: null,
           productId: product.id,
           product,
           name: product.name,
           sku: product.sku || `SKU-${product.id}`,
           color: '',
           size: '',
-          price: product.price || 0,
+          price: Number(product.price ?? 0),
           imageUrl: currentImage || product.imageUrl,
-          stockQuantity: product.stockQuantity ?? product.stock ?? 0,
+          stock: product.stockQuantity ?? product.stock ?? 0,
+          quantity,
         };
 
-    const ok = addItem(cartPayload, quantity);
-    if (ok) {
-      navigate('/checkout');
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
+    if (!isAuthenticated) {
+      navigate('/login', {
+        state: {
+          from: '/checkout',
+          checkoutItems: [directItem],
+          isDirectBuy: true,
+        },
+      });
     } else {
-      toast.warning(`Chỉ còn ${currentStock} sản phẩm trong kho`);
+      navigate('/checkout', {
+        state: {
+          checkoutItems: [directItem],
+          isDirectBuy: true,
+        },
+      });
     }
   };
 
