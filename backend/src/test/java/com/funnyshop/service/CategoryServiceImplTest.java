@@ -4,6 +4,7 @@ import com.funnyshop.dto.request.CategoryRequest;
 import com.funnyshop.dto.response.CategoryResponse;
 import com.funnyshop.entity.Category;
 import com.funnyshop.repository.CategoryRepository;
+import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.service.impl.CategoryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +26,9 @@ class CategoryServiceImplTest {
 
     @Mock
     private CategoryRepository categoryRepository;
+
+    @Mock
+    private ProductRepository productRepository;
 
     @InjectMocks
     private CategoryServiceImpl categoryService;
@@ -93,15 +97,45 @@ class CategoryServiceImplTest {
     }
 
     @Test
-    @DisplayName("deleteCategory - Xóa mềm danh mục (isDeleted = true)")
+    @DisplayName("deleteCategory - Xóa mềm danh mục khi không có sản phẩm liên kết (isDeleted = true)")
     void deleteCategory_SoftDelete_Success() {
         when(categoryRepository.findByIdAndIsDeletedFalse(1L)).thenReturn(Optional.of(sampleCategory));
+        when(productRepository.countByCategoryIdAndIsDeletedFalse(1L)).thenReturn(0L);
+        when(productRepository.countByCategoryId(1L)).thenReturn(0L);
         when(categoryRepository.save(any(Category.class))).thenAnswer(i -> i.getArgument(0));
 
         categoryService.deleteCategory(1L);
 
         assertTrue(sampleCategory.getIsDeleted());
         verify(categoryRepository).save(sampleCategory);
+    }
+
+    @Test
+    @DisplayName("getAllCategoriesAdmin - Lấy toàn bộ danh mục kèm số lượng sản phẩm")
+    void getAllCategoriesAdmin_Success() {
+        when(categoryRepository.findAllByOrderByIdAsc()).thenReturn(List.of(sampleCategory));
+        when(productRepository.countByCategoryId(1L)).thenReturn(10L);
+
+        List<CategoryResponse> result = categoryService.getAllCategoriesAdmin();
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(10L, result.get(0).getProductCount());
+    }
+
+    @Test
+    @DisplayName("deleteCategory - Chặn xóa danh mục khi vẫn còn sản phẩm liên kết")
+    void deleteCategory_FailWhenHasProducts() {
+        when(categoryRepository.findByIdAndIsDeletedFalse(1L)).thenReturn(Optional.of(sampleCategory));
+        when(productRepository.countByCategoryIdAndIsDeletedFalse(1L)).thenReturn(5L);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+            categoryService.deleteCategory(1L);
+        });
+
+        assertTrue(ex.getMessage().toLowerCase().contains("không thể ẩn hoặc xóa"));
+        assertFalse(sampleCategory.getIsDeleted());
+        verify(categoryRepository, never()).save(sampleCategory);
     }
 }
 

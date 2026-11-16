@@ -5,6 +5,7 @@ import com.funnyshop.dto.response.CategoryResponse;
 import com.funnyshop.entity.Category;
 import com.funnyshop.exception.ResourceNotFoundException;
 import com.funnyshop.repository.CategoryRepository;
+import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,11 +19,25 @@ import java.util.List;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
 
     @Override
     public List<CategoryResponse> getAllCategories() {
         return categoryRepository.findAllByIsDeletedFalse().stream()
-                .map(CategoryResponse::fromEntity)
+                .map(cat -> {
+                    long productCount = productRepository.countByCategoryIdAndIsDeletedFalse(cat.getId());
+                    return CategoryResponse.fromEntity(cat, productCount);
+                })
+                .toList();
+    }
+
+    @Override
+    public List<CategoryResponse> getAllCategoriesAdmin() {
+        return categoryRepository.findAllByOrderByIdAsc().stream()
+                .map(cat -> {
+                    long productCount = productRepository.countByCategoryId(cat.getId());
+                    return CategoryResponse.fromEntity(cat, productCount);
+                })
                 .toList();
     }
 
@@ -65,6 +80,17 @@ public class CategoryServiceImpl implements CategoryService {
                                 "Không tìm thấy danh mục với ID: " + id
                         )
                 );
+
+        long activeProducts = productRepository.countByCategoryIdAndIsDeletedFalse(id);
+        long totalProducts = productRepository.countByCategoryId(id);
+
+        if (activeProducts > 0 || totalProducts > 0) {
+            long count = activeProducts > 0 ? activeProducts : totalProducts;
+            throw new IllegalArgumentException(
+                    "Không thể ẩn hoặc xóa danh mục '" + category.getName() + "' vì vẫn còn " + count +
+                    " sản phẩm đang liên kết. Vui lòng chuyển các sản phẩm sang danh mục khác hoặc dừng bán chúng trước khi xóa."
+            );
+        }
 
         category.setIsDeleted(true);
         categoryRepository.save(category);

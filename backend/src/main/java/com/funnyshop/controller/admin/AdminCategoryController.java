@@ -19,6 +19,18 @@ public class AdminCategoryController {
 
     private final CategoryService categoryService;
 
+    @GetMapping
+    public ResponseEntity<ApiResponse<java.util.List<CategoryResponse>>> getAllCategoriesAdmin() {
+        java.util.List<CategoryResponse> categories = categoryService.getAllCategoriesAdmin();
+
+        return ResponseEntity.ok(
+                ApiResponse.<java.util.List<CategoryResponse>>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Lấy toàn bộ danh sách danh mục quản trị thành công!")
+                        .data(categories)
+                        .build());
+    }
+
     @PostMapping
     public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(
             @Valid @RequestBody CategoryRequest request) {
@@ -56,6 +68,18 @@ public class AdminCategoryController {
                 ApiResponse.<Void>builder()
                         .code(HttpStatus.OK.value())
                         .message("Ẩn/xóa mềm danh mục thành công!")
+                        .build());
+    }
+
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<ApiResponse<CategoryResponse>> restoreCategory(@PathVariable Long id) {
+        CategoryResponse response = categoryService.restoreCategory(id);
+
+        return ResponseEntity.ok(
+                ApiResponse.<CategoryResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Khôi phục danh mục thành công!")
+                        .data(response)
                         .build());
     }
 }

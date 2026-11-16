@@ -220,6 +220,11 @@ export const adminApi = {
   },
 
   // ── Categories ──────────────────────────────────────────────────────────
+  getCategories: async () => {
+    const res = await apiClient.get('/api/v1/admin/categories');
+    return extractList(res);
+  },
+
   createCategory: async ({ name, description = '' }) => {
     const res = await apiClient.post('/api/v1/admin/categories', { name, description });
     return res?.data !== undefined ? res.data : res;
@@ -232,6 +237,11 @@ export const adminApi = {
 
   deleteCategory: async (id) => {
     const res = await apiClient.delete(`/api/v1/admin/categories/${id}`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  restoreCategory: async (id) => {
+    const res = await apiClient.patch(`/api/v1/admin/categories/${id}/restore`);
     return res?.data !== undefined ? res.data : res;
   },
 
