@@ -32,6 +32,8 @@ export const NO_AUTH_ENDPOINTS = [
   '/api/v1/auth/forgot-password',
   '/api/v1/auth/verify-otp',
   '/api/v1/auth/reset-password',
+  '/api/chat',
+  '/api/v1/chat',
 ];
 
 /**
