@@ -16,6 +16,7 @@ import OrderDetail from './pages/OrderDetail';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 import Forbidden from './pages/Forbidden';
+import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminProductForm from './pages/admin/AdminProductForm';
 import AdminOrders from './pages/admin/AdminOrders';
@@ -57,7 +58,8 @@ export default function App() {
         {/* Admin Management Layout: requires ADMIN role */}
         <Route path="/admin" element={<ProtectedRoute requiredRole="ADMIN" />}>
           <Route element={<AdminLayout />}>
-            <Route index element={<Navigate to="/admin/products" replace />} />
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="products" element={<AdminProducts />} />
             <Route path="products/new" element={<AdminProductForm />} />
             <Route path="products/:id" element={<AdminProductForm />} />

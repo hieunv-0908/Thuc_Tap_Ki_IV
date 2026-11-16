@@ -11,10 +11,12 @@ export default function Topbar({ onOpenMobile }) {
   const getBreadcrumbs = () => {
     const path = location.pathname;
     const crumbs = [
-      { label: 'Quản trị', to: '/admin/products' },
+      { label: 'Quản trị', to: '/admin/dashboard' },
     ];
 
-    if (path.startsWith('/admin/products/new')) {
+    if (path.startsWith('/admin/dashboard') || path === '/admin') {
+      crumbs.push({ label: 'Tổng quan' });
+    } else if (path.startsWith('/admin/products/new')) {
       crumbs.push({ label: 'Sản phẩm', to: '/admin/products' });
       crumbs.push({ label: 'Thêm mới' });
     } else if (path.match(/\/admin\/products\/\d+/)) {
@@ -22,8 +24,12 @@ export default function Topbar({ onOpenMobile }) {
       crumbs.push({ label: 'Chỉnh sửa' });
     } else if (path.startsWith('/admin/products')) {
       crumbs.push({ label: 'Sản phẩm' });
+    } else if (path.startsWith('/admin/categories')) {
+      crumbs.push({ label: 'Danh mục' });
     } else if (path.startsWith('/admin/orders')) {
       crumbs.push({ label: 'Đơn hàng' });
+    } else if (path.startsWith('/admin/users')) {
+      crumbs.push({ label: 'Người dùng' });
     }
 
     return crumbs;
