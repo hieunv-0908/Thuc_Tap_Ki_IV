@@ -65,6 +65,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     Optional<Order> findByIdempotencyKey(String idempotencyKey);
 
+    Optional<Order> findByPayosOrderCode(Long payosOrderCode);
+
     @Query("SELECT DISTINCT o FROM Order o " +
            "LEFT JOIN FETCH o.user " +
            "LEFT JOIN FETCH o.orderItems oi " +

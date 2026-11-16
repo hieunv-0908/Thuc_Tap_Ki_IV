@@ -83,6 +83,30 @@ public class Order {
     @ToString.Include
     private String paymentMethod = "COD";
 
+    @Column(name = "payment_status", length = 30)
+    @Builder.Default
+    @ToString.Include
+    private String paymentStatus = "PENDING";
+
+    @Column(name = "payos_order_code", unique = true)
+    @ToString.Include
+    private Long payosOrderCode;
+
+    @Column(name = "payos_checkout_url", columnDefinition = "TEXT")
+    private String payosCheckoutUrl;
+
+    @Column(name = "payos_qr_code", columnDefinition = "TEXT")
+    private String payosQrCode;
+
+    @Column(name = "payos_account_number", length = 50)
+    private String payosAccountNumber;
+
+    @Column(name = "payos_account_name", length = 100)
+    private String payosAccountName;
+
+    @Column(name = "payos_bin", length = 20)
+    private String payosBin;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
     @Builder.Default

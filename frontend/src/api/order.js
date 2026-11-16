@@ -50,4 +50,19 @@ export const orderApi = {
     const res = await apiClient.get(`/api/v1/orders/${id}/timeline`);
     return res?.data !== undefined ? res.data : res;
   },
+
+  createPayOSPaymentLink: async (orderId) => {
+    const res = await apiClient.post(`/api/v1/orders/${orderId}/payos-payment-link`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  getPayOSPaymentStatus: async (orderId) => {
+    const res = await apiClient.get(`/api/v1/orders/${orderId}/payos-status`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  simulatePayOSSuccess: async (orderId) => {
+    const res = await apiClient.post(`/api/v1/orders/${orderId}/payos-simulate-success`);
+    return res?.data !== undefined ? res.data : res;
+  },
 };

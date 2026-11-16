@@ -36,6 +36,13 @@ public class OrderResponse {
     private Long voucherId;
     private String voucherCode;
     private String paymentMethod;
+    private String paymentStatus;
+    private Long payosOrderCode;
+    private String paymentUrl;
+    private String qrCode;
+    private String accountNumber;
+    private String accountName;
+    private String bin;
     private OrderStatus status;
     private String cancelReason;
     private List<OrderItemResponse> items;
@@ -76,6 +83,13 @@ public class OrderResponse {
                 .voucherId(order.getVoucher() != null ? order.getVoucher().getId() : null)
                 .voucherCode(order.getVoucherCode())
                 .paymentMethod(order.getPaymentMethod())
+                .paymentStatus(order.getPaymentStatus())
+                .payosOrderCode(order.getPayosOrderCode())
+                .paymentUrl(order.getPayosCheckoutUrl())
+                .qrCode(order.getPayosQrCode())
+                .accountNumber(order.getPayosAccountNumber())
+                .accountName(order.getPayosAccountName())
+                .bin(order.getPayosBin())
                 .status(order.getStatus())
                 .items(items)
                 .createdAt(order.getCreatedAt())
