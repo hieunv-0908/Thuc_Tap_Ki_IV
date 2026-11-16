@@ -126,13 +126,13 @@ class AdminCategoryControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/v1/admin/categories/{id}/permanent - Xóa vĩnh viễn danh mục thành công")
+    @DisplayName("DELETE /api/v1/admin/categories/{id}/permanent - Xóa vĩnh viễn danh mục thành công (Zero Data Loss)")
     void hardDeleteCategory_Success() throws Exception {
         doNothing().when(categoryService).hardDeleteCategory(1L);
 
         mockMvc.perform(delete("/api/v1/admin/categories/1/permanent"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code", is(200)))
-                .andExpect(jsonPath("$.message", is("Xóa vĩnh viễn danh mục thành công!")));
+                .andExpect(jsonPath("$.message", is("Chính sách Bảo toàn Dữ liệu: Danh mục đã được chuyển sang trạng thái Ẩn an toàn, không làm mất dữ liệu khỏi CSDL.")));
     }
 }

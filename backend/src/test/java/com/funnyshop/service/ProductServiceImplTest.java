@@ -206,25 +206,15 @@ class ProductServiceImplTest {
     }
 
     @Test
-    @DisplayName("hardDeleteProduct - Xóa vật lý sản phẩm chưa có đơn hàng")
+    @DisplayName("hardDeleteProduct - Áp dụng chính sách bảo toàn dữ liệu (chuyển sang isDeleted = true)")
     void hardDeleteProduct_Success() {
         when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
-        when(orderItemRepository.existsByProductIdOrVariantProductId(100L)).thenReturn(false);
 
         productService.hardDeleteProduct(100L);
 
-        verify(productRepository).delete(mockProduct);
-    }
-
-    @Test
-    @DisplayName("hardDeleteProduct - Bị chặn khi sản phẩm đã phát sinh trong đơn hàng")
-    void hardDeleteProduct_HasOrders_ThrowsException() {
-        when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
-        when(orderItemRepository.existsByProductIdOrVariantProductId(100L)).thenReturn(true);
-
-        assertThrows(IllegalStateException.class, () -> productService.hardDeleteProduct(100L));
-
-        verify(productRepository, never()).delete(any(Product.class));
+        assertTrue(mockProduct.getIsDeleted());
+        verify(productRepository).save(mockProduct);
+        verify(productVariantRepository).updateIsDeletedByProductId(100L, true);
     }
 
     @Test
@@ -234,7 +224,7 @@ class ProductServiceImplTest {
 
         assertThrows(ResourceNotFoundException.class, () -> productService.hardDeleteProduct(100L));
 
-        verify(productRepository, never()).delete(any(Product.class));
+        verify(productRepository, never()).save(any(Product.class));
     }
 
     @Test

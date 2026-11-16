@@ -137,7 +137,7 @@ class AdminProductControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/v1/admin/products/{id}/permanent - Xóa cứng sản phẩm thành công")
+    @DisplayName("DELETE /api/v1/admin/products/{id}/permanent - Xóa cứng sản phẩm thành công (Zero Data Loss)")
     void hardDeleteProduct_Success() throws Exception {
         doNothing().when(productService).hardDeleteProduct(1L);
 
@@ -145,7 +145,7 @@ class AdminProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code", is(200)))
-                .andExpect(jsonPath("$.message", is("Xóa vĩnh viễn sản phẩm và dữ liệu liên quan thành công!")));
+                .andExpect(jsonPath("$.message", is("Chính sách Bảo toàn Dữ liệu: Sản phẩm đã được chuyển sang trạng thái Ẩn an toàn, không làm mất dữ liệu khỏi CSDL.")));
 
         verify(productService, times(1)).hardDeleteProduct(1L);
     }

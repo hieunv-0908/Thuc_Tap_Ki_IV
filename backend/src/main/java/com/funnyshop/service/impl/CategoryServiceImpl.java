@@ -108,16 +108,11 @@ public class CategoryServiceImpl implements CategoryService {
                         )
                 );
 
-        // Ràng buộc nghiệp vụ: Nếu danh mục còn sản phẩm liên kết thì KHÔNG ĐƯỢC XÓA VĨNH VIỄN
-        long productCount = productRepository.countByCategoryId(id);
-        if (productCount > 0) {
-            throw new IllegalStateException(
-                    "Không thể xóa vĩnh viễn danh mục này vì vẫn còn " + productCount
-                    + " sản phẩm đang liên kết. Vui lòng chuyển hoặc xóa các sản phẩm sang danh mục khác trước!"
-            );
-        }
-
-        categoryRepository.delete(category);
+        // Chính sách bảo toàn dữ liệu (Zero Data Loss):
+        // Xóa cứng không làm mất dữ liệu khỏi CSDL để bảo toàn dữ liệu.
+        // Tự động chuyển và duy trì ở trạng thái xóa mềm (isDeleted = true).
+        category.setIsDeleted(true);
+        categoryRepository.save(category);
     }
 
     // Khôi phục danh mục đã xóa mềm

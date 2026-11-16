@@ -124,14 +124,16 @@ class CategoryServiceImplTest {
     }
 
     @Test
-    @DisplayName("hardDeleteCategory - Xóa vĩnh viễn khi không còn sản phẩm")
+    @DisplayName("hardDeleteCategory - Áp dụng chính sách bảo toàn dữ liệu (chuyển sang isDeleted = true)")
     void hardDeleteCategory_Success() {
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(sampleCategory));
-        when(productRepository.countByCategoryId(1L)).thenReturn(0L);
+        when(categoryRepository.save(any(Category.class))).thenAnswer(i -> i.getArgument(0));
 
         categoryService.hardDeleteCategory(1L);
 
-        verify(categoryRepository).delete(sampleCategory);
+        assertTrue(sampleCategory.getIsDeleted());
+        verify(categoryRepository).save(sampleCategory);
+        verify(categoryRepository, never()).delete(any(Category.class));
     }
 
     @Test

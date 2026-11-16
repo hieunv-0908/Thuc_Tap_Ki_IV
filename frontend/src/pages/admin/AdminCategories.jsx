@@ -211,18 +211,18 @@ export default function AdminCategories() {
     setHardDeleteTarget(cat);
   };
 
-  // Xác nhận xóa vĩnh viễn
+  // Xác nhận xóa cứng theo chính sách Zero Data Loss (chỉ thông báo, không mất dữ liệu)
   const handleConfirmHardDelete = async () => {
     if (!hardDeleteTarget) return;
     try {
       setIsHardDeleting(true);
-      await adminApi.hardDeleteCategory(hardDeleteTarget.id);
-      toast.success(`Đã xóa vĩnh viễn danh mục "${hardDeleteTarget.name}".`);
+      const res = await adminApi.hardDeleteCategory(hardDeleteTarget.id);
+      toast.info(res?.message || `Chính sách bảo toàn dữ liệu: Danh mục "${hardDeleteTarget.name}" đã được lưu trữ an toàn ở trạng thái Ẩn, không làm mất dữ liệu khỏi CSDL.`);
       setHardDeleteTarget(null);
       await fetchCategories();
     } catch (err) {
-      console.error('Lỗi xóa vĩnh viễn danh mục:', err);
-      toast.error(err.response?.data?.message || err.message || 'Không thể xóa vĩnh viễn danh mục.');
+      console.error('Lỗi khi xử lý danh mục:', err);
+      toast.error(err.response?.data?.message || err.message || 'Không thể xử lý yêu cầu.');
     } finally {
       setIsHardDeleting(false);
     }
@@ -511,15 +511,15 @@ export default function AdminCategories() {
         loading={isRestoring}
       />
 
-      {/* Confirm Hard Delete (Xóa vĩnh viễn) */}
+      {/* Confirm Hard Delete (Chính sách Zero Data Loss) */}
       <ConfirmDialog
         isOpen={Boolean(hardDeleteTarget)}
         onClose={() => setHardDeleteTarget(null)}
         onConfirm={handleConfirmHardDelete}
-        title={`Xóa vĩnh viễn danh mục "${hardDeleteTarget?.name}"?`}
-        message="Hành động này sẽ xóa hoàn toàn bản ghi danh mục khỏi cơ sở dữ liệu và không thể hoàn tác."
-        confirmText="Xác nhận xóa vĩnh viễn"
-        confirmVariant="danger"
+        title="Chính sách bảo toàn dữ liệu (Không mất dữ liệu)"
+        message={`Danh mục "${hardDeleteTarget?.name}" sẽ được lưu trữ an toàn ở trạng thái Đã ẩn. Để bảo toàn tính toàn vẹn hệ thống, dữ liệu không bị xóa vĩnh viễn khỏi CSDL.`}
+        confirmText="Xác nhận lưu trữ an toàn"
+        confirmVariant="warning"
         loading={isHardDeleting}
       />
     </div>
