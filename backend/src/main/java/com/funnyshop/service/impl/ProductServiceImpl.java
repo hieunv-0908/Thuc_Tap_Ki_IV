@@ -15,6 +15,7 @@ import com.funnyshop.entity.ProductVariant;
 import com.funnyshop.exception.ResourceAlreadyExistsException;
 import com.funnyshop.exception.ResourceNotFoundException;
 import com.funnyshop.repository.CategoryRepository;
+import com.funnyshop.repository.OrderItemRepository;
 import com.funnyshop.repository.ProductImageRepository;
 import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.repository.ProductVariantRepository;
@@ -39,6 +40,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ProductImageRepository productImageRepository;
+    private final OrderItemRepository orderItemRepository;
 
     @Override
     public Page<ProductResponse> getProducts(
@@ -309,9 +311,25 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void hardDeleteProduct(Long id) {
-        if (productRepository.hardDeleteById(id) == 0) {
-            throw new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + id);
+
+        // 1. Kiểm tra sản phẩm tồn tại
+        if (!productRepository.existsById(id)) {
+            throw new ResourceNotFoundException(
+                    "Không tìm thấy sản phẩm với ID: " + id
+            );
         }
+
+        // 2. Gỡ liên kết sản phẩm và biến thể khỏi lịch sử đơn hàng
+        orderItemRepository.detachProductReferences(id);
+
+        // 3. Xóa vật lý hình ảnh của sản phẩm
+        productImageRepository.hardDeleteByProductId(id);
+
+        // 4. Xóa vật lý các biến thể của sản phẩm
+        productVariantRepository.hardDeleteByProductId(id);
+
+        // 5. Xóa vật lý sản phẩm
+        productRepository.hardDeleteById(id);
     }
 
     @Override
