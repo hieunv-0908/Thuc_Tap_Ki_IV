@@ -252,21 +252,21 @@ async function getLocalFashionFallback(message) {
 
   if (isSimpleGreeting(clean)) {
     return {
-      reply: 'Dạ FunnyShop xin chào bạn! Mình là Trợ lý AI tư vấn thời trang của FunnyShop. Bạn đang cần tìm kiếm trang phục thời trang nam, thời trang nữ hay áo hoodie/phụ kiện hôm nay ạ? 👔👗',
+      reply: 'Dạ em chào bạn nha! Em là Stylist tư vấn của FunnyShop đây ạ 👋\nMình đang cần tìm đồ đi làm, đi dạo phố hay chuẩn bị đi tiệc thế ạ? Cứ nhắn cho em để em tư vấn set đồ ưng ý nhất cho mình nhé! 👔👗',
       products: [],
     };
   }
 
   if (clean.includes('ship') || clean.includes('giao hàng') || clean.includes('vận chuyển')) {
     return {
-      reply: 'FunnyShop hỗ trợ giao hàng toàn quốc từ 2 - 4 ngày. Khách hàng được đồng kiểm hàng trước khi thanh toán (COD) hoặc thanh toán chuyển khoản qua VietQR PayOS an toàn tuyệt đối.',
+      reply: 'Dạ bên em ship hàng toàn quốc chỉ từ 2 - 4 ngày thôi ạ! Khi nhận hàng mình được đồng kiểm, mở ra xem ưng ý rồi mới thanh toán (COD), hoặc quét mã VietQR PayOS siêu tiện lợi luôn nha bạn! 🚚',
       products: [],
     };
   }
 
-  if (clean.includes('đổi trả') || clean.includes('size') || clean.includes('đổi size')) {
+  if (clean.includes('đổi trả') || clean.includes('size') || clean.includes('đổi size') || clean.includes('bảng size') || clean.includes('chiều cao') || clean.includes('cân nặng')) {
     return {
-      reply: 'FunnyShop hỗ trợ đổi size hoặc đổi mẫu trong vòng 7 ngày nếu không vừa vặn hoặc có lỗi từ nhà sản xuất. Bạn hãy giữ nguyên tem mác để shop hỗ trợ đổi nhanh nhất nhé!',
+      reply: 'Dạ bạn cứ nhắn cho em chiều cao và cân nặng (ví dụ: cao 1m70 nặng 65kg) là em bắt size chuẩn chỉnh cho mình luôn nha! Nếu lỡ mặc chưa vừa thì bên em hỗ trợ đổi size tận nơi trong 7 ngày hoàn toàn yên tâm ạ ❤️',
       products: [],
     };
   }
@@ -280,7 +280,7 @@ async function getLocalFashionFallback(message) {
   ];
   if (genericOrderPhrases.some((phrase) => clean === phrase)) {
     return {
-      reply: 'Dạ bạn muốn đặt sản phẩm nào của FunnyShop ạ? Bạn có thể cho mình biết tên sản phẩm hoặc mẫu trang phục bạn muốn mua (ví dụ: áo polo, sơ mi, quần jeans, đầm midi hay áo blazer) để mình mở đơn và hỗ trợ đặt ngay cho bạn nhé! 🛍️',
+      reply: 'Dạ em hỗ trợ lên đơn cho mình ngay đây ạ! Bạn đang muốn chốt mẫu nào của shop thế ạ (ví dụ: áo polo, sơ mi, quần jeans hay đầm midi)? Bạn nhắn em tên sản phẩm để em giữ hàng và tạo đơn ngay cho mình nha! 🛍️',
       products: liveProducts.slice(0, 3),
       isOrderIntent: false,
     };
@@ -296,31 +296,67 @@ async function getLocalFashionFallback(message) {
     };
   }
 
-  // Khớp sản phẩm dựa trên từ khóa thời trang thực tế
-  let matched;
-  if (clean.includes('polo') || clean.includes('áo thun nam')) {
+  // Khớp sản phẩm và câu trả lời chi tiết theo từng nhu cầu thời trang cụ thể
+  let matched = [];
+  let customReply = '';
+
+  if (clean.includes('nam') || clean.includes('đồ nam') || clean.includes('áo nam') || clean.includes('quần nam')) {
+    customReply = 'Dạ em hiểu nhu cầu của mình rồi nè! Đồ nam bên em thiết kế phom dáng trẻ trung, vải cotton thoáng mát và cực kỳ tôn dáng. Em gửi bạn xem mấy mẫu polo và sơ mi đang được chuộng nhất bên em nha: ✨';
+    matched = liveProducts.filter((p) => {
+      const cat = (p.categoryName || '').toLowerCase();
+      const name = (p.name || '').toLowerCase();
+      return cat.includes('nam') || name.includes('nam') || name.includes('polo') || name.includes('sơ mi') || name.includes('jean');
+    });
+  } else if (clean.includes('nữ') || clean.includes('đồ nữ') || clean.includes('áo nữ') || clean.includes('váy') || clean.includes('đầm')) {
+    customReply = 'Dạ đây nè bạn ơi! Các mẫu đầm midi và blazer nữ nhà em lên phom nhẹ nhàng, thanh lịch mà tôn dáng lắm luôn. Em gửi bạn xem thử mấy mẫu xinh xắn này nhé: 👗✨';
+    matched = liveProducts.filter((p) => {
+      const cat = (p.categoryName || '').toLowerCase();
+      const name = (p.name || '').toLowerCase();
+      return cat.includes('nữ') || name.includes('nữ') || name.includes('đầm') || name.includes('váy') || name.includes('blazer');
+    });
+  } else if (clean.includes('công sở') || clean.includes('đi làm') || clean.includes('lịch sự') || clean.includes('formal')) {
+    customReply = 'Dạ đi làm thì ưu tiên hàng đầu là vừa chỉn chu, lịch sự mà mặc cả ngày vẫn phải thoải mái đúng không nè? Em gợi ý cho mình mấy mẫu sơ mi, polo và blazer dễ phối nhất này nha: 💼';
+    matched = liveProducts.filter((p) => {
+      const name = (p.name || '').toLowerCase();
+      return name.includes('sơ mi') || name.includes('blazer') || name.includes('polo') || name.includes('công sở');
+    });
+  } else if (clean.includes('phối đồ') || clean.includes('mix') || clean.includes('kết hợp') || clean.includes('mặc với')) {
+    customReply = 'Dạ em mách nhỏ bí quyết phối đồ cực tôn dáng nè: Bạn thử mix áo polo/sơ mi với chiếc quần jeans ống đứng, bên ngoài khoác thêm blazer là có ngay outfit vừa thanh lịch vừa phong cách đi làm hay đi cà phê đều đẹp nha!';
+    matched = liveProducts.slice(0, 3);
+  } else if (clean.includes('giá rẻ') || clean.includes('rẻ nhất') || clean.includes('tiết kiệm') || clean.includes('giá tốt') || clean.includes('sale') || clean.includes('khuyến mãi')) {
+    customReply = 'Dạ có ngay ạ! Đây là những mẫu giá cực kỳ yêu thương bên em nhưng chất vải vẫn rất xịn mịn và bền đẹp. Bạn xem thử mấy mẫu giá tốt này nhé:';
+    matched = [...liveProducts].sort((a, b) => (a.price || 0) - (b.price || 0));
+  } else if (clean.includes('mới nhất') || clean.includes('xu hướng') || clean.includes('trend') || clean.includes('hot')) {
+    customReply = 'Dạ đây là những mẫu hot hit mới cập bến nhà em được nhiều bạn trẻ săn đón nhất tuần này nè! Em gửi bạn tham khảo nha: 🔥';
+    matched = [...liveProducts].sort((a, b) => (b.id || 0) - (a.id || 0));
+  } else if (clean.includes('polo')) {
+    customReply = 'Dạ áo Polo bên em làm từ chất vải Cotton Cool co giãn 4 chiều, thấm hút mồ hôi siêu tốt mặc mùa này mát rượi luôn nè bạn:';
     matched = liveProducts.filter((p) => p.name.toLowerCase().includes('polo'));
   } else if (clean.includes('sơ mi') || clean.includes('so mi')) {
-    matched = liveProducts.filter((p) => p.name.toLowerCase().includes('sơ mi'));
+    customReply = 'Dạ các mẫu Áo Sơ Mi nhà FunnyShop phom dáng may đo chuẩn, cổ áo đứng phom và ít nhăn, mặc đi làm hay đi gặp khách hàng bao sang luôn ạ:';
+    matched = liveProducts.filter((p) => p.name.toLowerCase().includes('sơ mi') || p.name.toLowerCase().includes('so mi'));
   } else if (clean.includes('jean') || clean.includes('quần')) {
-    matched = liveProducts.filter((p) => p.name.toLowerCase().includes('jean'));
-  } else if (clean.includes('đầm') || clean.includes('váy') || clean.includes('dam') || clean.includes('vay')) {
-    matched = liveProducts.filter((p) => p.name.toLowerCase().includes('đầm') || p.name.toLowerCase().includes('váy'));
-  } else if (clean.includes('blazer') || clean.includes('áo khoác') || clean.includes('khoác nữ')) {
+    customReply = 'Dạ quần jeans bên em chất denim dày dặn vừa phải, co giãn nhẹ và tôn dáng cực kỳ. Em gửi bạn xem thử mẫu bán chạy nhất nha:';
+    matched = liveProducts.filter((p) => p.name.toLowerCase().includes('jean') || p.name.toLowerCase().includes('quần'));
+  } else if (clean.includes('blazer')) {
+    customReply = 'Dạ áo Blazer bên em phom Hàn Quốc trẻ trung, đệm vai tinh tế giúp tôn dáng cực kỳ sang chảnh khi đi làm hoặc đi tiệc ạ:';
     matched = liveProducts.filter((p) => p.name.toLowerCase().includes('blazer'));
-  } else if (clean.includes('hoodie') || clean.includes('unisex') || clean.includes('form rộng')) {
-    matched = liveProducts.filter((p) => p.name.toLowerCase().includes('hoodie'));
-  } else if (clean.includes('nam') || clean.includes('đồ nam')) {
-    matched = liveProducts.filter((p) => (p.categoryName || '').toLowerCase().includes('nam'));
-  } else if (clean.includes('nữ') || clean.includes('đồ nữ')) {
-    matched = liveProducts.filter((p) => (p.categoryName || '').toLowerCase().includes('nữ'));
+  } else if (clean.includes('hoodie') || clean.includes('unisex')) {
+    customReply = 'Dạ các mẫu Áo Hoodie và đồ Unisex nhà em phom rộng giấu dáng cực chất, chất nỉ bông dày dặn ấm áp mặc đi chơi chụp hình bao đẹp luôn:';
+    matched = liveProducts.filter((p) => p.name.toLowerCase().includes('hoodie') || (p.categoryName || '').toLowerCase().includes('unisex'));
+  } else if (clean.includes('tôi muốn') || clean.includes('tôi đang cần') || clean.includes('mình đang cần') || clean.includes('đang cần') || clean.includes('cần tìm')) {
+    customReply = 'Dạ em đây ạ! Bạn đang cần tìm đồ để đi làm, đi chơi hay đi tiệc thế ạ? Cứ chia sẻ với em phong cách bạn thích hoặc dáng người để em lựa set đồ chuẩn nhất cho mình nhé! 👕👗';
+    matched = liveProducts.slice(0, 3);
   } else {
+    customReply = 'Dạ em hiểu nhu cầu của mình rồi nè! Để em gửi bạn tham khảo trước mấy mẫu thời trang đang được yêu thích nhất bên em nha. Bạn thích phong cách nào cứ bảo em nhé: ❤️';
     matched = liveProducts.slice(0, 3);
   }
 
+  const finalProducts = matched && matched.length > 0 ? matched.slice(0, 3) : liveProducts.slice(0, 3);
+
   return {
-    reply: 'Dạ, dưới đây là những mẫu trang phục thời trang phù hợp nhất tại FunnyShop dành cho bạn:',
-    products: matched && matched.length > 0 ? matched.slice(0, 3) : liveProducts.slice(0, 3),
+    reply: customReply,
+    products: finalProducts,
   };
 }
 
@@ -347,13 +383,25 @@ async function callDirectGemini(message) {
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
-  const prompt = `Bạn là Trợ lý AI tư vấn và hỗ trợ đặt hàng của cửa hàng FunnyShop (chuyên thời trang nam, nữ và unisex).
+  const prompt = `BẠN LÀ MỘT STYLIST KIÊM CHUYÊN VIÊN TƯ VẤN BÁN HÀNG THỜI TRANG BẰNG XƯƠNG BẰNG THỊT CỦA FUNNYSHOP.
+Bạn đang nhắn tin trực tiếp với khách hàng trên khung chat trực tuyến (như Zalo / Messenger / Instagram của shop).
+
+PHONG CÁCH GIAO TIẾP (BẮT BUỘC TỰ NHIÊN NHƯ NGƯỜI THẬT 100%):
+- Xưng hô: Ấm áp, lễ phép, gần gũi (Dạ em chào anh/chị/bạn nha, dạ mẫu này mặc lên tôn dáng lắm ạ, để em chọn mẫu ưng ý nhất cho mình nhé...). Tuyệt đối không dùng văn phong robot hay khuôn sáo.
+- Đồng cảm & Hiểu ý: Khi khách nói các câu tự nhiên như "tôi muốn...", "tôi đang cần...", "mình đang cần...", "đang cần...", "tư vấn giúp...", hãy đồng cảm và phản hồi ngay nhu cầu (ví dụ: 'Dạ em hiểu rồi ạ! Nếu mình đang cần đồ đi làm...', 'Dạ bên em có mấy mẫu này phom tôn dáng cực kỳ nè bạn!').
+- Tư vấn có gu: Nêu ngắn gọn lý do vì sao nên chọn (chất liệu mát, phom đứng, phối đồ đẹp, che khuyết điểm...).
+- Độ dài: 2 - 4 câu tự nhiên như một tin nhắn chat thật.
 
 DANH MỤC SẢN PHẨM HIỆN CÓ TẠI SHOP (Dữ liệu thực tế từ hệ thống):
 ${catalogStr}
 
 QUY TẮC BẮT BUỘC:
-1. ĐÚNG SẢN PHẨM: CHỈ tư vấn và giới thiệu các sản phẩm có trong danh sách trên. TUYỆT ĐỐI KHÔNG bịa ra đồ chơi, gấu bông, quà lưu niệm hay đồ gia dụng.
+1. ĐÚNG DANH MỤC & ĐỐI TƯỢNG:
+   - Khi khách hỏi/cần đồ nam ('thời trang nam', 'đồ nam', 'áo nam', 'quần nam', 'đang cần đồ nam'): CHỈ tư vấn và gợi ý sản phẩm thời trang Nam. Tuyệt đối không gợi ý đầm, váy hay đồ nữ.
+   - Khi khách hỏi/cần đồ nữ ('thời trang nữ', 'đồ nữ', 'váy', 'đầm', 'đang cần đồ nữ'): CHỈ tư vấn sản phẩm thời trang Nữ.
+   - Khi khách hỏi về phối đồ hoặc đồ công sở, hãy gợi ý kết hợp phù hợp (áo sơ mi/polo + quần jeans hoặc blazer).
+   - Khi khách hỏi sản phẩm giá rẻ/tiết kiệm: Hãy ưu tiên gợi ý các sản phẩm có mức giá thấp nhất.
+   - CHỈ tư vấn sản phẩm có trong danh mục trên. TUYỆT ĐỐI KHÔNG bịa ra sản phẩm khác.
 2. HỖ TRỢ ĐẶT HÀNG:
    - NẾU KHÁCH NÓI CHUNG CHUNG: ví dụ "tôi muốn đặt hàng", "mua hàng", "cho mình đặt đơn", "mua đồ" mà CHƯA NÊU RÕ SẢN PHẨM NÀO:
      Hãy hỏi lại khách muốn mua sản phẩm cụ thể nào trong shop (áo polo, sơ mi, quần jeans, đầm midi hay áo blazer...). TUYỆT ĐỐI KHÔNG tự chọn một sản phẩm thay cho khách và TUYỆT ĐỐI KHÔNG ghi dòng ORDER_TARGET_ID.
@@ -362,7 +410,7 @@ QUY TẮC BẮT BUỘC:
      ORDER_TARGET_ID: [id]
      RECOMMENDED_PRODUCT_IDS: [id]
 3. TƯ VẤN SẢN PHẨM:
-   - Khi khách hỏi tìm đồ hoặc nhờ gợi ý, hãy tư vấn ngắn gọn, lịch sự và đặt dòng:
+   - Khi khách hỏi tìm đồ hoặc nhờ gợi ý, hãy tư vấn ngắn gọn, ấm áp (2-4 câu) và đặt dòng:
      RECOMMENDED_PRODUCT_IDS: [id1, id2] (tối đa 2-3 sản phẩm từ danh mục trên).
 4. KHÁCH CHỈ CHÀO HỎI: Không đính kèm ID sản phẩm nào.
 5. CHÍNH SÁCH: Giao hàng toàn quốc 2-4 ngày, đồng kiểm trước khi nhận (COD) hoặc thanh toán VietQR qua PayOS, đổi trả/đổi size trong 7 ngày.
@@ -482,12 +530,37 @@ export const aiApi = {
       const res = await apiClient.post('/api/chat', { message });
       const data = res?.data || res;
       if (data && (data.reply || data.products)) {
-        const orderTarget = detectOrderIntent(message, liveProducts);
-        if (orderTarget && !data.isOrderIntent) {
-          data.isOrderIntent = true;
-          data.targetProduct = orderTarget;
+        const cleanMsg = (message || '').toLowerCase();
+        const isFashionInquiry = cleanMsg.includes('nam') || cleanMsg.includes('nữ') || cleanMsg.includes('áo') ||
+          cleanMsg.includes('quần') || cleanMsg.includes('thời trang') || cleanMsg.includes('gợi ý') ||
+          cleanMsg.includes('tìm hiểu') || cleanMsg.includes('polo') || cleanMsg.includes('sơ mi') ||
+          cleanMsg.includes('jean') || cleanMsg.includes('đầm') || cleanMsg.includes('váy') ||
+          cleanMsg.includes('công sở') || cleanMsg.includes('giá') || cleanMsg.includes('phối đồ');
+
+        // Nếu người dùng hỏi thời trang nhưng backend trả về lời chào xã giao do bản backend cũ chưa cập nhật
+        const isBackendFalseGreeting = isFashionInquiry && (
+          data.reply?.includes('Trợ lý AI tư vấn thời trang') ||
+          data.reply?.includes('Bạn đang quan tâm đến trang phục') ||
+          data.reply?.includes('bạn đang cần tìm kiếm')
+        );
+
+        if (!isBackendFalseGreeting) {
+          // Bổ sung sản phẩm nếu backend trả về danh sách rỗng khi khách hỏi đồ
+          if (isFashionInquiry && (!data.products || data.products.length === 0)) {
+            const localFallback = await getLocalFashionFallback(message);
+            data.products = localFallback.products || [];
+            if (!data.reply || data.reply.includes('nổi bật')) {
+              data.reply = localFallback.reply;
+            }
+          }
+
+          const orderTarget = detectOrderIntent(message, liveProducts);
+          if (orderTarget && !data.isOrderIntent) {
+            data.isOrderIntent = true;
+            data.targetProduct = orderTarget;
+          }
+          return data;
         }
-        return data;
       }
     } catch {
       // Backend chưa có endpoint (hoặc server staging chưa deploy bản mới)

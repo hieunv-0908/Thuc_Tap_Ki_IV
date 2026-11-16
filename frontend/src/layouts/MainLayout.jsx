@@ -19,7 +19,7 @@ export default function MainLayout({ onSearch, searchQuery }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-page text-ink antialiased selection:bg-primary-100 selection:text-primary-900">
+    <div className="min-h-screen flex flex-col bg-paper text-ink antialiased selection:bg-sand selection:text-ink">
       <ToastContainer />
       <AnnouncementBar />
       <Navbar onSearch={onSearch} initialSearchQuery={searchQuery} />
