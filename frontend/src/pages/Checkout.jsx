@@ -10,10 +10,15 @@ import {
   Clock,
   Package,
   Truck,
+  Ticket,
+  X,
+  Tag,
 } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { orderApi } from '../api/order';
+import { voucherApi } from '../api/voucher';
+import VoucherSelectorModal from '../components/voucher/VoucherSelectorModal';
 import { toast } from '../store/toastStore';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate } from '../utils/formatDate';
@@ -51,6 +56,42 @@ export default function Checkout() {
 
   const totalPrice = getTotalPrice();
   const totalCount = getTotalCount();
+
+  // Voucher states
+  const [voucherInput, setVoucherInput] = useState('');
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+
+  const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
+  const finalTotal = Math.max(0, totalPrice - discountAmount);
+
+  const handleApplyVoucher = async (codeOverride) => {
+    const code = (codeOverride || voucherInput).trim().toUpperCase();
+    if (!code) {
+      toast.error('Vui lòng nhập mã giảm giá');
+      return;
+    }
+    setIsApplyingVoucher(true);
+    try {
+      const res = await voucherApi.applyVoucher(code, totalPrice);
+      if (res.valid) {
+        setAppliedVoucher(res);
+        setVoucherInput(res.voucherCode);
+        toast.success(`Áp dụng mã ${res.voucherCode} thành công! Giảm ${formatCurrency(res.discountAmount)}`);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Không thể áp dụng mã giảm giá');
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    setAppliedVoucher(null);
+    setVoucherInput('');
+    toast.info('Đã hủy áp dụng mã giảm giá');
+  };
 
   // Redirect if cart is empty and no order has just been created
   useEffect(() => {
@@ -126,6 +167,7 @@ export default function Checkout() {
         address: formData.address.trim(),
         paymentMethod: 'COD',
         idempotencyKey,
+        voucherCode: appliedVoucher ? appliedVoucher.voucherCode : undefined,
         items: items.map((i) => ({
           variantId: i.variantId || undefined,
           productId: i.productId || i.product?.id,
@@ -490,12 +532,87 @@ export default function Checkout() {
               })}
             </div>
 
+            {/* Voucher Section */}
+            <div className="pt-3 border-t border-line space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-semibold text-ink">
+                <span className="flex items-center gap-1.5">
+                  <Ticket className="size-3.5 text-primary-600" />
+                  Mã giảm giá
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsVoucherModalOpen(true)}
+                  className="text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1 font-medium text-xs transition"
+                >
+                  <Tag className="size-3" />
+                  Chọn mã có sẵn
+                </button>
+              </div>
+
+              {appliedVoucher ? (
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono font-bold uppercase text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60">
+                      {appliedVoucher.voucherCode}
+                    </span>
+                    <span className="text-emerald-700 dark:text-emerald-300 font-medium truncate">
+                      - {formatCurrency(discountAmount)}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveVoucher}
+                    title="Gỡ mã"
+                    className="p-1 text-emerald-600 hover:text-rose-600 rounded transition"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={voucherInput}
+                    onChange={(e) => setVoucherInput(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleApplyVoucher();
+                      }
+                    }}
+                    placeholder="Nhập mã voucher..."
+                    className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-line bg-gray-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 uppercase font-mono font-bold tracking-wider"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    loading={isApplyingVoucher}
+                    disabled={isApplyingVoucher || !voucherInput.trim()}
+                    onClick={() => handleApplyVoucher()}
+                    className="text-xs px-3 py-1.5 h-auto whitespace-nowrap"
+                  >
+                    Áp dụng
+                  </Button>
+                </div>
+              )}
+            </div>
+
             {/* Dotted border calculation section */}
             <div className="space-y-2.5 pt-3 border-t border-dashed border-line text-sm">
               <div className="flex justify-between text-ink-muted">
                 <span>Tạm tính</span>
                 <span className="font-medium text-ink">{formatCurrency(totalPrice)}</span>
               </div>
+              {appliedVoucher && (
+                <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span className="flex items-center gap-1">
+                    <Ticket className="size-3.5" />
+                    Giảm giá ({appliedVoucher.voucherCode})
+                  </span>
+                  <span>-{formatCurrency(discountAmount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-ink-muted">
                 <span>Phí giao hàng</span>
                 <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-xs">
@@ -505,7 +622,7 @@ export default function Checkout() {
               <div className="flex justify-between items-baseline pt-2 border-t border-line">
                 <span className="text-base font-bold text-ink">Tổng thanh toán</span>
                 <span className="text-xl font-extrabold text-primary-700">
-                  {formatCurrency(totalPrice)}
+                  {formatCurrency(finalTotal)}
                 </span>
               </div>
             </div>
@@ -533,6 +650,15 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      {/* Voucher Selector Modal */}
+      <VoucherSelectorModal
+        isOpen={isVoucherModalOpen}
+        onClose={() => setIsVoucherModalOpen(false)}
+        currentSubtotal={totalPrice}
+        appliedCode={appliedVoucher?.voucherCode}
+        onSelectVoucher={(code) => handleApplyVoucher(code)}
+      />
     </div>
   );
 }

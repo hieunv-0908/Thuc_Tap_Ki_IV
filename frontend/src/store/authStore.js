@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { useCartStore } from './cartStore.js';
 
 export const useAuthStore = create(
   persist(
@@ -20,6 +21,11 @@ export const useAuthStore = create(
           user,
           isAuthenticated: Boolean(token && user),
         });
+
+        // Kích hoạt merge và chuyển context giỏ hàng sang user
+        if (user?.id) {
+          useCartStore.getState().onLoginSuccess(user.id);
+        }
       },
 
       // Cập nhật nhanh cặp token sau khi auto-refresh mà không reset user
@@ -37,6 +43,9 @@ export const useAuthStore = create(
           user: null,
           isAuthenticated: false,
         });
+
+        // Dọn dẹp giỏ hàng in-memory và chuyển về ngữ cảnh guest
+        useCartStore.getState().onLogout();
       },
 
       updateUser: (updatedFields) => {
@@ -60,6 +69,8 @@ export const useAuthStore = create(
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
+        // Đồng bộ ngữ cảnh giỏ hàng khi nạp xong auth state từ storage
+        useCartStore.getState().initCart(state?.user?.id || null);
       },
     }
   )

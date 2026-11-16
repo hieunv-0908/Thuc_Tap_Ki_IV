@@ -41,6 +41,7 @@ public class SecurityConfig {
     // List các Endpoint Public không cần xác thực
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/v1/auth/**",
+            "/api/auth/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html"
@@ -94,13 +95,22 @@ public class SecurityConfig {
                                 "/api/categories/*/restore"
                         ).hasRole("ADMIN")
 
-                        // Các API GET Product và Category được Public
+                        // Các API GET Product, Category, Voucher được Public
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/products/**",
                                 "/api/products/**",
                                 "/api/v1/categories/**",
-                                "/api/categories/**"
+                                "/api/categories/**",
+                                "/api/v1/vouchers/**",
+                                "/api/vouchers/**"
+                        ).permitAll()
+
+                        // API kiểm tra áp dụng voucher được Public
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/vouchers/apply",
+                                "/api/vouchers/apply"
                         ).permitAll()
 
                         // Các API Admin
@@ -122,9 +132,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000")); // Môi trường Dev Frontend
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "http://103.178.235.87:*"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

@@ -325,8 +325,16 @@ export default function OrderDetail() {
           <div className="space-y-2.5 text-sm">
             <div className="flex justify-between text-ink-muted">
               <span>Tạm tính</span>
-              <span className="font-medium text-ink">{formatCurrency(order.totalPrice)}</span>
+              <span className="font-medium text-ink">
+                {formatCurrency(order.subtotalAmount || order.totalPrice || order.totalAmount)}
+              </span>
             </div>
+            {order.discountAmount > 0 && (
+              <div className="flex justify-between text-emerald-600 font-medium">
+                <span>Giảm giá Voucher {order.voucherCode ? `(${order.voucherCode})` : ''}</span>
+                <span>-{formatCurrency(order.discountAmount)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-ink-muted">
               <span>Phí vận chuyển</span>
               <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-xs">
@@ -336,7 +344,7 @@ export default function OrderDetail() {
             <div className="flex justify-between items-baseline pt-3 border-t border-dashed border-line">
               <span className="text-base font-bold text-ink">Tổng thanh toán</span>
               <span className="text-2xl font-extrabold text-primary-700">
-                {formatCurrency(order.totalPrice)}
+                {formatCurrency(order.totalPrice || order.totalAmount)}
               </span>
             </div>
           </div>
