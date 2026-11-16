@@ -117,7 +117,7 @@ export default function OrderDetail() {
         }));
       }
       setShowPayOSModal(true);
-    } catch (err) {
+    } catch {
       setShowPayOSModal(true);
     } finally {
       setIsPaying(false);

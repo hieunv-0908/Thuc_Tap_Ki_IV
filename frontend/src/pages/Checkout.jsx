@@ -15,7 +15,6 @@ import {
   Tag,
   CreditCard,
   ExternalLink,
-  QrCode,
 } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
@@ -271,7 +270,7 @@ export default function Checkout() {
       setPendingPayOSOrder(null);
       try {
         await orderApi.cancelOrder(orderIdToCancel, 'Khách hàng hủy thanh toán trực tuyến');
-      } catch (err) {
+      } catch {
         // Bỏ qua lỗi nếu đơn đã được xử lý
       }
     }

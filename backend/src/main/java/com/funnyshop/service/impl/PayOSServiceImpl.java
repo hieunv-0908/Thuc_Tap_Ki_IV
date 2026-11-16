@@ -333,17 +333,14 @@ public class PayOSServiceImpl implements PayOSService {
         @SuppressWarnings("unchecked")
         Map<String, Object> data = (Map<String, Object>) dataObj;
 
-        Long orderCode = null;
-        if (data.get("orderCode") != null) {
-            orderCode = Long.valueOf(String.valueOf(data.get("orderCode")));
+        Object orderCodeObj = data.get("orderCode");
+        if (orderCodeObj == null) {
+            throw new AppException("Thiếu mã orderCode trong webhook", HttpStatus.BAD_REQUEST);
         }
+        final Long orderCode = Long.valueOf(String.valueOf(orderCodeObj));
 
         String code = String.valueOf(webhookBody.getOrDefault("code", data.getOrDefault("code", "")));
         boolean isSuccess = "00".equals(code) || Boolean.TRUE.equals(webhookBody.get("success"));
-
-        if (orderCode == null) {
-            throw new AppException("Thiếu mã orderCode trong webhook", HttpStatus.BAD_REQUEST);
-        }
 
         Order order = orderRepository.findByPayosOrderCode(orderCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với mã PayOS: " + orderCode));

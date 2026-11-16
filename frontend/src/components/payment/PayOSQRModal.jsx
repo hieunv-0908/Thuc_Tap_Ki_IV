@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  QrCode,
   Copy,
   Check,
   ExternalLink,
@@ -75,7 +74,7 @@ export default function PayOSQRModal({
             if (onSuccess) onSuccess();
           }, 1500);
         }
-      } catch (e) {
+      } catch {
         // Bỏ qua lỗi polling mạng nhẹ
       }
     };
