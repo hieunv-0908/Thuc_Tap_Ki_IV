@@ -137,6 +137,20 @@ class AdminProductControllerTest {
     }
 
     @Test
+    @DisplayName("DELETE /api/v1/admin/products/{id}/permanent - Xóa cứng sản phẩm thành công")
+    void hardDeleteProduct_Success() throws Exception {
+        doNothing().when(productService).hardDeleteProduct(1L);
+
+        mockMvc.perform(delete("/api/v1/admin/products/1/permanent")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Xóa vĩnh viễn sản phẩm và dữ liệu liên quan thành công!")));
+
+        verify(productService, times(1)).hardDeleteProduct(1L);
+    }
+
+    @Test
     @DisplayName("PUT /api/v1/admin/products/{id}/restore - Khôi phục sản phẩm thành công")
     void restoreProduct_Success() throws Exception {
         when(productService.restoreProduct(1L)).thenReturn(sampleResponse);

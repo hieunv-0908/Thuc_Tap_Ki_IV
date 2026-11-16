@@ -45,8 +45,8 @@ export default function AdminProducts() {
 
   // Modals
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [hardDeleteTarget, setHardDeleteTarget] = useState(null); // { id, name }
+  const [isHardDeleting, setIsHardDeleting] = useState(false);
   const [restoreTarget, setRestoreTarget] = useState(null); // { id, name }
   const [isRestoring, setIsRestoring] = useState(false);
 
@@ -212,10 +212,10 @@ export default function AdminProducts() {
 
   // Handle Soft Delete (Dừng bán)
   const handleSoftDelete = async (id, name) => {
-    if (!confirm(`Bạn có chắc muốn dừng bán sản phẩm "${name}"? Sản phẩm sẽ bị ẩn khỏi shop.`)) return;
+    if (!confirm(`Bạn có chắc muốn ẩn/xóa mềm sản phẩm "${name}"? Dữ liệu vẫn được giữ và có thể khôi phục sau này.`)) return;
     try {
-      await adminApi.deleteProduct(id);
-      toast.success(`Đã dừng bán sản phẩm "${name}".`);
+      await adminApi.softDeleteProduct(id);
+      toast.success(`Đã ẩn sản phẩm "${name}". Bạn có thể khôi phục sản phẩm sau này.`);
       await fetchData();
     } catch (err) {
       console.error('Lỗi dừng bán sản phẩm:', err);
@@ -223,20 +223,20 @@ export default function AdminProducts() {
     }
   };
 
-  // Handle Delete
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
+  // Handle permanent delete
+  const handleHardDeleteConfirm = async () => {
+    if (!hardDeleteTarget) return;
     try {
-      setIsDeleting(true);
-      await adminApi.deleteProduct(deleteTarget.id);
-      toast.success(`Đã xóa sản phẩm "${deleteTarget.name}".`);
-      setDeleteTarget(null);
+      setIsHardDeleting(true);
+      await adminApi.hardDeleteProduct(hardDeleteTarget.id);
+      toast.success(`Đã xóa vĩnh viễn sản phẩm "${hardDeleteTarget.name}".`);
+      setHardDeleteTarget(null);
       await fetchData();
     } catch (err) {
-      console.error('Lỗi xóa sản phẩm:', err);
-      toast.error(err.message || 'Không thể xóa sản phẩm. Vui lòng thử lại.');
+      console.error('Lỗi xóa vĩnh viễn sản phẩm:', err);
+      toast.error(err.message || 'Không thể xóa vĩnh viễn sản phẩm. Vui lòng thử lại.');
     } finally {
-      setIsDeleting(false);
+      setIsHardDeleting(false);
     }
   };
 
@@ -439,17 +439,17 @@ export default function AdminProducts() {
               >
                 <EyeOff className="size-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => setDeleteTarget(row)}
-                className="p-1.5 rounded-lg text-ink-muted hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
-                title="Xóa sản phẩm"
-                aria-label={`Xóa ${row.name}`}
-              >
-                <Trash2 className="size-4" />
-              </button>
             </>
           )}
+          <button
+            type="button"
+            onClick={() => setHardDeleteTarget({ id: row.id, name: row.name })}
+            className="p-1.5 rounded-lg text-ink-muted hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+            title="Xóa vĩnh viễn sản phẩm"
+            aria-label={`Xóa vĩnh viễn ${row.name}`}
+          >
+            <Trash2 className="size-4" />
+          </button>
         </div>
       ),
     },
@@ -630,17 +630,17 @@ export default function AdminProducts() {
         onSuccess={fetchData}
       />
 
-      {/* Confirm Delete Dialog */}
+      {/* Confirm permanent delete dialog */}
       <ConfirmDialog
-        isOpen={Boolean(deleteTarget)}
-        onClose={() => !isDeleting && setDeleteTarget(null)}
-        onConfirm={handleDeleteConfirm}
-        title="Xóa sản phẩm này?"
-        description={`Bạn có chắc chắn muốn xóa "${deleteTarget?.name}"? Hành động này không thể hoàn tác.`}
-        confirmText="Xóa sản phẩm"
+        isOpen={Boolean(hardDeleteTarget)}
+        onClose={() => !isHardDeleting && setHardDeleteTarget(null)}
+        onConfirm={handleHardDeleteConfirm}
+        title="Xóa vĩnh viễn sản phẩm?"
+        description={`Bạn sắp xóa vĩnh viễn "${hardDeleteTarget?.name}" cùng các biến thể, hình ảnh, mục giỏ hàng và chi tiết đơn hàng liên quan. Hành động này không thể hoàn tác hoặc khôi phục.`}
+        confirmText="Xóa vĩnh viễn"
         cancelText="Hủy"
         variant="danger"
-        loading={isDeleting}
+        loading={isHardDeleting}
       />
 
       {/* Confirm Restore Dialog */}
