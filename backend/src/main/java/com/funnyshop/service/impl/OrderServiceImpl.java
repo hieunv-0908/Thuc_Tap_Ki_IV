@@ -22,7 +22,9 @@ import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.repository.ProductVariantRepository;
 import com.funnyshop.repository.UserRepository;
 import com.funnyshop.service.OrderService;
+import com.funnyshop.service.PayOSService;
 import com.funnyshop.service.VoucherService;
+import com.funnyshop.dto.response.PayOSPaymentResponse;
 import com.funnyshop.entity.Voucher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,6 +58,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderStatusHistoryRepository orderStatusHistoryRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final VoucherService voucherService;
+    private final PayOSService payOSService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -269,7 +272,27 @@ public class OrderServiceImpl implements OrderService {
 
         eventPublisher.publishEvent(createdEvent);
 
-        return OrderResponse.fromEntity(savedOrder);
+        OrderResponse orderResponse = OrderResponse.fromEntity(savedOrder);
+
+        // Nếu phương thức thanh toán là PayOS, sinh link thanh toán trực tuyến
+        if ("PAYOS".equalsIgnoreCase(savedOrder.getPaymentMethod())) {
+            try {
+                PayOSPaymentResponse payResponse = payOSService.createPaymentLink(savedOrder, null, null);
+                if (payResponse != null) {
+                    orderResponse.setPaymentUrl(payResponse.getCheckoutUrl());
+                    orderResponse.setQrCode(payResponse.getQrCode());
+                    orderResponse.setPayosOrderCode(payResponse.getOrderCode());
+                    orderResponse.setPaymentStatus(payResponse.getStatus());
+                    orderResponse.setAccountNumber(payResponse.getAccountNumber());
+                    orderResponse.setAccountName(payResponse.getAccountName());
+                    orderResponse.setBin(payResponse.getBin());
+                }
+            } catch (Exception e) {
+                log.error("[Checkout] Không tạo được link PayOS: {}", e.getMessage(), e);
+            }
+        }
+
+        return orderResponse;
     }
 
     @Override

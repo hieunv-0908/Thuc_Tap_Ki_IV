@@ -168,7 +168,18 @@ export default function Orders() {
       key: 'totalPrice',
       header: 'Tổng tiền',
       render: (row) => (
-        <span className="font-bold text-ink">{formatCurrency(row.totalPrice)}</span>
+        <div>
+          <span className="font-bold text-ink block">{formatCurrency(row.totalPrice)}</span>
+          <span className="text-[11px]">
+            {row.paymentMethod === 'PAYOS' ? (
+              <span className={row.paymentStatus === 'PAID' ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-medium'}>
+                PayOS ({row.paymentStatus === 'PAID' ? 'Đã TT' : 'Chờ TT'})
+              </span>
+            ) : (
+              <span className="text-ink-subtle">COD</span>
+            )}
+          </span>
+        </div>
       ),
     },
     {
@@ -385,6 +396,15 @@ export default function Orders() {
                       <span className="text-xs text-ink-muted block">Tổng tiền:</span>
                       <span className="text-base font-bold text-ink">
                         {formatCurrency(order.totalPrice)}
+                      </span>
+                      <span className="text-[11px] block mt-0.5">
+                        {order.paymentMethod === 'PAYOS' ? (
+                          <span className={order.paymentStatus === 'PAID' ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-medium'}>
+                            PayOS ({order.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chờ thanh toán'})
+                          </span>
+                        ) : (
+                          <span className="text-ink-subtle">Thanh toán khi nhận (COD)</span>
+                        )}
                       </span>
                     </div>
 
