@@ -13,6 +13,9 @@ import {
   Ticket,
   X,
   Tag,
+  CreditCard,
+  ExternalLink,
+  QrCode,
 } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
@@ -26,6 +29,7 @@ import { isValidPhone, isValidAddress } from '../utils/validators';
 import StepIndicator from '../components/ui/StepIndicator';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
+import PayOSQRModal from '../components/payment/PayOSQRModal';
 
 /**
  * Checkout page component complying with Design.md 7.5 (v2.0)
@@ -56,6 +60,9 @@ export default function Checkout() {
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdOrder, setCreatedOrder] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [pendingPayOSOrder, setPendingPayOSOrder] = useState(null);
+  const [showPayOSModal, setShowPayOSModal] = useState(false);
 
   // Sinh Idempotency Key theo vòng đời trang Checkout (chống tạo đơn trùng khi click đúp/lag mạng)
   const [idempotencyKey, setIdempotencyKey] = useState(() => {
@@ -158,8 +165,13 @@ export default function Checkout() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     if (isSubmitting) return;
+
+    if (checkoutItems.length === 0) {
+      toast.error('Không có sản phẩm nào trong danh sách thanh toán.');
+      return;
+    }
 
     setServerError('');
 
@@ -173,6 +185,7 @@ export default function Checkout() {
         phone: phoneErr,
         address: addressErr,
       });
+      toast.error(nameErr || phoneErr || addressErr || 'Vui lòng kiểm tra lại thông tin nhận hàng');
       return;
     }
 
@@ -183,7 +196,7 @@ export default function Checkout() {
         fullName: formData.fullName.trim(),
         phone: formData.phone.trim(),
         address: formData.address.trim(),
-        paymentMethod: 'COD',
+        paymentMethod: paymentMethod,
         idempotencyKey,
         voucherCode: appliedVoucher ? appliedVoucher.voucherCode : undefined,
         items: checkoutItems.map((i) => ({
@@ -195,23 +208,27 @@ export default function Checkout() {
 
       const result = await orderApi.createOrder(orderPayload);
 
-      // Cập nhật giỏ hàng:
-      if (isDirectBuy) {
-        // Mua ngay trực tiếp: KHÔNG xóa giỏ hàng
-      } else {
-        // Mua từ giỏ hàng: Chỉ xóa các sản phẩm vừa thanh toán, giữ lại các món chưa chọn
-        const paidKeys = checkoutItems.map(
-          (i) => i.cartItemId || (i.variantId ? `var-${i.variantId}` : `prod-${i.productId || i.id}`)
-        );
-        removeItems(paidKeys);
-      }
+      // Nếu phương thức thanh toán là COD: Xác nhận đặt hàng thành công ngay
+      if (paymentMethod !== 'PAYOS') {
+        if (!isDirectBuy) {
+          const paidKeys = checkoutItems.map(
+            (i) => i.cartItemId || (i.variantId ? `var-${i.variantId}` : `prod-${i.productId || i.id}`)
+          );
+          removeItems(paidKeys);
+        }
 
-      setCreatedOrder(result);
-      // Reset cấp key mới cho phiên tiếp theo
-      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        setIdempotencyKey(crypto.randomUUID());
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+          setIdempotencyKey(crypto.randomUUID());
+        }
+
+        setCreatedOrder(result);
+        toast.success('Đặt hàng thành công!');
+      } else {
+        // Nếu phương thức thanh toán là PayOS Online:
+        // CHƯA xóa giỏ hàng, mở Modal QR và giữ người dùng tại trang thanh toán
+        setPendingPayOSOrder(result);
+        setShowPayOSModal(true);
       }
-      toast.success('Đặt hàng thành công!');
     } catch (err) {
       setServerError(
         err.message || 'Không thể đặt hàng. Vui lòng kiểm tra lại thông tin.'
@@ -219,6 +236,52 @@ export default function Checkout() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Chỉ khi thanh toán thành công mới xóa giỏ hàng và chuyển sang màn hình "Đặt hàng thành công"
+  const handlePayOSSuccess = () => {
+    setShowPayOSModal(false);
+
+    if (!isDirectBuy) {
+      const paidKeys = checkoutItems.map(
+        (i) => i.cartItemId || (i.variantId ? `var-${i.variantId}` : `prod-${i.productId || i.id}`)
+      );
+      removeItems(paidKeys);
+    }
+
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      setIdempotencyKey(crypto.randomUUID());
+    }
+
+    setCreatedOrder({
+      ...(pendingPayOSOrder || {}),
+      paymentStatus: 'PAID',
+      status: 'PROCESSING',
+    });
+    setPendingPayOSOrder(null);
+    toast.success('Thanh toán thành công! Đơn hàng của bạn đã được ghi nhận.');
+  };
+
+  // Nếu chưa thanh toán mà tắt cửa sổ QR: Ở lại trang đặt hàng, chưa đặt được hàng
+  const handlePayOSClose = async () => {
+    setShowPayOSModal(false);
+
+    if (pendingPayOSOrder?.id) {
+      const orderIdToCancel = pendingPayOSOrder.id;
+      setPendingPayOSOrder(null);
+      try {
+        await orderApi.cancelOrder(orderIdToCancel, 'Khách hàng hủy thanh toán trực tuyến');
+      } catch (err) {
+        // Bỏ qua lỗi nếu đơn đã được xử lý
+      }
+    }
+
+    // Cấp Idempotency Key mới để khách hàng có thể bấm đặt lại
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      setIdempotencyKey(crypto.randomUUID());
+    }
+
+    toast.warning('Bạn chưa hoàn tất thanh toán. Đơn hàng chưa được đặt.');
   };
 
   // Màn hình "Đặt hàng thành công" per Design.md 7.5 (v2.0)
@@ -290,7 +353,19 @@ export default function Checkout() {
             <div className="flex justify-between items-center border-t border-primary-100 pt-3">
               <div>
                 <span className="text-xs text-ink-muted block">Phương thức:</span>
-                <span className="text-xs font-semibold text-secondary-700">Thanh toán khi nhận hàng (COD)</span>
+                <span className="text-xs font-semibold text-secondary-700">
+                  {createdOrder.paymentMethod === 'PAYOS'
+                    ? 'Thanh toán online qua PayOS (VietQR)'
+                    : 'Thanh toán khi nhận hàng (COD)'}
+                </span>
+                {createdOrder.paymentMethod === 'PAYOS' && (
+                  <span className={`inline-block mt-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full ${createdOrder.paymentStatus === 'PAID'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-amber-100 text-amber-700'
+                    }`}>
+                    {createdOrder.paymentStatus === 'PAID' ? '✓ Đã thanh toán' : '⏳ Chờ thanh toán'}
+                  </span>
+                )}
               </div>
               <div className="text-right">
                 <span className="text-xs text-ink-muted block">Tổng tiền:</span>
@@ -300,6 +375,35 @@ export default function Checkout() {
               </div>
             </div>
           </div>
+
+          {/* Banner thúc đẩy thanh toán nếu là PayOS và chưa thanh toán */}
+          {createdOrder.paymentMethod === 'PAYOS' && createdOrder.paymentStatus !== 'PAID' && createdOrder.paymentUrl && (
+            <div className="mb-8 p-5 rounded-2xl bg-secondary-50 border-2 border-secondary-300 text-left space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="size-10 rounded-xl bg-secondary-600 text-white flex items-center justify-center shrink-0">
+                  <CreditCard className="size-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-ink text-sm sm:text-base">
+                    Hoàn tất thanh toán qua PayOS (VietQR)
+                  </h4>
+                  <p className="text-xs text-ink-muted mt-1 leading-relaxed">
+                    Đơn hàng đã được tạo. Vui lòng bấm nút bên dưới để chuyển sang cổng PayOS quét mã VietQR hoặc chuyển khoản ngân hàng tự động duyệt 24/7.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <a
+                  href={createdOrder.paymentUrl}
+                  className="w-full inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-secondary-600 hover:bg-secondary-700 text-white font-bold text-sm shadow-md transition-all cursor-pointer"
+                >
+                  <span>Thanh toán ngay bằng PayOS</span>
+                  <ExternalLink className="size-4" />
+                </a>
+              </div>
+            </div>
+          )}
 
           {/* Next Steps (Design.md 7.5: 3 bước mờ Chờ xử lý -> Đang xử lý -> Đang giao) */}
           <div className="mb-8 p-4 rounded-xl bg-gray-50 border border-line text-left">
@@ -383,7 +487,7 @@ export default function Checkout() {
             </div>
           )}
 
-          <form id="checkout-form" onSubmit={handleSubmit} className="space-y-6">
+          <form id="checkout-form" onSubmit={handleSubmit} noValidate className="space-y-6">
             {/* Card 1: MapPin Thông tin nhận hàng (Design.md 7.5) */}
             <div className="bg-white rounded-2xl border border-line p-5 sm:p-7 shadow-soft space-y-5">
               <div className="flex items-center gap-3 border-b border-line pb-4">
@@ -473,7 +577,7 @@ export default function Checkout() {
               </div>
             </div>
 
-            {/* Card 2: Wallet Phương thức thanh toán (Design.md 7.5: rounded-xl border-2 border-secondary-500 bg-secondary-50 p-4) */}
+            {/* Card 2: Phương thức thanh toán */}
             <div className="bg-white rounded-2xl border border-line p-5 sm:p-7 shadow-soft space-y-4">
               <div className="flex items-center gap-3 border-b border-line pb-4">
                 <div className="size-9 rounded-xl bg-secondary-100 text-secondary-700 flex items-center justify-center font-bold shrink-0">
@@ -484,31 +588,80 @@ export default function Checkout() {
                     2. Phương thức thanh toán
                   </h3>
                   <p className="text-xs text-ink-muted">
-                    Phương thức thanh toán an toàn, minh bạch
+                    Chọn hình thức thanh toán thuận tiện nhất cho bạn
                   </p>
                 </div>
               </div>
 
-              <div
-                className="rounded-xl border-2 border-secondary-500 bg-secondary-50 p-4 flex items-center justify-between cursor-pointer"
-                role="radio"
-                aria-checked="true"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="size-10 rounded-xl bg-white text-secondary-600 flex items-center justify-center shadow-2xs">
-                    <Wallet className="size-5" />
+              <div className="space-y-3">
+                {/* Lựa chọn 1: COD */}
+                <div
+                  onClick={() => setPaymentMethod('COD')}
+                  className={`rounded-xl border-2 p-4 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'COD'
+                      ? 'border-primary-500 bg-primary-50/50 shadow-xs'
+                      : 'border-line hover:border-gray-300 bg-white'
+                    }`}
+                  role="radio"
+                  aria-checked={paymentMethod === 'COD'}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className={`size-10 rounded-xl flex items-center justify-center shadow-2xs ${paymentMethod === 'COD' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-ink-muted'
+                      }`}>
+                      <Wallet className="size-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-ink text-sm sm:text-base">
+                        Thanh toán khi nhận hàng (COD)
+                      </h4>
+                      <p className="text-xs text-ink-muted mt-0.5">
+                        Trả tiền mặt khi kiểm tra và nhận được hàng
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-ink text-sm sm:text-base">
-                      Thanh toán khi nhận hàng (COD)
-                    </h4>
-                    <p className="text-xs text-ink-muted mt-0.5">
-                      Trả tiền mặt khi kiểm tra và nhận được hàng
-                    </p>
-                  </div>
+
+                  {paymentMethod === 'COD' ? (
+                    <CheckCircle2 className="size-5 text-primary-600 shrink-0" aria-hidden="true" />
+                  ) : (
+                    <div className="size-5 rounded-full border-2 border-line shrink-0" />
+                  )}
                 </div>
 
-                <CheckCircle2 className="size-5 text-secondary-600 shrink-0" aria-hidden="true" />
+                {/* Lựa chọn 2: PayOS Online */}
+                <div
+                  onClick={() => setPaymentMethod('PAYOS')}
+                  className={`rounded-xl border-2 p-4 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'PAYOS'
+                      ? 'border-secondary-500 bg-secondary-50/50 shadow-xs'
+                      : 'border-line hover:border-gray-300 bg-white'
+                    }`}
+                  role="radio"
+                  aria-checked={paymentMethod === 'PAYOS'}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className={`size-10 rounded-xl flex items-center justify-center shadow-2xs ${paymentMethod === 'PAYOS' ? 'bg-secondary-600 text-white' : 'bg-gray-100 text-ink-muted'
+                      }`}>
+                      <CreditCard className="size-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-bold text-ink text-sm sm:text-base">
+                          Thanh toán online qua PayOS (VietQR)
+                        </h4>
+                        <span className="inline-flex items-center gap-1 rounded-md bg-secondary-100 text-secondary-700 px-2 py-0.5 text-[10px] font-bold">
+                          ✨ Tự động duyệt 24/7
+                        </span>
+                      </div>
+                      <p className="text-xs text-ink-muted mt-0.5">
+                        Quét mã VietQR chuyển khoản nhanh bằng mọi app ngân hàng
+                      </p>
+                    </div>
+                  </div>
+
+                  {paymentMethod === 'PAYOS' ? (
+                    <CheckCircle2 className="size-5 text-secondary-600 shrink-0" aria-hidden="true" />
+                  ) : (
+                    <div className="size-5 rounded-full border-2 border-line shrink-0" />
+                  )}
+                </div>
               </div>
             </div>
           </form>
@@ -661,11 +814,12 @@ export default function Checkout() {
               <Button
                 type="submit"
                 form="checkout-form"
+                onClick={handleSubmit}
                 variant="primary"
                 size="lg"
                 fullWidth
                 loading={isSubmitting}
-                disabled={isSubmitting || items.length === 0}
+                disabled={isSubmitting || checkoutItems.length === 0}
                 className="font-bold shadow-brand"
               >
                 {isSubmitting ? 'Đang hoàn tất đặt hàng...' : 'Xác nhận đặt hàng'}
@@ -679,6 +833,14 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      {/* PayOS QR Modal */}
+      <PayOSQRModal
+        isOpen={showPayOSModal}
+        order={pendingPayOSOrder}
+        onSuccess={handlePayOSSuccess}
+        onClose={handlePayOSClose}
+      />
 
       {/* Voucher Selector Modal */}
       <VoucherSelectorModal

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Truck,
@@ -10,6 +10,7 @@ import {
   Package,
   Calendar,
   RotateCcw,
+  ExternalLink,
 } from 'lucide-react';
 import { orderApi } from '../api/order';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -20,6 +21,7 @@ import OrderTimeline from '../components/order/OrderTimeline';
 import ErrorState from '../components/ui/ErrorState';
 import Button from '../components/ui/Button';
 import CancelOrderModal from '../components/order/CancelOrderModal';
+import PayOSQRModal from '../components/payment/PayOSQRModal';
 import { useCartStore } from '../store/cartStore';
 import { toast } from '../store/toastStore';
 
@@ -29,6 +31,7 @@ import { toast } from '../store/toastStore';
 export default function OrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const addItem = useCartStore((s) => s.addItem);
 
   const [order, setOrder] = useState(null);
@@ -37,6 +40,8 @@ export default function OrderDetail() {
   const [error, setError] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
+  const [showPayOSModal, setShowPayOSModal] = useState(false);
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -79,6 +84,45 @@ export default function OrderDetail() {
       isMounted = false;
     };
   }, [id]);
+
+  // Xử lý phản hồi từ cổng thanh toán PayOS qua URL params (?payment=success hoặc ?payment=cancelled)
+  useEffect(() => {
+    const paymentStatusParam = searchParams.get('payment');
+    if (paymentStatusParam === 'success') {
+      toast.success('Thanh toán qua PayOS thành công! Hệ thống đang cập nhật đơn hàng.');
+      orderApi.getPayOSPaymentStatus(id).then((res) => {
+        if (res?.paymentStatus) {
+          setOrder((prev) => prev ? { ...prev, paymentStatus: res.paymentStatus } : prev);
+        }
+      }).catch(() => {});
+    } else if (paymentStatusParam === 'cancelled') {
+      toast.warning('Bạn đã hủy thanh toán PayOS. Bạn có thể thanh toán lại bất kỳ lúc nào.');
+    }
+  }, [id, searchParams]);
+
+  const handlePayWithPayOS = async () => {
+    if (!order) return;
+    try {
+      setIsPaying(true);
+      const res = await orderApi.createPayOSPaymentLink(order.id);
+      const paymentData = res?.data || res;
+      if (paymentData) {
+        setOrder((prev) => ({
+          ...prev,
+          paymentUrl: paymentData.checkoutUrl || prev.paymentUrl,
+          qrCode: paymentData.qrCode || prev.qrCode,
+          accountNumber: paymentData.accountNumber || prev.accountNumber,
+          accountName: paymentData.accountName || prev.accountName,
+          bin: paymentData.bin || prev.bin,
+        }));
+      }
+      setShowPayOSModal(true);
+    } catch (err) {
+      setShowPayOSModal(true);
+    } finally {
+      setIsPaying(false);
+    }
+  };
 
   const handleReorder = () => {
     if (!order || !order.items) return;
@@ -303,11 +347,44 @@ export default function OrderDetail() {
 
             <div className="flex items-start gap-2.5 pt-2 border-t border-line">
               <CreditCard className="size-4 text-secondary-600 shrink-0 mt-0.5" />
-              <div>
+              <div className="flex-1">
                 <span className="text-xs text-ink-subtle block">Phương thức thanh toán:</span>
-                <span className="font-semibold text-secondary-700">
-                  Thanh toán khi nhận hàng (COD)
-                </span>
+                <div className="flex items-center justify-between flex-wrap gap-2 mt-0.5">
+                  <span className="font-semibold text-secondary-700">
+                    {order.paymentMethod === 'PAYOS'
+                      ? 'Thanh toán online qua PayOS (VietQR)'
+                      : 'Thanh toán khi nhận hàng (COD)'}
+                  </span>
+                  {order.paymentMethod === 'PAYOS' && (
+                    <span
+                      className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                        order.paymentStatus === 'PAID'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {order.paymentStatus === 'PAID' ? '✓ Đã thanh toán' : '⏳ Chờ thanh toán'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Nút thanh toán lại nếu đơn PayOS chưa thanh toán và chưa hủy */}
+                {order.paymentMethod === 'PAYOS' &&
+                  order.paymentStatus !== 'PAID' &&
+                  order.status === ORDER_STATUS.PENDING && (
+                    <div className="mt-3">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        rightIcon={ExternalLink}
+                        loading={isPaying}
+                        onClick={handlePayWithPayOS}
+                        className="font-bold shadow-xs"
+                      >
+                        Thanh toán ngay qua PayOS
+                      </Button>
+                    </div>
+                  )}
               </div>
             </div>
           </div>
@@ -463,6 +540,18 @@ export default function OrderDetail() {
           Tiếp tục mua sắm
         </Button>
       </div>
+
+      {/* PayOS QR Modal */}
+      <PayOSQRModal
+        isOpen={showPayOSModal}
+        order={order}
+        onSuccess={() => {
+          setShowPayOSModal(false);
+          setOrder((prev) => (prev ? { ...prev, paymentStatus: 'PAID', status: ORDER_STATUS.PROCESSING } : prev));
+          fetchOrder();
+        }}
+        onClose={() => setShowPayOSModal(false)}
+      />
 
       {/* Modal chọn lý do và xác nhận hủy đơn hàng */}
       <CancelOrderModal

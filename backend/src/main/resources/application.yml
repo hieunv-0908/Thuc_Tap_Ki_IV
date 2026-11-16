@@ -30,6 +30,13 @@ app:
       # Chuyển đổi giữa 2 chế độ: 'in-memory' (local dev RAM) hoặc 'redis' (production/staging)
       provider: in-memory
 
+payos:
+  client-id: ${PAYOS_CLIENT_ID:ae3108e3-17f9-43cc-8aea-e0bddd7ba86b}
+  api-key: ${PAYOS_API_KEY:96cbc67d-b033-40dc-a04a-5b5c9319f2dd}
+  checksum-key: ${PAYOS_CHECKSUM_KEY:00548434b45f9cc139b6050fc4ce4983ecbbf9dfdab1802a6124a3e1351d72a8}
+  return-url: ${PAYOS_RETURN_URL:http://localhost:5173/orders/{orderId}?payment=success}
+  cancel-url: ${PAYOS_CANCEL_URL:http://localhost:5173/orders/{orderId}?payment=cancelled}
+
 logging:
   level:
     com.funnyshop: DEBUG
