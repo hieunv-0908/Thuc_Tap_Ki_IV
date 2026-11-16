@@ -11,6 +11,8 @@ import { toast } from '../../store/toastStore';
  */
 export default function CartItem({
   item,
+  isSelected = true,
+  onToggleSelect,
   onUpdateQuantity,
   onRemove,
 }) {
@@ -42,7 +44,13 @@ export default function CartItem({
   };
 
   return (
-    <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-line bg-white shadow-soft hover:border-primary-200 transition-colors">
+    <div
+      className={`relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border shadow-soft transition-all ${
+        isSelected
+          ? 'border-primary-300 bg-primary-50/20'
+          : 'border-line bg-white opacity-85 hover:opacity-100'
+      }`}
+    >
       {/* Mobile delete button: Top right */}
       <button
         type="button"
@@ -53,8 +61,19 @@ export default function CartItem({
         <Trash2 className="size-4" />
       </button>
 
-      {/* Left: Product image + info */}
-      <div className="flex items-center gap-3.5 flex-1 min-w-0 pr-8 sm:pr-0">
+      {/* Checkbox & Left: Product image + info */}
+      <div className="flex items-center gap-3 sm:gap-3.5 flex-1 min-w-0 pr-8 sm:pr-0">
+        {/* Checkbox select */}
+        <label className="flex items-center justify-center p-0.5 cursor-pointer shrink-0">
+          <input
+            type="checkbox"
+            checked={Boolean(isSelected)}
+            onChange={() => onToggleSelect && onToggleSelect(itemId)}
+            className="size-5 rounded border-line text-primary-700 focus:ring-primary-500 focus:ring-offset-0 cursor-pointer accent-primary-700"
+            aria-label={`Chọn sản phẩm ${itemName}`}
+          />
+        </label>
+
         <div className="size-20 shrink-0 rounded-lg overflow-hidden border border-line bg-gray-50 flex items-center justify-center">
           {imgError || !itemImage ? (
             <div className="w-full h-full bg-primary-50 flex items-center justify-center text-primary-400">
