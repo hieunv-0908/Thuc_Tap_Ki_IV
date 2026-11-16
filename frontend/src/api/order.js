@@ -5,7 +5,7 @@ import apiClient from './axios';
 // const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const orderApi = {
-  createOrder: async ({ fullName, phone, address, paymentMethod = 'COD', items, idempotencyKey }) => {
+  createOrder: async ({ fullName, phone, address, paymentMethod = 'COD', items, idempotencyKey, voucherCode }) => {
     // if (isMock) {
     //   const user = useAuthStore.getState().user;
     //   return await mockEngine.createOrder(user?.id, { fullName, phone, address, items });
@@ -16,7 +16,7 @@ export const orderApi = {
     }
     const res = await apiClient.post(
       '/api/v1/orders',
-      { fullName, phone, address, paymentMethod, items, idempotencyKey },
+      { fullName, phone, address, paymentMethod, items, idempotencyKey, voucherCode },
       { headers }
     );
     return res?.data !== undefined ? res.data : res;

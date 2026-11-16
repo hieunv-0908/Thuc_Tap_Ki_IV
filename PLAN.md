@@ -34,7 +34,7 @@ flowchart TD
 | Giai đoạn | Nội dung chính | Trọng tâm công nghệ | Mức độ ưu tiên | Trạng thái |
 |---|---|---|---|---|
 | **Phase 1** | Tách biệt giỏ hàng theo tài khoản / khách; xử lý dọn dẹp khi đăng xuất | Frontend Zustand Store, LocalStorage Partitioning, Session Context | 🔴 P0 (Cao nhất - Sửa lỗi bảo mật/UX) | `[x] Đã hoàn thành` |
-| **Phase 2** | Quản lý & Áp dụng Voucher (DB, Service, Validation, Checkout Lock, UI) | MySQL Schema, Spring JPA, Pessimistic Locking, Checkout API, React Modal | 🔴 P0 (Nghiệp vụ cốt lõi) | `[ ] Chưa làm` |
+| **Phase 2** | Quản lý & Áp dụng Voucher (DB, Service, Validation, Checkout Lock, UI) | MySQL Schema, Spring JPA, Pessimistic Locking, Checkout API, React Modal | 🔴 P0 (Nghiệp vụ cốt lõi) | `[x] Đã hoàn thành` |
 | **Phase 3** | Quản lý & Phân tích Doanh thu (Aggregations, Period Filter, Timeline API) | SQL Aggregation, Time-series Query, Spring Service, Admin UI | 🟡 P1 (Nghiệp vụ quản trị) | `[ ] Chưa làm` |
 | **Phase 4** | Xuất dữ liệu Đơn hàng & Sản phẩm ra CSV chuẩn UTF-8 BOM | Spring Streaming CSV, OpenCSV / Writer, Blob Download Client | 🟡 P1 (Tiện ích vận hành) | `[ ] Chưa làm` |
 | **Phase 5** | Xây dựng Dashboard tổng quan toàn hệ thống cho Admin | Recharts / Chart.js, StatCards, Realtime Recent Orders, KPI Summary | 🟢 P2 (Trải nghiệm quản trị) | `[ ] Chưa làm` |
@@ -89,7 +89,8 @@ flowchart TD
 
 ### --------------------------------------------------------------------------------
 ### 🔹 GIAI ĐOẠN 2: HỆ THỐNG VOUCHER (QUẢN LÝ & ÁP DỤNG MÃ GIẢM GIÁ)
-*(Voucher Management & Safe Checkout Application)*
+*(Voucher Management & Safe Checkout Application)*  
+**Tài liệu chi tiết:** [PLAN_PHASE_2_VOUCHER_SYSTEM.md](file:///d:/thuc_tap/Thuc_Tap_Ki_IV/docs/PLAN_PHASE_2_VOUCHER_SYSTEM.md)
 
 #### 1. Thiết kế Cơ sở dữ liệu (Database Schema)
 Bổ sung bảng `vouchers` và `voucher_usages`, cập nhật bảng `orders`:

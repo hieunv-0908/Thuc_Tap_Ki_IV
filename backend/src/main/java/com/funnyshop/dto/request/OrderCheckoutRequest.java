@@ -39,6 +39,9 @@ public class OrderCheckoutRequest {
     @Size(max = 64, message = "Idempotency key không được vượt quá 64 ký tự")
     private String idempotencyKey;
 
+    @Size(max = 50, message = "Mã voucher không được vượt quá 50 ký tự")
+    private String voucherCode;
+
     @NotEmpty(message = "Danh sách sản phẩm đặt hàng không được để trống")
     private List<@Valid OrderCheckoutItemRequest> items;
 }

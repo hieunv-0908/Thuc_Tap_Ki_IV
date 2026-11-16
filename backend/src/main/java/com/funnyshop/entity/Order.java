@@ -61,6 +61,23 @@ public class Order {
     @ToString.Include
     private BigDecimal totalAmount;
 
+    @Column(name = "subtotal_amount", precision = 12, scale = 2)
+    @ToString.Include
+    private BigDecimal subtotalAmount;
+
+    @Column(name = "discount_amount", precision = 12, scale = 2)
+    @Builder.Default
+    @ToString.Include
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "voucher_id")
+    private Voucher voucher;
+
+    @Column(name = "voucher_code", length = 50)
+    @ToString.Include
+    private String voucherCode;
+
     @Column(name = "payment_method", length = 20)
     @Builder.Default
     @ToString.Include
@@ -93,6 +110,12 @@ public class Order {
         this.updatedAt = LocalDateTime.now();
         if (this.status == null) {
             this.status = OrderStatus.PENDING;
+        }
+        if (this.discountAmount == null) {
+            this.discountAmount = BigDecimal.ZERO;
+        }
+        if (this.subtotalAmount == null) {
+            this.subtotalAmount = this.totalAmount;
         }
     }
 

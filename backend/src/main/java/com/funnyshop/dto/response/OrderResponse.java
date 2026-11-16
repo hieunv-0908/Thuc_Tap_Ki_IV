@@ -31,6 +31,10 @@ public class OrderResponse {
     private String address;
     private BigDecimal totalAmount;
     private BigDecimal totalPrice;
+    private BigDecimal subtotalAmount;
+    private BigDecimal discountAmount;
+    private Long voucherId;
+    private String voucherCode;
     private String paymentMethod;
     private OrderStatus status;
     private String cancelReason;
@@ -67,6 +71,10 @@ public class OrderResponse {
                 .address(order.getShippingAddress())
                 .totalAmount(order.getTotalAmount())
                 .totalPrice(order.getTotalAmount())
+                .subtotalAmount(order.getSubtotalAmount() != null ? order.getSubtotalAmount() : order.getTotalAmount())
+                .discountAmount(order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO)
+                .voucherId(order.getVoucher() != null ? order.getVoucher().getId() : null)
+                .voucherCode(order.getVoucherCode())
                 .paymentMethod(order.getPaymentMethod())
                 .status(order.getStatus())
                 .items(items)

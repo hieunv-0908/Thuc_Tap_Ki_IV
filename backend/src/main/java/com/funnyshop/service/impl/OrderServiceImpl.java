@@ -22,6 +22,8 @@ import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.repository.ProductVariantRepository;
 import com.funnyshop.repository.UserRepository;
 import com.funnyshop.service.OrderService;
+import com.funnyshop.service.VoucherService;
+import com.funnyshop.entity.Voucher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -53,6 +55,7 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final OrderStatusHistoryRepository orderStatusHistoryRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final VoucherService voucherService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -195,8 +198,35 @@ public class OrderServiceImpl implements OrderService {
             order.getOrderItems().add(orderItem);
         }
 
-        order.setTotalAmount(totalAmount);
+        // Tích hợp xử lý Voucher an toàn (Pessimistic Lock & Kiểm tra ràng buộc)
+        BigDecimal subtotalAmount = totalAmount;
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        Voucher appliedVoucher = null;
+
+        if (request.getVoucherCode() != null && !request.getVoucherCode().isBlank()) {
+            appliedVoucher = voucherService.validateAndGetVoucherForCheckout(
+                    request.getVoucherCode(), subtotalAmount, user.getId());
+            if (appliedVoucher != null) {
+                discountAmount = voucherService.calculateDiscount(appliedVoucher, subtotalAmount);
+                order.setVoucher(appliedVoucher);
+                order.setVoucherCode(appliedVoucher.getCode());
+            }
+        }
+
+        BigDecimal finalTotal = subtotalAmount.subtract(discountAmount);
+        if (finalTotal.compareTo(BigDecimal.ZERO) < 0) {
+            finalTotal = BigDecimal.ZERO;
+        }
+
+        order.setSubtotalAmount(subtotalAmount);
+        order.setDiscountAmount(discountAmount);
+        order.setTotalAmount(finalTotal);
+
         Order savedOrder = orderRepository.save(order);
+
+        if (appliedVoucher != null) {
+            voucherService.recordVoucherUsage(appliedVoucher, user, savedOrder, discountAmount);
+        }
 
         // Ghi nhận lịch sử trạng thái ban đầu của đơn hàng (Audit Trail)
         OrderStatusHistory initialHistory = OrderStatusHistory.builder()
@@ -301,8 +331,11 @@ public class OrderServiceImpl implements OrderService {
                     HttpStatus.BAD_REQUEST);
         }
 
-        // Nếu chuyển sang CANCELLED thì tiến hành hoàn kho nguyên tử
+        // Nếu chuyển sang CANCELLED thì tiến hành hoàn kho nguyên tử và hoàn voucher
         if (newStatus == OrderStatus.CANCELLED) {
+            if (order.getVoucher() != null) {
+                voucherService.refundVoucherUsage(order);
+            }
             // Sắp xếp variantId tăng dần để triệt tiêu deadlock
             List<OrderItem> sortedItems = order.getOrderItems()
                     .stream()
@@ -419,7 +452,10 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
-        // 5. Cập nhật trạng thái CANCELLED
+        // 5. Cập nhật trạng thái CANCELLED & hoàn lượt voucher nếu có
+        if (order.getVoucher() != null) {
+            voucherService.refundVoucherUsage(order);
+        }
         order.setStatus(OrderStatus.CANCELLED);
         Order savedOrder = orderRepository.save(order);
 

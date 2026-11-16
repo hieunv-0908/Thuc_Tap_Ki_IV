@@ -95,13 +95,22 @@ public class SecurityConfig {
                                 "/api/categories/*/restore"
                         ).hasRole("ADMIN")
 
-                        // Các API GET Product và Category được Public
+                        // Các API GET Product, Category, Voucher được Public
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/products/**",
                                 "/api/products/**",
                                 "/api/v1/categories/**",
-                                "/api/categories/**"
+                                "/api/categories/**",
+                                "/api/v1/vouchers/**",
+                                "/api/vouchers/**"
+                        ).permitAll()
+
+                        // API kiểm tra áp dụng voucher được Public
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/vouchers/apply",
+                                "/api/vouchers/apply"
                         ).permitAll()
 
                         // Các API Admin
