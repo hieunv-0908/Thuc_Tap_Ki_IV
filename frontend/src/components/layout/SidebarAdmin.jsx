@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Package, ClipboardList, Layers, Users, Store, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, Package, ClipboardList, Layers, Users, Store, LogOut, X } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import ConfirmDialog from '../ui/ConfirmDialog';
@@ -25,6 +25,11 @@ export default function SidebarAdmin({ onCloseMobile }) {
   };
 
   const navItems = [
+    {
+      to: '/admin/dashboard',
+      label: 'Tổng quan',
+      icon: LayoutDashboard,
+    },
     {
       to: '/admin/products',
       label: 'Sản phẩm',
@@ -58,7 +63,7 @@ export default function SidebarAdmin({ onCloseMobile }) {
       {/* Top Header */}
       <div>
         <div className="h-16 px-5 border-b border-line flex items-center justify-between">
-          <NavLink to="/admin/products" className="flex items-center gap-2 group">
+          <NavLink to="/admin/dashboard" className="flex items-center gap-2 group">
             <span className="font-bold text-xl tracking-tight">
               <span className="text-primary-400 group-hover:text-primary-300 transition-colors">Funny</span>
               <span className="text-secondary-400 group-hover:text-secondary-300 transition-colors">Shop</span>
