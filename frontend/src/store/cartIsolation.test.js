@@ -19,13 +19,13 @@ const storageMock = (() => {
   };
 })();
 
-global.localStorage = storageMock;
-global.window = { location: { pathname: '/', search: '', href: '' } };
+globalThis.localStorage = storageMock;
+globalThis.window = { location: { pathname: '/', search: '', href: '' } };
 
 console.log('🧪 Starting Phase 1 Cart Isolation Tests...\n');
 
 // Import stores after mocking localStorage
-const { useCartStore, getCartStorageKey } = await import('./cartStore.js');
+const { useCartStore } = await import('./cartStore.js');
 const { useAuthStore } = await import('./authStore.js');
 
 // Test 1: TC-01 - Guest adds items and reloads
