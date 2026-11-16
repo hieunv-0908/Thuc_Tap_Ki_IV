@@ -12,6 +12,7 @@ import com.funnyshop.entity.ProductImage;
 import com.funnyshop.entity.ProductVariant;
 import com.funnyshop.exception.ResourceNotFoundException;
 import com.funnyshop.repository.CategoryRepository;
+import com.funnyshop.repository.OrderItemRepository;
 import com.funnyshop.repository.ProductImageRepository;
 import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.repository.ProductVariantRepository;
@@ -50,6 +51,9 @@ class ProductServiceImplTest {
 
     @Mock
     private ProductImageRepository productImageRepository;
+
+    @Mock
+    private OrderItemRepository orderItemRepository;
 
     @InjectMocks
     private ProductServiceImpl productService;
@@ -202,23 +206,37 @@ class ProductServiceImplTest {
     }
 
     @Test
-    @DisplayName("hardDeleteProduct - Xóa vật lý sản phẩm qua repository")
+    @DisplayName("hardDeleteProduct - Xóa cứng sản phẩm thành công khi chưa từng có đơn hàng")
     void hardDeleteProduct_Success() {
-        when(productRepository.hardDeleteById(100L)).thenReturn(1);
+        when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
+        when(orderItemRepository.existsByProductIdOrVariantProductId(100L)).thenReturn(false);
 
         productService.hardDeleteProduct(100L);
 
+        verify(productImageRepository).deleteByProductId(100L);
+        verify(productVariantRepository).hardDeleteByProductId(100L);
         verify(productRepository).hardDeleteById(100L);
+    }
+
+    @Test
+    @DisplayName("hardDeleteProduct - Chặn xóa cứng khi sản phẩm đã phát sinh đơn hàng")
+    void hardDeleteProduct_HasOrders_ThrowsException() {
+        when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
+        when(orderItemRepository.existsByProductIdOrVariantProductId(100L)).thenReturn(true);
+
+        assertThrows(IllegalStateException.class, () -> productService.hardDeleteProduct(100L));
+
+        verify(productRepository, never()).hardDeleteById(anyLong());
     }
 
     @Test
     @DisplayName("hardDeleteProduct - Không tìm thấy sản phẩm")
     void hardDeleteProduct_NotFound() {
-        when(productRepository.hardDeleteById(100L)).thenReturn(0);
+        when(productRepository.findById(100L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> productService.hardDeleteProduct(100L));
 
-        verify(productRepository).hardDeleteById(100L);
+        verify(productRepository, never()).save(any(Product.class));
     }
 
     @Test

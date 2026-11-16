@@ -16,8 +16,14 @@ public class CategoryResponse {
     private Long id;
     private String name;
     private String description;
+    private Boolean isDeleted;
+    private Long productCount;
 
     public static CategoryResponse fromEntity(Category category) {
+        return fromEntity(category, null);
+    }
+
+    public static CategoryResponse fromEntity(Category category, Long productCount) {
         if (category == null) {
             return null;
         }
@@ -25,6 +31,8 @@ public class CategoryResponse {
                 .id(category.getId())
                 .name(category.getName())
                 .description(category.getDescription())
+                .isDeleted(category.getIsDeleted())
+                .productCount(productCount)
                 .build();
     }
 }

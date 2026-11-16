@@ -119,7 +119,7 @@ public class AdminProductController {
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
                         .code(HttpStatus.OK.value())
-                        .message("Xóa vĩnh viễn sản phẩm và dữ liệu liên quan thành công!")
+                        .message("Xóa vĩnh viễn sản phẩm thành công!")
                         .build());
     }
 

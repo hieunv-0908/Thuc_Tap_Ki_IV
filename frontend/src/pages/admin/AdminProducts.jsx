@@ -231,13 +231,13 @@ export default function AdminProducts() {
     if (!hardDeleteTarget) return;
     try {
       setIsHardDeleting(true);
-      await adminApi.hardDeleteProduct(hardDeleteTarget.id);
-      toast.success(`Đã xóa vĩnh viễn sản phẩm "${hardDeleteTarget.name}".`);
+      const res = await adminApi.hardDeleteProduct(hardDeleteTarget.id);
+      toast.success(res?.message || `Đã xóa vĩnh viễn sản phẩm "${hardDeleteTarget.name}".`);
       setHardDeleteTarget(null);
       await fetchData();
     } catch (err) {
-      console.error('Lỗi xóa vĩnh viễn sản phẩm:', err);
-      toast.error(err.message || 'Không thể xóa vĩnh viễn sản phẩm. Vui lòng thử lại.');
+      console.error('Lỗi khi xóa vĩnh viễn sản phẩm:', err);
+      toast.error(err.response?.data?.message || err.message || 'Không thể xóa vĩnh viễn sản phẩm.');
     } finally {
       setIsHardDeleting(false);
     }
@@ -668,9 +668,9 @@ export default function AdminProducts() {
         isOpen={Boolean(hardDeleteTarget)}
         onClose={() => !isHardDeleting && setHardDeleteTarget(null)}
         onConfirm={handleHardDeleteConfirm}
-        title="Xóa vĩnh viễn sản phẩm?"
-        description={`Bạn sắp xóa vĩnh viễn "${hardDeleteTarget?.name}" cùng các biến thể, hình ảnh, mục giỏ hàng và chi tiết đơn hàng liên quan. Hành động này không thể hoàn tác hoặc khôi phục.`}
-        confirmText="Xóa vĩnh viễn"
+        title={`Xóa vĩnh viễn sản phẩm "${hardDeleteTarget?.name}"?`}
+        description={`Bạn sắp xóa vĩnh viễn sản phẩm "${hardDeleteTarget?.name}" cùng toàn bộ biến thể và hình ảnh khỏi cơ sở dữ liệu. Thao tác này chỉ thực hiện được khi sản phẩm chưa có đơn hàng liên quan và không thể hoàn tác.`}
+        confirmText="Xác nhận xóa vĩnh viễn"
         cancelText="Hủy"
         variant="danger"
         loading={isHardDeleting}
