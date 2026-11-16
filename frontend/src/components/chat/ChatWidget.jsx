@@ -1,11 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  MessageCircle,
   X,
   Send,
-  Sparkles,
-  Bot,
   AlertCircle,
   Zap,
   ShoppingBag,
@@ -42,7 +39,7 @@ export default function ChatWidget({ onSelectProduct }) {
     {
       id: 'welcome-1',
       sender: 'ai',
-      text: 'Xin chào! Mình là Trợ lý AI FunnyShop. Mình có thể giúp bạn chọn trang phục thời trang nam/nữ, tư vấn size, phối đồ hoặc đặt hàng trực tiếp ngay trong chat hôm nay 👔👗',
+      text: 'Xin chào! Mình là Stylist AI của FunnyShop 👋\n\nMình có thể hỗ trợ bạn:\n• Gợi ý trang phục nam/nữ theo sở thích\n• Tư vấn phối đồ công sở, dạo phố, đi tiệc\n• Tìm kiếm sản phẩm giá tốt, xu hướng mới\n• Hỗ trợ tư vấn size & đặt hàng trực tiếp ngay trong chat (COD / VietQR PayOS)\n\nBạn đang quan tâm đến mẫu trang phục nào hôm nay? 👔👗',
       products: [],
     },
   ]);
@@ -66,9 +63,13 @@ export default function ChatWidget({ onSelectProduct }) {
   const messagesEndRef = useRef(null);
 
   const quickSuggestions = [
-    'Áo Polo & Sơ mi nam',
-    'Đầm & Blazer nữ công sở',
-    'Chính sách giao hàng & đổi size',
+    { label: 'Thời trang Nam 👔', msg: 'Gợi ý thời trang nam' },
+    { label: 'Thời trang Nữ 👗', msg: 'Gợi ý thời trang nữ' },
+    { label: 'Đồ công sở 💼', msg: 'Tư vấn đồ công sở đi làm lịch sự' },
+    { label: 'Gợi ý phối đồ ✨', msg: 'Tư vấn phối đồ đẹp' },
+    { label: 'Giá tốt nhất 💰', msg: 'Sản phẩm giá tốt nhất' },
+    { label: 'Xu hướng mới 🔥', msg: 'Xu hướng thời trang mới nhất' },
+    { label: 'Chính sách đổi trả ↩', msg: 'Chính sách đổi trả và giao hàng' },
   ];
 
   const scrollToBottom = () => {
@@ -317,36 +318,32 @@ export default function ChatWidget({ onSelectProduct }) {
 
   return (
     <>
-      {/* Floating trigger button */}
+      {/* Floating trigger button (Stylist AI - Japanese Minimalist) */}
       {!isOpen && (
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-4 right-4 z-[45] size-14 rounded-full bg-secondary-500 text-white shadow-violet hover:bg-secondary-600 active:bg-secondary-700 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
-          aria-label="Mở trò chuyện với trợ lý FunnyShop"
+          className="fixed bottom-6 right-6 z-[45] px-4 py-2.5 bg-ink text-paper text-xs uppercase tracking-[0.16em] font-light border border-line hover:border-ink transition-colors flex items-center gap-2 cursor-pointer shadow-none"
+          aria-label="Mở Stylist AI"
         >
-          <MessageCircle className="size-7" />
-          <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-primary-500" />
-          </span>
+          <span className="size-2 bg-vermilion inline-block" />
+          <span>Stylist AI</span>
         </button>
       )}
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="fixed inset-x-2 bottom-2 sm:inset-x-auto sm:bottom-24 sm:right-4 z-[45] w-auto sm:w-[390px] h-[550px] max-h-[85vh] rounded-2xl bg-white shadow-xl border border-line flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed inset-x-2 bottom-2 sm:inset-x-auto sm:bottom-20 sm:right-6 z-[45] w-auto sm:w-[400px] h-[560px] max-h-[85vh] bg-paper border border-line flex flex-col overflow-hidden animate-in fade-in duration-200">
           {/* Header */}
-          <div className="bg-secondary-500 text-white px-4 py-3.5 flex items-center justify-between shrink-0 shadow-xs">
+          <div className="bg-paper text-ink border-b border-line px-4 py-3.5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="size-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Sparkles className="size-4.5 text-white" />
-              </div>
+              <span className="size-2 bg-vermilion inline-block" />
               <div>
-                <h3 className="text-sm font-semibold leading-tight">Trợ lý FunnyShop</h3>
-                <span className="text-[11px] text-secondary-100 flex items-center gap-1">
-                  <span className="size-1.5 rounded-full bg-emerald-400" />
-                  Tư vấn & Đặt hàng 24/7
+                <h3 className="font-serif text-sm font-light tracking-wide text-ink leading-tight">
+                  Stylist AI
+                </h3>
+                <span className="text-[10px] uppercase tracking-widest text-mute">
+                  Tư vấn &amp; Đặt hàng 24/7
                 </span>
               </div>
             </div>
@@ -354,38 +351,43 @@ export default function ChatWidget({ onSelectProduct }) {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="p-1 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="p-1 text-mute hover:text-ink transition-colors cursor-pointer"
               aria-label="Đóng bảng trò chuyện"
             >
-              <X className="size-5" />
+              <X className="size-4" strokeWidth={1.5} />
             </button>
           </div>
 
           {/* Messages container */}
-          <div className="flex-1 p-3.5 overflow-y-auto space-y-3 bg-gray-50/50">
+          <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-paper">
             {messages.map((m) => (
               <div
                 key={m.id}
-                className={`flex gap-2 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
               >
-                {m.sender === 'ai' && (
-                  <div className="size-7 rounded-full bg-secondary-100 text-secondary-700 flex items-center justify-center shrink-0 mt-0.5">
-                    <Bot className="size-4" />
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5 mb-1 text-[10px] uppercase tracking-widest text-mute">
+                  {m.sender === 'user' ? (
+                    <span>Bạn</span>
+                  ) : (
+                    <>
+                      <span className="size-1.5 bg-vermilion inline-block" />
+                      <span>Stylist AI</span>
+                    </>
+                  )}
+                </div>
 
-                <div className="max-w-[85%] flex flex-col gap-1.5">
+                <div className="max-w-[90%] flex flex-col gap-2">
                   <div
-                    className={`px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
+                    className={`p-3 text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap ${
                       m.sender === 'user'
-                        ? 'bg-secondary-500 text-white rounded-2xl rounded-br-xs self-end'
+                        ? 'bg-sand text-ink border border-line self-end'
                         : m.isError
-                        ? 'bg-red-50 text-red-700 border border-red-200 rounded-2xl rounded-bl-xs'
-                        : 'bg-white text-ink border border-line rounded-2xl rounded-bl-xs shadow-2xs'
+                        ? 'bg-red-50 text-vermilion border border-vermilion/30'
+                        : 'bg-paper text-ink border border-line'
                     }`}
                   >
                     {m.isError && (
-                      <div className="flex items-center gap-1.5 font-semibold text-red-700 mb-1">
+                      <div className="flex items-center gap-1.5 font-medium text-vermilion mb-1">
                         <AlertCircle className="size-3.5 shrink-0" />
                         <span>Thông báo</span>
                       </div>
@@ -396,7 +398,7 @@ export default function ChatWidget({ onSelectProduct }) {
                         <button
                           type="button"
                           onClick={handleRetry}
-                          className="text-xs font-semibold text-red-700 underline hover:text-red-900 cursor-pointer"
+                          className="text-xs font-medium text-vermilion underline hover:opacity-80 cursor-pointer"
                         >
                           Thử lại
                         </button>
@@ -406,8 +408,8 @@ export default function ChatWidget({ onSelectProduct }) {
 
                   {/* Nút hành động xem đơn hàng nếu có */}
                   {m.orderAction && (
-                    <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
-                      <div className="text-xs font-bold text-emerald-800">
+                    <div className="p-3 bg-sand border border-line flex items-center justify-between gap-2">
+                      <div className="text-xs font-medium text-ink">
                         Đơn hàng #{m.orderAction.id}
                       </div>
                       <button
@@ -416,7 +418,7 @@ export default function ChatWidget({ onSelectProduct }) {
                           setIsOpen(false);
                           navigate(`/orders/${m.orderAction.id}`);
                         }}
-                        className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded-lg cursor-pointer flex items-center gap-1 transition-colors"
+                        className="text-xs uppercase tracking-wider text-paper bg-ink px-3 py-1 cursor-pointer flex items-center gap-1 transition-colors"
                       >
                         <span>Xem đơn hàng</span>
                         <ArrowRight className="size-3" />
@@ -430,30 +432,30 @@ export default function ChatWidget({ onSelectProduct }) {
                       {m.products.map((p) => (
                         <div
                           key={p.id}
-                          className="p-2.5 bg-white rounded-xl border border-line shadow-2xs hover:border-secondary-300 transition-colors flex flex-col gap-2"
+                          className="p-3 bg-paper border border-line flex flex-col gap-2.5"
                         >
-                          <div className="flex items-center gap-2.5">
+                          <div className="flex items-center gap-3">
                             <img
                               src={p.imageUrl}
                               alt={p.name}
-                              className="size-12 rounded-lg object-cover bg-gray-100 shrink-0"
+                              className="size-12 object-cover object-top bg-sand border border-line shrink-0"
                             />
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-ink truncate">{p.name}</p>
-                              <p className="text-xs font-bold text-primary-700">
+                              <p className="font-serif text-xs font-light text-ink truncate">{p.name}</p>
+                              <p className="text-xs font-medium text-ink mt-0.5">
                                 {formatCurrency(p.price)}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1.5 pt-1.5 border-t border-line/60">
+                          <div className="flex items-center gap-2 pt-2 border-t border-line">
                             <button
                               type="button"
                               onClick={() => handleStartQuickOrder(p)}
-                              className="flex-1 py-1.5 px-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                              className="flex-1 py-1.5 px-2 border border-ink text-ink hover:bg-ink hover:text-paper text-[11px] uppercase tracking-wider font-light flex items-center justify-center gap-1 transition-colors cursor-pointer"
                             >
                               <Zap className="size-3" />
-                              <span>Đặt mua ngay</span>
+                              <span>Đặt mua</span>
                             </button>
                             <button
                               type="button"
@@ -465,10 +467,10 @@ export default function ChatWidget({ onSelectProduct }) {
                                   navigate(`/products/${p.id}`);
                                 }
                               }}
-                              className="py-1.5 px-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-ink text-[11px] font-medium flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                              className="py-1.5 px-3 border border-line text-mute hover:text-ink text-[11px] uppercase tracking-wider font-light flex items-center justify-center gap-1 transition-colors cursor-pointer"
                             >
                               <span>Xem</span>
-                              <ExternalLink className="size-3 text-gray-500" />
+                              <ExternalLink className="size-3" />
                             </button>
                           </div>
                         </div>
@@ -479,23 +481,11 @@ export default function ChatWidget({ onSelectProduct }) {
               </div>
             ))}
 
-            {/* AI is thinking bubble */}
+            {/* AI is thinking */}
             {isLoading && (
-              <div className="flex items-center gap-2">
-                <div className="size-7 rounded-full bg-secondary-100 text-secondary-700 flex items-center justify-center shrink-0">
-                  <Bot className="size-4" />
-                </div>
-                <div className="bg-white border border-line rounded-2xl rounded-bl-xs px-3.5 py-2.5 flex items-center gap-1.5 shadow-2xs">
-                  <span className="size-2 rounded-full bg-secondary-400 animate-bounce" />
-                  <span
-                    className="size-2 rounded-full bg-secondary-400 animate-bounce"
-                    style={{ animationDelay: '150ms' }}
-                  />
-                  <span
-                    className="size-2 rounded-full bg-secondary-400 animate-bounce"
-                    style={{ animationDelay: '300ms' }}
-                  />
-                </div>
+              <div className="flex items-center gap-2 text-xs font-light text-mute py-1">
+                <span className="size-1.5 bg-vermilion inline-block" />
+                <span>Stylist AI đang suy nghĩ...</span>
               </div>
             )}
 
@@ -503,16 +493,16 @@ export default function ChatWidget({ onSelectProduct }) {
           </div>
 
           {/* Quick Suggestions Chips */}
-          {messages.length <= 3 && !isLoading && !orderingProduct && (
-            <div className="px-3 py-2 border-t border-line/60 bg-white flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {messages.length <= 4 && !isLoading && !orderingProduct && (
+            <div className="px-3 py-2 border-t border-line bg-paper flex items-center gap-2 overflow-x-auto no-scrollbar">
               {quickSuggestions.map((sug, idx) => (
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => handleSendMessage(sug)}
-                  className="shrink-0 text-xs text-secondary-700 bg-secondary-50 hover:bg-secondary-100 border border-secondary-200 rounded-full px-2.5 py-1 transition-colors cursor-pointer"
+                  onClick={() => handleSendMessage(sug.msg)}
+                  className="shrink-0 text-xs font-light text-ink bg-sand/50 hover:bg-sand border border-line px-2.5 py-1 transition-colors cursor-pointer"
                 >
-                  {sug}
+                  {sug.label}
                 </button>
               ))}
             </div>
@@ -651,24 +641,24 @@ export default function ChatWidget({ onSelectProduct }) {
           )}
 
           {/* Input Box */}
-          <div className="p-3 bg-white border-t border-line flex items-center gap-2">
+          <div className="p-3 bg-paper border-t border-line flex items-center gap-3">
             <input
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Nhập câu hỏi hoặc yêu cầu đặt hàng..."
+              placeholder="Hỏi về trang phục hoặc đặt hàng..."
               disabled={isLoading}
-              className="flex-1 h-10 rounded-full border border-line bg-gray-50 px-3.5 text-sm text-ink placeholder:text-ink-subtle focus:bg-white focus:outline-none focus:border-secondary-500 focus:ring-1 focus:ring-secondary-200"
+              className="flex-1 h-9 border-b border-line bg-transparent px-2 text-xs font-light text-ink placeholder:text-mute focus:outline-none focus:border-ink transition-colors"
             />
             <button
               type="button"
               onClick={() => handleSendMessage()}
               disabled={!inputMessage.trim() || isLoading}
-              className="size-10 rounded-full bg-secondary-500 text-white flex items-center justify-center hover:bg-secondary-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0 cursor-pointer"
+              className="h-9 px-3 bg-ink text-paper text-xs uppercase tracking-widest font-light hover:bg-ink/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0 cursor-pointer flex items-center justify-center"
               aria-label="Gửi tin nhắn"
             >
-              <Send className="size-4" />
+              <Send className="size-3.5" />
             </button>
           </div>
         </div>

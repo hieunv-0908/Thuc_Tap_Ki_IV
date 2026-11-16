@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { ArrowUp } from 'lucide-react';
 
 /**
- * ScrollToTop floating button per Design.md 3.4
+ * ScrollToTop floating button complying with funnyshop-homepage-design.md Section 3.14
+ * Minimalist square border, no rounded bubbles.
  */
 export default function ScrollToTop() {
   const [visible, setVisible] = useState(false);
@@ -30,11 +31,11 @@ export default function ScrollToTop() {
     <button
       type="button"
       onClick={scrollToTop}
-      className="fixed bottom-4 left-4 lg:left-auto lg:right-24 z-40 size-11 rounded-full bg-white text-ink border border-line shadow-md hover:bg-gray-50 hover:text-primary-700 hover:border-primary-200 active:scale-95 transition-all flex items-center justify-center cursor-pointer animate-in fade-in zoom-in-75 duration-200"
+      className="fixed bottom-6 left-6 lg:left-auto lg:right-36 z-40 size-10 bg-paper text-ink border border-line hover:border-ink hover:text-vermilion transition-colors flex items-center justify-center cursor-pointer shadow-none"
       aria-label="Cuộn lên đầu trang"
       title="Lên đầu trang"
     >
-      <ArrowUp className="size-5" />
+      <ArrowUp className="size-4" strokeWidth={1.5} />
     </button>
   );
 }

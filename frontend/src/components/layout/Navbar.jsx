@@ -131,17 +131,17 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
   return (
     <>
       <header
-        className={`sticky top-0 z-40 h-16 w-full border-b border-line bg-white/95 backdrop-blur-md transition-shadow duration-200 ${
-          isScrolled ? 'shadow-soft' : ''
+        className={`sticky top-0 z-40 h-[72px] w-full border-b border-line bg-paper/95 backdrop-blur-md transition-all duration-200 ${
+          isScrolled ? 'shadow-2xs' : ''
         }`}
       >
-        <div className="mx-auto w-full max-w-7xl h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+        <div className="mx-auto w-full max-w-7xl h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-6">
           {/* Left: Mobile hamburger & Logo */}
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-lg text-ink hover:bg-gray-100 transition-colors cursor-pointer"
+              className="lg:hidden p-2 text-ink hover:text-mute transition-colors cursor-pointer"
               aria-label="Mở menu danh mục"
             >
               <Menu className="size-6" />
@@ -149,17 +149,17 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
 
             <Link
               to="/"
-              className="group flex items-center py-1 transition-opacity hover:opacity-90"
+              className="group flex items-center py-1 transition-opacity hover:opacity-80"
               aria-label="Về trang chủ FunnyShop"
             >
               <BrandLogo />
             </Link>
           </div>
 
-          {/* Center: SearchBar (Desktop) with Quick Suggestions Dropdown */}
+          {/* Center: Minimalist Underline SearchBar (Desktop) with Quick Suggestions Dropdown */}
           <div
             ref={searchContainerRef}
-            className="hidden lg:flex flex-1 max-w-xl mx-4 relative items-center"
+            className="hidden lg:flex flex-1 max-w-md mx-6 relative items-center"
           >
             <form onSubmit={handleSearchSubmit} className="relative w-full flex items-center">
               <input
@@ -167,10 +167,10 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}
-                placeholder="Tìm áo thun, quần jeans, váy đầm..."
-                className="h-11 w-full rounded-full border border-line bg-gray-100 pl-11 pr-24 text-sm text-ink placeholder:text-ink-subtle focus:bg-white focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all"
+                placeholder="Tìm sản phẩm..."
+                className="h-10 w-full border-b border-line bg-transparent pl-8 pr-16 text-sm font-light text-ink placeholder:text-mute placeholder:font-light focus:outline-none focus:border-ink transition-colors"
               />
-              <Search className="size-4 text-ink-subtle absolute left-4 pointer-events-none" />
+              <Search className="size-4 text-mute absolute left-0 pointer-events-none" />
 
               {searchQuery && (
                 <button
@@ -183,7 +183,7 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                       navigate('/');
                     }
                   }}
-                  className="absolute right-20 text-ink-subtle hover:text-ink p-1 cursor-pointer"
+                  className="absolute right-12 text-mute hover:text-ink p-1 cursor-pointer"
                   aria-label="Xóa từ khóa tìm kiếm"
                 >
                   <X className="size-3.5" />
@@ -192,7 +192,7 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
 
               <button
                 type="submit"
-                className="absolute right-1.5 h-8 px-4 rounded-full bg-primary-700 text-white text-xs font-semibold hover:bg-primary-800 transition-colors cursor-pointer"
+                className="absolute right-0 text-xs uppercase tracking-widest text-ink hover:text-vermilion font-medium transition-colors cursor-pointer"
               >
                 Tìm
               </button>
@@ -200,9 +200,9 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
 
             {/* Quick Keyword Suggestions Dropdown on Focus */}
             {isSearchFocused && (
-              <div className="absolute top-12 left-0 right-0 bg-white rounded-2xl border border-line shadow-lg p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
-                <p className="text-xs font-semibold text-ink-subtle mb-2 px-1">
-                  Gợi ý từ khóa hot hôm nay:
+              <div className="absolute top-12 left-0 right-0 bg-paper border border-line p-4 z-50 animate-in fade-in duration-150">
+                <p className="text-[11px] uppercase tracking-widest text-mute mb-2.5">
+                  Xu hướng tìm kiếm:
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {QUICK_SEARCH_CHIPS.map((chip) => (
@@ -210,10 +210,9 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                       key={chip.label}
                       type="button"
                       onMouseDown={() => handleSelectQuickSuggestion(chip.label)}
-                      className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-gray-100 hover:bg-primary-50 hover:text-primary-700 transition-colors cursor-pointer"
+                      className="text-xs px-2.5 py-1 border border-line text-ink hover:border-ink transition-colors cursor-pointer"
                     >
-                      <span>{chip.emoji}</span>
-                      <span>{chip.label}</span>
+                      {chip.label}
                     </button>
                   ))}
                 </div>
@@ -222,7 +221,7 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-3 sm:gap-4">
             <div className="hidden sm:block">
               <ThemeToggle />
             </div>
@@ -231,7 +230,7 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
             <button
               type="button"
               onClick={() => setIsMobileSearchOpen((prev) => !prev)}
-              className="lg:hidden p-2.5 rounded-lg text-ink hover:bg-gray-100 transition-colors cursor-pointer"
+              className="lg:hidden p-2 text-ink hover:text-mute transition-colors cursor-pointer"
               aria-label="Tìm kiếm"
             >
               <Search className="size-5" />
@@ -240,14 +239,14 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
             {/* Cart Icon with Pop-animated Badge */}
             <Link
               to="/cart"
-              className="relative p-2.5 rounded-lg text-ink hover:bg-gray-100 transition-colors flex items-center justify-center cursor-pointer"
+              className="relative p-2 text-ink hover:text-mute transition-colors flex items-center justify-center cursor-pointer"
               aria-label={`Giỏ hàng có ${totalCartCount} sản phẩm`}
             >
               <ShoppingCart className="size-5" />
               {totalCartCount > 0 && (
                 <span
                   key={totalCartCount}
-                  className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-primary-700 text-white text-xs font-bold flex items-center justify-center shadow-xs animate-[pop_300ms_ease-out]"
+                  className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-ink text-paper text-[10px] font-bold flex items-center justify-center animate-[pop_300ms_ease-out]"
                   aria-hidden="true"
                 >
                   {displayCartCount}
@@ -261,44 +260,44 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                 <button
                   type="button"
                   onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                  className="flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border border-line hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="flex items-center gap-2 py-1.5 px-2.5 border border-line hover:border-ink transition-colors cursor-pointer"
                   aria-expanded={isUserMenuOpen}
                   aria-label="Menu tài khoản"
                 >
-                  <div className="size-8 rounded-full bg-primary-100 text-primary-700 font-bold text-xs flex items-center justify-center">
+                  <div className="size-6 rounded-full bg-sand text-ink font-serif text-xs flex items-center justify-center">
                     {getInitials(user?.fullName)}
                   </div>
-                  <span className="hidden md:inline text-sm font-medium text-ink max-w-[120px] truncate">
+                  <span className="hidden md:inline text-xs font-light tracking-wide text-ink max-w-[120px] truncate">
                     {user?.fullName}
                   </span>
-                  <ChevronDown className="size-4 text-ink-subtle hidden md:inline" />
+                  <ChevronDown className="size-3.5 text-mute hidden md:inline" />
                 </button>
 
                 {/* Dropdown Menu */}
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-xl border border-line bg-white shadow-md py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="absolute right-0 mt-2 w-56 border border-line bg-paper py-2 z-50 animate-in fade-in duration-150">
                     <div className="px-4 py-2 border-b border-line">
-                      <p className="text-xs text-ink-subtle">Tài khoản</p>
-                      <p className="text-sm font-semibold text-ink truncate">{user?.fullName}</p>
-                      <p className="text-xs text-ink-muted truncate">{user?.email}</p>
+                      <p className="text-[11px] text-mute uppercase tracking-widest">Tài khoản</p>
+                      <p className="text-sm font-serif text-ink truncate mt-0.5">{user?.fullName}</p>
+                      <p className="text-xs text-mute truncate">{user?.email}</p>
                     </div>
 
                     <div className="py-1">
                       <Link
                         to="/profile"
                         onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-ink hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-ink hover:bg-sand/40 transition-colors"
                       >
-                        <User className="size-4 text-ink-subtle" />
+                        <User className="size-3.5 text-mute" />
                         <span>Hồ sơ cá nhân</span>
                       </Link>
 
                       <Link
                         to="/orders"
                         onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-ink hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-ink hover:bg-sand/40 transition-colors"
                       >
-                        <ClipboardList className="size-4 text-ink-subtle" />
+                        <ClipboardList className="size-3.5 text-mute" />
                         <span>Đơn hàng của tôi</span>
                       </Link>
 
@@ -306,9 +305,9 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                         <Link
                           to="/admin/products"
                           onClick={() => setIsUserMenuOpen(false)}
-                          className="px-4 py-2 text-xs font-semibold text-secondary-700 bg-secondary-50 hover:bg-secondary-100 flex items-center gap-2 rounded-md mx-2 my-1 transition-colors"
+                          className="px-4 py-2 text-xs font-medium text-vermilion hover:bg-vermilion/10 flex items-center gap-2 transition-colors"
                         >
-                          <Shield className="size-3.5 text-secondary-500" />
+                          <Shield className="size-3.5 text-vermilion" />
                           <span>Trang quản trị (Admin)</span>
                         </Link>
                       )}
@@ -318,9 +317,9 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                       <button
                         type="button"
                         onClick={handleOpenLogoutConfirm}
-                        className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer text-left"
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-vermilion hover:bg-vermilion/10 transition-colors cursor-pointer text-left"
                       >
-                        <LogOut className="size-4" />
+                        <LogOut className="size-3.5" />
                         <span>Đăng xuất</span>
                       </button>
                     </div>
@@ -330,14 +329,20 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
             ) : (
               <div className="flex items-center gap-2">
                 <Link to="/login" state={{ from: location.pathname }}>
-                  <Button variant="outline" size="sm">
+                  <button
+                    type="button"
+                    className="px-3 py-1.5 text-xs uppercase tracking-wider text-ink hover:text-mute transition-colors cursor-pointer"
+                  >
                     Đăng nhập
-                  </Button>
+                  </button>
                 </Link>
                 <Link to="/register" className="hidden sm:inline-flex">
-                  <Button variant="primary" size="sm">
+                  <button
+                    type="button"
+                    className="px-3.5 py-1.5 border border-ink text-xs uppercase tracking-wider text-ink hover:bg-ink hover:text-paper transition-colors cursor-pointer"
+                  >
                     Đăng ký
-                  </Button>
+                  </button>
                 </Link>
               </div>
             )}
