@@ -1,32 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Mail,
-  Lock,
-  KeyRound,
-  ShieldCheck,
   CheckCircle2,
   ArrowLeft,
   ArrowRight,
-  Sparkles,
-  Zap,
   RefreshCw,
   AlertCircle,
-  Check,
 } from 'lucide-react';
 import { authApi } from '../api/auth';
 import { toast } from '../store/toastStore';
 import { isValidEmail, isValidPassword } from '../utils/validators';
-import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
-import StepIndicator from '../components/ui/StepIndicator';
+import BrandLogo from '../components/ui/BrandLogo';
 
 const RESET_STEPS = ['Xác nhận tài khoản', 'Mã OTP & Mật khẩu', 'Hoàn tất'];
-const isMock = false;
 
 /**
- * ForgotPassword page complying with FunnyShop Design System
- * 3-step wizard with mock data support
+ * ForgotPassword page - Japanese Minimalist v3.0 (Ma 間 & Kanso 簡素)
+ * Thiết kế tinh tế, thanh lịch, đồng bộ phong cách với trang chủ FunnyShop.
  */
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -45,7 +35,6 @@ export default function ForgotPassword() {
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mockOtpHint, setMockOtpHint] = useState('');
   const [resendCountdown, setResendCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
@@ -112,7 +101,6 @@ export default function ForgotPassword() {
       });
 
       setUserEmail(trimmed);
-      setMockOtpHint(isMock ? (res?.mockOtp || '123456') : '');
       setResendCountdown(60);
       setCanResend(false);
       setCurrentStep(1);
@@ -134,11 +122,9 @@ export default function ForgotPassword() {
     setServerError('');
     try {
       // const res = await authApi.forgotPassword({ emailOrUsername: identifier.trim() });
-      const res = await authApi.forgotPassword({
+      await authApi.forgotPassword({
         email: userEmail,
       });
-      // Chỉ cập nhật OTP gợi ý khi ở chế độ Mock
-      setMockOtpHint(isMock ? (res.mockOtp || '123456') : '');
       setResendCountdown(60);
       setCanResend(false);
       toast.success('Đã gửi lại mã OTP mới!');
@@ -211,210 +197,192 @@ export default function ForgotPassword() {
       setIsSubmitting(false);
     }
   };
-  // Quick fill sample account
-  const handleQuickFillAccount = (acc) => {
-    setIdentifier(acc);
-    setErrors({});
-    setServerError('');
-  };
-
-  // Quick fill OTP
-  const handleQuickFillOtp = () => {
-    setOtp('123456');
-    if (errors.otp) {
-      setErrors((prev) => ({ ...prev, otp: '' }));
-    }
-  };
 
   return (
-    <div className="relative min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 py-8 md:py-16 bg-gradient-to-br from-primary-50 via-white to-secondary-50 overflow-hidden">
-      {/* 2 Decorative Soft Blobs */}
-      <div
-        className="absolute top-10 left-10 size-64 rounded-full bg-primary-200/40 blur-3xl pointer-events-none select-none"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute bottom-10 right-10 size-72 rounded-full bg-secondary-200/40 blur-3xl pointer-events-none select-none"
-        aria-hidden="true"
-      />
+    <div className="min-h-[calc(100vh-72px)] bg-[#EDEDF0] flex items-center justify-center px-4 py-10 sm:py-16">
+      <div className="w-full max-w-4xl border border-line bg-white grid grid-cols-1 lg:grid-cols-12 overflow-hidden shadow-xs">
+        {/* Left: Editorial Lookbook Panel (Only lg:) */}
+        <div className="hidden lg:flex lg:col-span-5 bg-[#121214] text-paper p-10 flex-col justify-between relative overflow-hidden">
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none select-none grayscale"
+            style={{
+              backgroundImage:
+                "url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1000&auto=format&fit=crop&q=80')",
+            }}
+          />
 
-      <div className="relative z-10 w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-        {/* Left: Brand Panel (Only lg:) */}
-        <div className="hidden lg:flex flex-col justify-between h-full rounded-3xl bg-gradient-to-br from-primary-600 to-secondary-600 p-10 text-white relative overflow-hidden shadow-brand">
-          {/* Floating emoji in brand panel */}
-          <span
-            className="absolute top-6 right-6 text-5xl opacity-40 animate-[float_5s_ease-in-out_infinite] select-none pointer-events-none"
-            aria-hidden="true"
-          >
-            🔑
-          </span>
-          <span
-            className="absolute bottom-8 right-8 text-4xl opacity-30 animate-[float-slow_8s_ease-in-out_infinite] select-none pointer-events-none"
-            aria-hidden="true"
-          >
-            🛡️
-          </span>
+          <div className="relative z-10">
+            <Link to="/" className="inline-block mb-12">
+              <BrandLogo onDark size="md" />
+            </Link>
 
-          <div>
-            <div className="inline-flex items-center gap-2 text-2xl font-bold tracking-tight mb-8">
-              <span>🎈</span>
-              <span>FunnyShop</span>
+            <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-zinc-400 font-light mb-4">
+              <span className="size-1.5 bg-vermilion inline-block" />
+              <span>Bảo mật tài khoản</span>
             </div>
 
-            <h2 className="text-3xl font-extrabold tracking-tight leading-snug mb-4">
-              Khôi phục tài khoản dễ dàng & an toàn
+            <h2 className="font-serif text-2xl xl:text-3xl font-light text-zinc-100 leading-snug tracking-wide mb-4">
+              Khôi phục quyền truy cập nhanh chóng &amp; an toàn.
             </h2>
-            <p className="text-sm text-white/90 leading-relaxed mb-8">
-              Đừng lo lắng nếu bạn quên mật khẩu! FunnyShop luôn sẵn sàng hỗ trợ bạn lấy lại quyền
-              truy cập chỉ trong vài bước đơn giản.
+
+            <p className="text-xs font-light text-zinc-400 leading-relaxed mb-10">
+              Chỉ với vài thao tác xác thực qua mã OTP bảo mật gửi đến email của bạn, mật khẩu mới sẽ được thiết lập ngay lập tức.
             </p>
 
-            {/* 3 benefit bullets */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="size-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <ShieldCheck className="size-4.5 text-white" />
-                </div>
-                <span className="text-sm font-medium">Bảo mật cao với mã xác thực OTP</span>
+            <div className="space-y-4 border-t border-zinc-800/80 pt-6">
+              <div className="flex items-center gap-3 text-xs font-light text-zinc-300">
+                <span className="text-[10px] font-mono text-zinc-500">01</span>
+                <span>Xác thực danh tính bằng mã OTP 6 số</span>
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="size-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <Zap className="size-4.5 text-white" />
-                </div>
-                <span className="text-sm font-medium">Khôi phục tức thì trong vài phút</span>
+              <div className="flex items-center gap-3 text-xs font-light text-zinc-300">
+                <span className="text-[10px] font-mono text-zinc-500">02</span>
+                <span>Thiết lập mật khẩu mới có mã hóa an toàn</span>
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="size-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <Sparkles className="size-4.5 text-white" />
-                </div>
-                <span className="text-sm font-medium">Tiếp tục mua sắm quà tặng vui nhộn</span>
+              <div className="flex items-center gap-3 text-xs font-light text-zinc-300">
+                <span className="text-[10px] font-mono text-zinc-500">03</span>
+                <span>Đăng nhập tức thì tiếp tục trải nghiệm mua sắm</span>
               </div>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/20 text-xs text-white/80">
-            Nền tảng quà tặng độc lạ hàng đầu cho giới trẻ Việt Nam.
+          <div className="relative z-10 pt-8 border-t border-zinc-800/80 text-[10px] uppercase tracking-widest text-zinc-500 font-light">
+            FunnyShop • Triết lý Kanso 簡素
           </div>
         </div>
 
         {/* Right: Form Card */}
-        <div className="w-full max-w-md mx-auto bg-white rounded-2xl border border-line shadow-soft p-6 sm:p-8 animate-in fade-in duration-200">
+        <div className="lg:col-span-7 p-6 sm:p-10 md:p-12 flex flex-col justify-center bg-white">
           {/* Header */}
-          <div className="text-center mb-6">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1.5 text-2xl font-bold tracking-tight mb-2"
-            >
-              <span className="text-3xl" aria-hidden="true">
-                🎈
-              </span>
-              <span className="text-primary-700">Funny</span>
-              <span className="text-secondary-500">Shop</span>
-            </Link>
-            <h1 className="text-2xl font-bold text-ink">Quên mật khẩu</h1>
-            <p className="text-sm text-ink-muted mt-1">
-              {currentStep === 0 && 'Nhập thông tin tài khoản để nhận mã khôi phục'}
-              {currentStep === 1 && 'Nhập mã xác thực OTP và thiết lập mật khẩu mới'}
-              {currentStep === 2 && 'Mật khẩu đã được thiết lập thành công'}
+          <div className="mb-6">
+            <div className="lg:hidden mb-6">
+              <Link to="/">
+                <BrandLogo size="md" />
+              </Link>
+            </div>
+
+            <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-mute mb-1.5">
+              <span className="size-1.5 bg-vermilion inline-block" />
+              <span>Khôi phục tài khoản</span>
+            </div>
+            <h1 className="font-serif text-2xl sm:text-3xl font-light text-ink tracking-wide">
+              Quên mật khẩu
+            </h1>
+            <p className="text-xs font-light text-mute mt-1.5">
+              {currentStep === 0 && 'Nhập thông tin tài khoản để nhận mã khôi phục qua email.'}
+              {currentStep === 1 && 'Nhập mã xác thực OTP và thiết lập mật khẩu mới.'}
+              {currentStep === 2 && 'Mật khẩu đã được thiết lập thành công.'}
             </p>
           </div>
 
-          {/* Step Indicator */}
-          <StepIndicator
-            steps={RESET_STEPS}
-            currentStep={currentStep}
-            className="mb-6 -mt-2"
-          />
+          {/* Minimalist Step Tracker */}
+          <div className="grid grid-cols-3 gap-2 mb-8 border-b border-line pb-4">
+            {RESET_STEPS.map((stepLabel, idx) => {
+              const isPassed = idx < currentStep;
+              const isCurrent = idx === currentStep;
+              return (
+                <div key={idx} className="flex flex-col gap-1.5">
+                  <div
+                    className={`h-0.5 transition-colors ${
+                      isPassed || isCurrent ? 'bg-ink' : 'bg-line'
+                    }`}
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`text-[10px] font-mono ${
+                        isCurrent ? 'text-vermilion font-medium' : isPassed ? 'text-ink' : 'text-mute'
+                      }`}
+                    >
+                      0{idx + 1}
+                    </span>
+                    <span
+                      className={`text-[11px] truncate font-light ${
+                        isCurrent ? 'text-ink font-normal' : isPassed ? 'text-ink' : 'text-mute'
+                      }`}
+                    >
+                      {stepLabel}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
           {/* Server Error Alert */}
           {serverError && (
             <div
               role="alert"
-              className="mb-5 flex items-start gap-3 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm animate-in shake duration-200"
+              className="mb-6 flex items-start gap-2.5 p-3.5 bg-red-50/70 border border-vermilion/30 text-vermilion text-xs font-light"
             >
-              <AlertCircle className="size-5 shrink-0 mt-0.5 text-red-600" aria-hidden="true" />
-              <div className="flex-1 font-medium">{serverError}</div>
+              <AlertCircle className="size-4 shrink-0 mt-0.5 text-vermilion" aria-hidden="true" />
+              <div className="flex-1 leading-relaxed">{serverError}</div>
             </div>
           )}
 
           {/* --- STEP 0: Request OTP --- */}
           {currentStep === 0 && (
-            <form onSubmit={handleRequestOtp} className="space-y-4" noValidate>
-              <Input
-                label="Email hoặc Tên đăng nhập"
-                id="reset-identifier"
-                name="identifier"
-                type="text"
-                value={identifier}
-                onChange={(e) => {
-                  setIdentifier(e.target.value);
-                  setServerError('');
-                  if (errors.identifier) setErrors((prev) => ({ ...prev, identifier: '' }));
-                }}
-                placeholder="Ví dụ: user1@gmail.com hoặc admin"
-                error={errors.identifier}
-                leftIcon={Mail}
-                required
-                disabled={isSubmitting}
-                helperText="Hệ thống sẽ gửi mã xác thực 6 chữ số đến email của bạn"
-              />
+            <form onSubmit={handleRequestOtp} className="space-y-5" noValidate>
+              <div>
+                <label
+                  htmlFor="reset-identifier"
+                  className="block text-[11px] uppercase tracking-widest text-mute font-light mb-1.5"
+                >
+                  Email hoặc Tên đăng nhập <span className="text-vermilion">*</span>
+                </label>
+                <input
+                  id="reset-identifier"
+                  name="identifier"
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => {
+                    setIdentifier(e.target.value);
+                    setServerError('');
+                    if (errors.identifier) setErrors((prev) => ({ ...prev, identifier: '' }));
+                  }}
+                  placeholder="Ví dụ: user1@gmail.com hoặc username"
+                  disabled={isSubmitting}
+                  className={`w-full h-11 px-3 bg-white border text-xs sm:text-sm text-ink placeholder:text-mute/60 font-light transition-colors focus:outline-none ${
+                    errors.identifier
+                      ? 'border-vermilion focus:border-vermilion'
+                      : 'border-line focus:border-ink'
+                  }`}
+                />
+                {errors.identifier ? (
+                  <p className="text-xs text-vermilion font-light mt-1 flex items-center gap-1">
+                    <AlertCircle className="size-3" />
+                    <span>{errors.identifier}</span>
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-mute font-light mt-1">
+                    Mã xác thực bảo mật 6 số sẽ được gửi về hộp thư điện tử của bạn.
+                  </p>
+                )}
+              </div>
 
               <div className="pt-2">
-                <Button
+                <button
                   type="submit"
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  loading={isSubmitting}
-                  className="font-bold text-base shadow-brand"
+                  disabled={isSubmitting}
+                  className="w-full h-11 bg-ink text-paper text-xs uppercase tracking-[0.2em] font-light hover:bg-ink/85 border border-ink transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <span>Gửi mã xác thực OTP</span>
-                  <ArrowRight className="size-4.5 ml-2" />
-                </Button>
+                  {isSubmitting ? (
+                    <span>Đang gửi mã...</span>
+                  ) : (
+                    <>
+                      <span>Gửi mã xác thực OTP</span>
+                      <ArrowRight className="size-3.5" />
+                    </>
+                  )}
+                </button>
               </div>
-
-              {/* Mock accounts quick-fill - chỉ hiện khi ở chế độ Mock */}
-              {isMock && (
-              <div className="mt-6 pt-5 border-t border-line">
-                <p className="text-xs text-ink-subtle font-medium text-center mb-2.5 flex items-center justify-center gap-1.5">
-                  <Sparkles className="size-3.5 text-secondary-500" />
-                  Tài khoản mẫu để thử nghiệm nhanh (MockData):
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFillAccount('user1@gmail.com')}
-                    className="p-2.5 text-xs text-ink rounded-lg border border-line bg-gray-50 hover:bg-gray-100 text-left transition-colors cursor-pointer"
-                  >
-                    <div className="font-semibold text-ink">Khách hàng (User)</div>
-                    <div className="text-[11px] text-ink-subtle truncate">user1@gmail.com</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFillAccount('admin@funnyshop.vn')}
-                    className="p-2.5 text-xs text-ink rounded-lg border border-secondary-200 bg-secondary-50/60 hover:bg-secondary-100 text-left transition-colors cursor-pointer"
-                  >
-                    <div className="font-semibold text-secondary-700 flex items-center gap-1">
-                      <ShieldCheck className="size-3" />
-                      Admin
-                    </div>
-                    <div className="text-[11px] text-secondary-800 truncate">admin@funnyshop.vn</div>
-                  </button>
-                </div>
-              </div>
-              )}
 
               {/* Back to Login link */}
-              <div className="mt-6 text-center text-sm">
+              <div className="mt-8 pt-6 border-t border-line text-center text-xs font-light text-mute">
                 <Link
                   to="/login"
-                  className="inline-flex items-center gap-1.5 font-semibold text-ink-muted hover:text-ink transition-colors"
+                  className="inline-flex items-center gap-1.5 text-ink hover:text-vermilion underline underline-offset-4 transition-colors font-normal"
                 >
-                  <ArrowLeft className="size-4" />
-                  <span>Quay lại đăng nhập</span>
+                  <ArrowLeft className="size-3.5" />
+                  <span>Quay lại trang đăng nhập</span>
                 </Link>
               </div>
             </form>
@@ -422,58 +390,42 @@ export default function ForgotPassword() {
 
           {/* --- STEP 1: Enter OTP & New Password --- */}
           {currentStep === 1 && (
-            <form onSubmit={handleResetPassword} className="space-y-4" noValidate>
-              {/* Target email and Mock OTP notice */}
-              <div className="p-3.5 rounded-xl bg-primary-50 border border-primary-200 text-xs text-primary-900 flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <span>
-                    Mã xác thực đã gửi đến: <strong className="font-semibold">{userEmail}</strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentStep(0);
-                      setServerError('');
-                      setErrors({});
-                    }}
-                    className="text-xs font-semibold text-primary-700 hover:underline cursor-pointer"
-                  >
-                    Đổi tài khoản
-                  </button>
-                </div>
-
-                {/* Mock OTP Badge - chỉ hiện khi ở chế độ Mock */}
-                {isMock && mockOtpHint && (
-                <div className="mt-1 pt-1.5 border-t border-primary-200/60 flex items-center justify-between">
-                  <span className="flex items-center gap-1 text-primary-800 font-medium">
-                    <Sparkles className="size-3 text-secondary-600" />
-                    Mã OTP thử nghiệm: <code className="bg-white px-1.5 py-0.5 rounded font-mono font-bold text-primary-700">{mockOtpHint}</code>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleQuickFillOtp}
-                    className="px-2 py-0.5 bg-primary-700 text-white rounded text-[11px] font-semibold hover:bg-primary-800 transition-colors cursor-pointer"
-                  >
-                    Điền nhanh
-                  </button>
-                </div>
-                )}
+            <form onSubmit={handleResetPassword} className="space-y-5" noValidate>
+              {/* Target email info notice */}
+              <div className="p-3 bg-sand/60 border border-line text-xs font-light text-ink flex items-center justify-between">
+                <span>
+                  Mã gửi đến: <strong className="font-normal text-ink">{userEmail}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentStep(0);
+                    setServerError('');
+                    setErrors({});
+                  }}
+                  className="text-[11px] text-mute hover:text-ink underline underline-offset-4 cursor-pointer"
+                >
+                  Đổi email
+                </button>
               </div>
 
               {/* OTP Input */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="reset-otp" className="text-sm font-medium text-ink">
-                    Mã xác thực OTP <span className="text-primary-700">*</span>
+                  <label
+                    htmlFor="reset-otp"
+                    className="block text-[11px] uppercase tracking-widest text-mute font-light"
+                  >
+                    Mã xác thực OTP <span className="text-vermilion">*</span>
                   </label>
                   <button
                     type="button"
                     onClick={handleResendOtp}
                     disabled={!canResend || isSubmitting}
-                    className={`text-xs inline-flex items-center gap-1 transition-colors ${
+                    className={`text-[11px] font-light inline-flex items-center gap-1 transition-colors ${
                       canResend
-                        ? 'text-primary-700 hover:text-primary-800 font-semibold cursor-pointer'
-                        : 'text-ink-subtle cursor-not-allowed'
+                        ? 'text-ink underline underline-offset-4 cursor-pointer hover:text-vermilion'
+                        : 'text-mute/60 cursor-not-allowed'
                     }`}
                   >
                     <RefreshCw className={`size-3 ${isSubmitting ? 'animate-spin' : ''}`} />
@@ -481,7 +433,7 @@ export default function ForgotPassword() {
                   </button>
                 </div>
 
-                <Input
+                <input
                   id="reset-otp"
                   name="otp"
                   type="text"
@@ -492,18 +444,31 @@ export default function ForgotPassword() {
                     setOtp(val);
                     if (errors.otp) setErrors((prev) => ({ ...prev, otp: '' }));
                   }}
-                  placeholder="Nhập 6 chữ số (123456)"
-                  error={errors.otp}
-                  leftIcon={KeyRound}
-                  required
+                  placeholder="Nhập 6 số xác thực"
                   disabled={isSubmitting}
+                  className={`w-full h-11 px-3 bg-paper border text-center font-mono tracking-[0.3em] text-sm text-ink placeholder:text-mute/60 font-light transition-colors focus:outline-none ${
+                    errors.otp
+                      ? 'border-vermilion focus:border-vermilion'
+                      : 'border-line focus:border-ink'
+                  }`}
                 />
+                {errors.otp && (
+                  <p className="text-xs text-vermilion font-light mt-1 flex items-center gap-1">
+                    <AlertCircle className="size-3" />
+                    <span>{errors.otp}</span>
+                  </p>
+                )}
               </div>
 
               {/* New Password Input */}
               <div>
-                <Input
-                  label="Mật khẩu mới"
+                <label
+                  htmlFor="reset-new-password"
+                  className="block text-[11px] uppercase tracking-widest text-mute font-light mb-1.5"
+                >
+                  Mật khẩu mới <span className="text-vermilion">*</span>
+                </label>
+                <input
                   id="reset-new-password"
                   name="newPassword"
                   type="password"
@@ -513,53 +478,51 @@ export default function ForgotPassword() {
                     if (errors.newPassword) setErrors((prev) => ({ ...prev, newPassword: '' }));
                   }}
                   placeholder="Tối thiểu 6 ký tự"
-                  error={errors.newPassword}
-                  leftIcon={Lock}
-                  required
                   disabled={isSubmitting}
+                  className={`w-full h-11 px-3 bg-white border text-xs sm:text-sm text-ink placeholder:text-mute/60 font-light transition-colors focus:outline-none ${
+                    errors.newPassword
+                      ? 'border-vermilion focus:border-vermilion'
+                      : 'border-line focus:border-ink'
+                  }`}
                 />
+                {errors.newPassword && (
+                  <p className="text-xs text-vermilion font-light mt-1 flex items-center gap-1">
+                    <AlertCircle className="size-3" />
+                    <span>{errors.newPassword}</span>
+                  </p>
+                )}
 
-                {/* Password Strength Meter */}
+                {/* Minimalist 3-bar password strength meter */}
                 {newPassword && (
                   <div className="mt-2 space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-ink-subtle">Độ mạnh mật khẩu:</span>
+                    <div className="flex items-center justify-between text-[11px] font-light text-mute">
+                      <span>Độ an toàn:</span>
                       <span
-                        className={`font-semibold ${
+                        className={
                           passwordStrength.level === 1
-                            ? 'text-red-500'
+                            ? 'text-vermilion font-normal'
                             : passwordStrength.level === 2
-                            ? 'text-amber-500'
-                            : 'text-emerald-500'
-                        }`}
+                            ? 'text-amber-600 font-normal'
+                            : 'text-emerald-700 font-normal'
+                        }
                       >
                         {passwordStrength.label}
                       </span>
                     </div>
-                    <div className="grid grid-cols-3 gap-1.5 h-1.5 w-full">
+                    <div className="grid grid-cols-3 gap-1">
                       <div
-                        className={`rounded-full transition-colors ${
-                          passwordStrength.level >= 1
-                            ? passwordStrength.level === 1
-                              ? 'bg-red-500'
-                              : passwordStrength.level === 2
-                              ? 'bg-amber-500'
-                              : 'bg-emerald-500'
-                            : 'bg-gray-200'
+                        className={`h-0.5 transition-all ${
+                          passwordStrength.level >= 1 ? 'bg-vermilion' : 'bg-line'
                         }`}
                       />
                       <div
-                        className={`rounded-full transition-colors ${
-                          passwordStrength.level >= 2
-                            ? passwordStrength.level === 2
-                              ? 'bg-amber-500'
-                              : 'bg-emerald-500'
-                            : 'bg-gray-200'
+                        className={`h-0.5 transition-all ${
+                          passwordStrength.level >= 2 ? 'bg-amber-500' : 'bg-line'
                         }`}
                       />
                       <div
-                        className={`rounded-full transition-colors ${
-                          passwordStrength.level >= 3 ? 'bg-emerald-500' : 'bg-gray-200'
+                        className={`h-0.5 transition-all ${
+                          passwordStrength.level >= 3 ? 'bg-emerald-600' : 'bg-line'
                         }`}
                       />
                     </div>
@@ -568,9 +531,14 @@ export default function ForgotPassword() {
               </div>
 
               {/* Confirm New Password Input */}
-              <div>
-                <Input
-                  label="Xác nhận mật khẩu mới"
+              <div className="relative">
+                <label
+                  htmlFor="reset-confirm-password"
+                  className="block text-[11px] uppercase tracking-widest text-mute font-light mb-1.5"
+                >
+                  Xác nhận mật khẩu mới <span className="text-vermilion">*</span>
+                </label>
+                <input
                   id="reset-confirm-password"
                   name="confirmPassword"
                   type="password"
@@ -580,87 +548,90 @@ export default function ForgotPassword() {
                     if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: '' }));
                   }}
                   placeholder="Nhập lại mật khẩu mới"
-                  error={errors.confirmPassword}
-                  leftIcon={Lock}
-                  required
                   disabled={isSubmitting}
+                  className={`w-full h-11 px-3 bg-white border text-xs sm:text-sm text-ink placeholder:text-mute/60 font-light transition-colors focus:outline-none ${
+                    errors.confirmPassword
+                      ? 'border-vermilion focus:border-vermilion'
+                      : 'border-line focus:border-ink'
+                  }`}
                 />
                 {isConfirmMatching && (
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium mt-1">
-                    <Check className="size-3.5" />
-                    <span>Mật khẩu xác nhận khớp</span>
+                  <div className="absolute right-3 top-9 text-emerald-600 pointer-events-none">
+                    <CheckCircle2 className="size-4" />
                   </div>
+                )}
+                {errors.confirmPassword && (
+                  <p className="text-xs text-vermilion font-light mt-1 flex items-center gap-1">
+                    <AlertCircle className="size-3" />
+                    <span>{errors.confirmPassword}</span>
+                  </p>
                 )}
               </div>
 
               {/* Action Buttons */}
               <div className="pt-2 space-y-2">
-                <Button
+                <button
                   type="submit"
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  loading={isSubmitting}
-                  className="font-bold text-base shadow-brand"
+                  disabled={isSubmitting}
+                  className="w-full h-11 bg-ink text-paper text-xs uppercase tracking-[0.2em] font-light hover:bg-ink/85 border border-ink transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <span>Cập nhật mật khẩu</span>
-                  <CheckCircle2 className="size-4.5 ml-2" />
-                </Button>
+                  {isSubmitting ? (
+                    <span>Đang cập nhật...</span>
+                  ) : (
+                    <>
+                      <span>Cập nhật mật khẩu mới</span>
+                      <CheckCircle2 className="size-3.5" />
+                    </>
+                  )}
+                </button>
 
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="md"
-                  fullWidth
                   onClick={() => setCurrentStep(0)}
                   disabled={isSubmitting}
-                  className="text-ink-muted hover:text-ink text-sm"
+                  className="w-full h-10 text-xs font-light text-mute hover:text-ink underline underline-offset-4 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <ArrowLeft className="size-4 mr-1.5" />
+                  <ArrowLeft className="size-3.5" />
                   <span>Quay lại bước trước</span>
-                </Button>
+                </button>
               </div>
             </form>
           )}
 
           {/* --- STEP 2: Success State --- */}
           {currentStep === 2 && (
-            <div className="text-center py-4 space-y-6 animate-in zoom-in-95 duration-200">
-              <div className="size-18 mx-auto rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
-                <CheckCircle2 className="size-10" />
+            <div className="text-center py-6 space-y-6">
+              <div className="size-12 mx-auto border border-emerald-600 text-emerald-600 flex items-center justify-center">
+                <CheckCircle2 className="size-6" />
               </div>
 
               <div className="space-y-2">
-                <h2 className="text-xl font-bold text-ink">Đổi mật khẩu thành công!</h2>
-                <p className="text-sm text-ink-muted leading-relaxed">
-                  Mật khẩu tài khoản <strong className="text-ink">{userEmail || identifier}</strong> đã
-                  được cập nhật thành công vào hệ thống. Bạn có thể đăng nhập ngay với mật khẩu mới.
+                <h2 className="font-serif text-2xl font-light text-ink tracking-wide">
+                  Đổi mật khẩu thành công
+                </h2>
+                <p className="text-xs font-light text-mute leading-relaxed max-w-sm mx-auto">
+                  Mật khẩu tài khoản <strong className="text-ink font-normal">{userEmail || identifier}</strong> đã
+                  được cập nhật thành công. Bạn có thể đăng nhập ngay với mật khẩu mới.
                 </p>
               </div>
 
-              <div className="space-y-3 pt-2">
-                <Button
+              <div className="space-y-3 pt-3 max-w-xs mx-auto">
+                <button
                   type="button"
-                  variant="primary"
-                  size="lg"
-                  fullWidth
                   onClick={() => navigate('/login')}
-                  className="font-bold text-base shadow-brand"
+                  className="w-full h-11 bg-ink text-paper text-xs uppercase tracking-[0.2em] font-light hover:bg-ink/85 border border-ink transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
                   <span>Đăng nhập ngay</span>
-                  <ArrowRight className="size-4.5 ml-2" />
-                </Button>
+                  <ArrowRight className="size-3.5" />
+                </button>
 
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  size="md"
-                  fullWidth
                   onClick={() => navigate('/')}
-                  className="text-sm font-semibold"
+                  className="w-full h-10 border border-line text-xs font-light text-mute hover:text-ink hover:border-ink transition-colors cursor-pointer uppercase tracking-widest"
                 >
-                  <span>Về trang chủ FunnyShop</span>
-                </Button>
+                  <span>Về trang chủ</span>
+                </button>
               </div>
             </div>
           )}
