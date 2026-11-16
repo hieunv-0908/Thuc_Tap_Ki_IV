@@ -145,7 +145,7 @@ class AdminProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code", is(200)))
-                .andExpect(jsonPath("$.message", is("Xóa vĩnh viễn sản phẩm và dữ liệu liên quan thành công!")));
+                .andExpect(jsonPath("$.message", is("Xóa vĩnh viễn sản phẩm thành công!")));
 
         verify(productService, times(1)).hardDeleteProduct(1L);
     }

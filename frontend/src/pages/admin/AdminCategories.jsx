@@ -1,18 +1,29 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Layers, Plus, Pencil, Trash2, Ban, X, Check } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  Layers,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  RotateCcw,
+  EyeOff,
+  Package,
+  AlertTriangle,
+  CheckCircle2,
+} from 'lucide-react';
 import Table from '../../components/ui/Table';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import StatCard from '../../components/admin/StatCard';
-import { categoryApi } from '../../api/category';
+import Button from '../../components/ui/Button';
 import { adminApi } from '../../api/admin';
 import { toast } from '../../store/toastStore';
 
 export default function AdminCategories() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [filterTab, setFilterTab] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'DELETED'
 
-  // Form modal
+  // Form modal (Thêm / Sửa danh mục)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [formName, setFormName] = useState('');
@@ -20,53 +31,73 @@ export default function AdminCategories() {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Delete confirm
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deactivateTarget, setDeactivateTarget] = useState(null);
+  // Soft delete (Ẩn danh mục)
+  const [softDeleteTarget, setSoftDeleteTarget] = useState(null);
+  const [isSoftDeleting, setIsSoftDeleting] = useState(false);
 
+  // Hard delete (Xóa vĩnh viễn)
+  const [hardDeleteTarget, setHardDeleteTarget] = useState(null);
+  const [isHardDeleting, setIsHardDeleting] = useState(false);
+
+  // Restore (Khôi phục)
+  const [restoreTarget, setRestoreTarget] = useState(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  // Fetch danh mục từ API Admin (dùng cho refresh sau thao tác)
   const fetchCategories = useCallback(async () => {
     try {
-      const res = await categoryApi.getCategories();
-      setError(null);
-      setCategories(Array.isArray(res) ? res : (res?.content || []));
+      const res = await adminApi.getCategories();
+      const list = Array.isArray(res) ? res : (res?.content || []);
+      setCategories(list);
     } catch (err) {
       console.error('Lỗi tải danh mục:', err);
-      setError(err.message || 'Không thể tải danh sách danh mục.');
+      toast.error(err.response?.data?.message || err.message || 'Không thể tải danh sách danh mục.');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const refreshCategories = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    await fetchCategories();
-  }, [fetchCategories]);
-
   useEffect(() => {
-    let isCancelled = false;
-    categoryApi
-      .getCategories()
-      .then((res) => {
-        if (isCancelled) return;
-        setError(null);
-        setCategories(Array.isArray(res) ? res : (res?.content || []));
-      })
-      .catch((err) => {
-        if (isCancelled) return;
-        console.error('Lỗi tải danh mục:', err);
-        setError(err.message || 'Không thể tải danh sách danh mục.');
-      })
-      .finally(() => {
-        if (!isCancelled) setLoading(false);
-      });
-
+    let ignore = false;
+    async function load() {
+      try {
+        const res = await adminApi.getCategories();
+        if (!ignore) {
+          const list = Array.isArray(res) ? res : (res?.content || []);
+          setCategories(list);
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error('Lỗi nạp danh mục ban đầu:', err);
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+    load();
     return () => {
-      isCancelled = true;
+      ignore = true;
     };
   }, []);
 
+  // Thống kê
+  const stats = useMemo(() => {
+    const total = categories.length;
+    const active = categories.filter((c) => !c.isDeleted).length;
+    const deleted = categories.filter((c) => c.isDeleted).length;
+    return { total, active, deleted };
+  }, [categories]);
+
+  // Lọc theo Tab
+  const filteredCategories = useMemo(() => {
+    if (filterTab === 'ACTIVE') return categories.filter((c) => !c.isDeleted);
+    if (filterTab === 'DELETED') return categories.filter((c) => c.isDeleted);
+    return categories;
+  }, [categories, filterTab]);
+
+  // Mở form thêm mới
   const openCreate = () => {
     setEditTarget(null);
     setFormName('');
@@ -75,6 +106,7 @@ export default function AdminCategories() {
     setIsFormOpen(true);
   };
 
+  // Mở form chỉnh sửa
   const openEdit = (cat) => {
     setEditTarget(cat);
     setFormName(cat.name || '');
@@ -88,6 +120,7 @@ export default function AdminCategories() {
     setIsFormOpen(false);
   };
 
+  // Lưu danh mục
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!formName.trim()) {
@@ -98,44 +131,104 @@ export default function AdminCategories() {
       setSaving(true);
       setFormError('');
       if (editTarget) {
-        await adminApi.updateCategory(editTarget.id, { name: formName.trim(), description: formDescription.trim() });
+        await adminApi.updateCategory(editTarget.id, {
+          name: formName.trim(),
+          description: formDescription.trim(),
+        });
         toast.success(`Đã cập nhật danh mục "${formName.trim()}".`);
       } else {
-        await adminApi.createCategory({ name: formName.trim(), description: formDescription.trim() });
+        await adminApi.createCategory({
+          name: formName.trim(),
+          description: formDescription.trim(),
+        });
         toast.success(`Đã thêm danh mục "${formName.trim()}".`);
       }
       setIsFormOpen(false);
-      await refreshCategories();
+      await fetchCategories();
     } catch (err) {
       console.error('Lỗi lưu danh mục:', err);
-      setFormError(err.message || 'Không thể lưu danh mục. Vui lòng thử lại.');
+      setFormError(err.response?.data?.message || err.message || 'Không thể lưu danh mục.');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
+  // Kiểm tra trước khi ẩn
+  const handleRequestSoftDelete = (cat) => {
+    const count = Number(cat.productCount) || 0;
+    if (count > 0) {
+      toast.warning(
+        `Không thể ẩn danh mục "${cat.name}" vì vẫn còn ${count} sản phẩm đang liên kết. Hãy chuyển các sản phẩm sang danh mục khác trước!`
+      );
+      return;
+    }
+    setSoftDeleteTarget(cat);
+  };
+
+  // Xác nhận ẩn danh mục
+  const handleConfirmSoftDelete = async () => {
+    if (!softDeleteTarget) return;
     try {
-      setIsDeleting(true);
-      await adminApi.deleteCategory(deleteTarget.id);
-      toast.success(`Đã xóa danh mục "${deleteTarget.name}".`);
-      setDeleteTarget(null);
-      await refreshCategories();
+      setIsSoftDeleting(true);
+      await adminApi.deleteCategory(softDeleteTarget.id);
+      toast.success(`Đã ẩn danh mục "${softDeleteTarget.name}".`);
+      setSoftDeleteTarget(null);
+      await fetchCategories();
     } catch (err) {
-      console.error('Lỗi xóa danh mục:', err);
-      toast.error(err.message || 'Không thể xóa danh mục. Vui lòng thử lại.');
+      console.error('Lỗi ẩn danh mục:', err);
+      toast.error(err.response?.data?.message || err.message || 'Không thể ẩn danh mục.');
     } finally {
-      setIsDeleting(false);
+      setIsSoftDeleting(false);
     }
   };
 
-  const handleDeactivateConfirm = () => {
-    if (!deactivateTarget) return;
-    setDeactivateTarget(null);
-    toast.info('Chức năng vô hiệu hóa danh mục chưa được kết nối.');
+  // Xác nhận khôi phục danh mục
+  const handleConfirmRestore = async () => {
+    if (!restoreTarget) return;
+    try {
+      setIsRestoring(true);
+      await adminApi.restoreCategory(restoreTarget.id);
+      toast.success(`Đã khôi phục danh mục "${restoreTarget.name}".`);
+      setRestoreTarget(null);
+      await fetchCategories();
+    } catch (err) {
+      console.error('Lỗi khôi phục danh mục:', err);
+      toast.error(err.response?.data?.message || err.message || 'Không thể khôi phục danh mục.');
+    } finally {
+      setIsRestoring(false);
+    }
   };
 
+  // Kiểm tra trước khi xóa vĩnh viễn
+  const handleRequestHardDelete = (cat) => {
+    const count = Number(cat.productCount) || 0;
+    if (count > 0) {
+      toast.warning(
+        `Không thể xóa vĩnh viễn danh mục "${cat.name}" vì còn ${count} sản phẩm liên kết!`
+      );
+      return;
+    }
+    setHardDeleteTarget(cat);
+  };
+
+  // Xác nhận xóa cứng vĩnh viễn
+  const handleConfirmHardDelete = async () => {
+    if (!hardDeleteTarget) return;
+    try {
+      setIsHardDeleting(true);
+      const res = await adminApi.hardDeleteCategory(hardDeleteTarget.id);
+      toast.success(res?.message || `Đã xóa vĩnh viễn danh mục "${hardDeleteTarget.name}".`);
+      setHardDeleteTarget(null);
+      await fetchCategories();
+    } catch (err) {
+      console.error('Lỗi khi xóa vĩnh viễn danh mục:', err);
+      toast.error(err.response?.data?.message || err.message || 'Không thể xóa vĩnh viễn danh mục.');
+    } finally {
+      setIsHardDeleting(false);
+    }
+  };
+
+  // Cấu hình bảng
   const columns = [
     {
       key: 'id',
@@ -146,14 +239,41 @@ export default function AdminCategories() {
     {
       key: 'name',
       header: 'Tên danh mục',
-      render: (row) => <span className="font-semibold text-ink">{row.name}</span>,
+      render: (row) => (
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-ink">{row.name}</span>
+            {row.isDeleted ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-300">
+                Đã ẩn
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Đang kinh doanh
+              </span>
+            )}
+          </div>
+          {row.description && (
+            <p className="text-xs text-ink-muted line-clamp-1 mt-0.5">{row.description}</p>
+          )}
+        </div>
+      ),
     },
     {
-      key: 'description',
-      header: 'Mô tả',
-      render: (row) => (
-        <span className="text-sm text-ink-muted line-clamp-1">{row.description || '—'}</span>
-      ),
+      key: 'products',
+      header: 'Sản phẩm liên kết',
+      className: 'whitespace-nowrap',
+      render: (row) => {
+        const count = Number(row.productCount) || 0;
+        return count > 0 ? (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary-50 text-primary-700 border border-primary-200">
+            <Package className="size-3.5" />
+            <span>{count} sản phẩm</span>
+          </span>
+        ) : (
+          <span className="text-xs text-ink-subtle italic">0 sản phẩm (có thể ẩn/xóa)</span>
+        );
+      },
     },
     {
       key: 'actions',
@@ -162,31 +282,57 @@ export default function AdminCategories() {
       className: 'text-right whitespace-nowrap',
       render: (row) => (
         <div className="flex items-center justify-end gap-1.5">
-          <button
-            type="button"
-            onClick={() => openEdit(row)}
-            className="p-1.5 rounded-lg text-ink-muted hover:text-secondary-700 hover:bg-secondary-50 transition-colors cursor-pointer"
-            title="Chỉnh sửa danh mục"
-          >
-            <Pencil className="size-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeactivateTarget(row)}
-            className="p-1.5 rounded-lg text-ink-muted hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
-            title="Vô hiệu hóa danh mục"
-            aria-label={`Vô hiệu hóa danh mục ${row.name}`}
-          >
-            <Ban className="size-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeleteTarget(row)}
-            className="p-1.5 rounded-lg text-ink-muted hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
-            title="Xóa danh mục"
-          >
-            <Trash2 className="size-4" />
-          </button>
+          {row.isDeleted ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setRestoreTarget(row)}
+                className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-colors cursor-pointer"
+                title="Khôi phục danh mục"
+                aria-label={`Khôi phục ${row.name}`}
+              >
+                <RotateCcw className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRequestHardDelete(row)}
+                className="p-1.5 rounded-lg text-ink-muted hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                title="Xóa vĩnh viễn danh mục"
+                aria-label={`Xóa vĩnh viễn ${row.name}`}
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => openEdit(row)}
+                className="p-1.5 rounded-lg text-ink-muted hover:text-secondary-700 hover:bg-secondary-50 transition-colors cursor-pointer"
+                title="Chỉnh sửa danh mục"
+                aria-label={`Chỉnh sửa ${row.name}`}
+              >
+                <Pencil className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRequestSoftDelete(row)}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  (Number(row.productCount) || 0) > 0
+                    ? 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
+                    : 'text-ink-muted hover:text-orange-700 hover:bg-orange-50'
+                }`}
+                title={
+                  (Number(row.productCount) || 0) > 0
+                    ? `Còn ${row.productCount} sản phẩm, không thể ẩn`
+                    : 'Ẩn danh mục (Dừng bán)'
+                }
+                aria-label={`Ẩn danh mục ${row.name}`}
+              >
+                <EyeOff className="size-4" />
+              </button>
+            </>
+          )}
         </div>
       ),
     },
@@ -199,146 +345,182 @@ export default function AdminCategories() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-ink">Quản lý danh mục</h1>
           <p className="text-sm text-ink-muted mt-0.5">
-            Tạo, chỉnh sửa và quản lý các danh mục sản phẩm trong FunnyShop
+            Quản lý các nhóm thời trang, kiểm soát liên kết sản phẩm và trạng thái hiển thị
           </p>
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-700 text-white font-semibold text-sm hover:bg-primary-800 transition-colors cursor-pointer shadow-sm"
-        >
-          <Plus className="size-4" />
+        <Button variant="primary" leftIcon={Plus} onClick={openCreate}>
           Thêm danh mục
-        </button>
+        </Button>
       </div>
 
-      {/* Stat */}
-      <div className="max-w-xs">
+      {/* StatCards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
           icon={Layers}
           label="Tổng danh mục"
-          value={categories.length}
+          value={stats.total}
           variant="primary"
-          subtext="Danh mục đang hoạt động"
+          subtext="Toàn bộ danh mục hệ thống"
+        />
+        <StatCard
+          icon={CheckCircle2}
+          label="Đang hoạt động"
+          value={stats.active}
+          variant="success"
+          subtext="Hiển thị cho khách hàng"
+        />
+        <StatCard
+          icon={AlertTriangle}
+          label="Đã ẩn"
+          value={stats.deleted}
+          variant="warning"
+          subtext="Không hiện trên cửa hàng"
         />
       </div>
 
-      {/* Table */}
-      <Table
-        columns={columns}
-        data={categories}
-        loading={loading}
-        error={error}
-        onRetry={refreshCategories}
-        emptyTitle="Chưa có danh mục nào"
-        emptyDescription="Nhấn 'Thêm danh mục' để tạo danh mục đầu tiên."
-      />
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2 p-1.5 rounded-xl bg-gray-100/80 w-fit">
+        <button
+          type="button"
+          onClick={() => setFilterTab('ALL')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            filterTab === 'ALL'
+              ? 'bg-white text-ink shadow-xs'
+              : 'text-ink-muted hover:text-ink'
+          }`}
+        >
+          Tất cả ({categories.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterTab('ACTIVE')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            filterTab === 'ACTIVE'
+              ? 'bg-white text-emerald-700 shadow-xs'
+              : 'text-ink-muted hover:text-ink'
+          }`}
+        >
+          Đang hoạt động ({stats.active})
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterTab('DELETED')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            filterTab === 'DELETED'
+              ? 'bg-white text-gray-700 shadow-xs'
+              : 'text-ink-muted hover:text-ink'
+          }`}
+        >
+          Đã ẩn ({stats.deleted})
+        </button>
+      </div>
 
-      {/* Form Modal */}
+      {/* Table */}
+      <div className="bg-white rounded-2xl border border-line shadow-soft overflow-hidden">
+        <Table
+          columns={columns}
+          data={filteredCategories}
+          loading={loading}
+          emptyMessage="Chưa có danh mục nào phù hợp với bộ lọc."
+        />
+      </div>
+
+      {/* Form Modal (Thêm / Sửa) */}
       {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={closeForm}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-2xl p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-ink">
-                {editTarget ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới'}
-              </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-line p-6 shadow-xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="text-lg font-bold text-ink">
+                {editTarget ? 'Chỉnh sửa danh mục' : 'Thêm mới danh mục'}
+              </h3>
               <button
                 type="button"
                 onClick={closeForm}
-                className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-gray-100 transition-colors cursor-pointer"
-                disabled={saving}
+                className="p-1 rounded-lg text-ink-subtle hover:text-ink hover:bg-gray-100 transition cursor-pointer"
               >
                 <X className="size-5" />
               </button>
             </div>
 
+            {formError && (
+              <div className="p-3 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs">
+                {formError}
+              </div>
+            )}
+
             <form onSubmit={handleFormSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-ink mb-1.5" htmlFor="cat-name">
-                  Tên danh mục <span className="text-red-500">*</span>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-ink">
+                  Tên danh mục <span className="text-red-600">*</span>
                 </label>
                 <input
-                  id="cat-name"
                   type="text"
                   value={formName}
-                  onChange={(e) => { setFormName(e.target.value); setFormError(''); }}
-                  placeholder="VD: Đồ chơi, Phụ kiện..."
-                  className="h-10 w-full px-3 rounded-lg border border-line bg-page text-sm text-ink placeholder:text-ink-subtle focus:bg-white focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-colors"
-                  autoFocus
-                  disabled={saving}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="Ví dụ: Áo Sơ Mi Nam"
+                  className="w-full h-10 px-3 rounded-lg border border-line bg-page text-sm text-ink focus:bg-white focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200"
+                  required
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-ink mb-1.5" htmlFor="cat-desc">
-                  Mô tả <span className="text-ink-subtle font-normal">(tuỳ chọn)</span>
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-ink">Mô tả danh mục</label>
                 <textarea
-                  id="cat-desc"
+                  rows={3}
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Mô tả ngắn về danh mục..."
-                  rows={3}
-                  className="w-full px-3 py-2 rounded-lg border border-line bg-page text-sm text-ink placeholder:text-ink-subtle focus:bg-white focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-colors resize-none"
-                  disabled={saving}
+                  placeholder="Mô tả phong cách hoặc thông tin danh mục..."
+                  className="w-full p-3 rounded-lg border border-line bg-page text-sm text-ink focus:bg-white focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200"
                 />
               </div>
 
-              {formError && (
-                <p className="text-sm text-red-600 font-medium">{formError}</p>
-              )}
-
-              <div className="flex gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  disabled={saving}
-                  className="flex-1 h-10 rounded-xl border border-line bg-white text-ink text-sm font-semibold hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
-                >
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-line">
+                <Button variant="ghost" onClick={closeForm} disabled={saving}>
                   Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 h-10 rounded-xl bg-primary-700 text-white text-sm font-semibold hover:bg-primary-800 transition-colors cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
-                >
-                  {saving ? (
-                    <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <Check className="size-4" />
-                  )}
+                </Button>
+                <Button type="submit" variant="primary" loading={saving}>
                   {editTarget ? 'Lưu thay đổi' : 'Thêm danh mục'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* Confirm Soft Delete (Ẩn danh mục) */}
       <ConfirmDialog
-        isOpen={Boolean(deleteTarget)}
-        onClose={() => !isDeleting && setDeleteTarget(null)}
-        onConfirm={handleDeleteConfirm}
-        title="Xóa danh mục này?"
-        description={`Bạn có chắc chắn muốn xóa danh mục "${deleteTarget?.name}"? Thao tác này không thể hoàn tác.`}
-        confirmText="Xóa danh mục"
-        cancelText="Hủy"
-        variant="danger"
-        loading={isDeleting}
+        isOpen={Boolean(softDeleteTarget)}
+        onClose={() => setSoftDeleteTarget(null)}
+        onConfirm={handleConfirmSoftDelete}
+        title={`Ẩn danh mục "${softDeleteTarget?.name}"?`}
+        message="Danh mục này sẽ bị ẩn khỏi cửa hàng của khách hàng. Bạn có thể khôi phục lại bất kỳ lúc nào."
+        confirmText="Xác nhận ẩn"
+        confirmVariant="warning"
+        loading={isSoftDeleting}
       />
+
+      {/* Confirm Restore (Khôi phục) */}
       <ConfirmDialog
-        isOpen={Boolean(deactivateTarget)}
-        onClose={() => setDeactivateTarget(null)}
-        onConfirm={handleDeactivateConfirm}
-        title="Vô hiệu hóa danh mục?"
-        description={`Bạn có chắc chắn muốn vô hiệu hóa danh mục "${deactivateTarget?.name}"?`}
-        confirmText="Vô hiệu hóa"
-        cancelText="Hủy"
+        isOpen={Boolean(restoreTarget)}
+        onClose={() => setRestoreTarget(null)}
+        onConfirm={handleConfirmRestore}
+        title={`Khôi phục danh mục "${restoreTarget?.name}"?`}
+        message="Danh mục này sẽ hiển thị trở lại trên thanh điều hướng và bộ lọc sản phẩm của cửa hàng."
+        confirmText="Xác nhận khôi phục"
+        confirmVariant="primary"
+        loading={isRestoring}
+      />
+
+      {/* Confirm Hard Delete (Xóa vĩnh viễn khỏi CSDL) */}
+      <ConfirmDialog
+        isOpen={Boolean(hardDeleteTarget)}
+        onClose={() => setHardDeleteTarget(null)}
+        onConfirm={handleConfirmHardDelete}
+        title={`Xóa vĩnh viễn danh mục "${hardDeleteTarget?.name}"?`}
+        message="Hành động này sẽ xóa hoàn toàn bản ghi danh mục khỏi cơ sở dữ liệu. Thao tác này chỉ thực hiện được khi danh mục không còn sản phẩm nào và không thể hoàn tác."
+        confirmText="Xác nhận xóa vĩnh viễn"
+        confirmVariant="danger"
+        loading={isHardDeleting}
       />
     </div>
   );

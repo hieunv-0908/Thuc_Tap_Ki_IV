@@ -102,4 +102,37 @@ class AdminCategoryControllerTest {
 
         verify(categoryService, times(1)).deleteCategory(1L);
     }
+
+    @Test
+    @DisplayName("GET /api/v1/admin/categories - Lấy tất cả danh mục cho Admin")
+    void getAllCategories_Success() throws Exception {
+        when(categoryService.getAllCategoriesForAdmin()).thenReturn(java.util.List.of(sampleResponse));
+
+        mockMvc.perform(get("/api/v1/admin/categories"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.data[0].name", is("Đồ gia dụng")));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/admin/categories/{id}/restore - Khôi phục danh mục thành công")
+    void restoreCategory_Success() throws Exception {
+        when(categoryService.restoreCategory(1L)).thenReturn(sampleResponse);
+
+        mockMvc.perform(patch("/api/v1/admin/categories/1/restore"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Khôi phục danh mục thành công!")));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/admin/categories/{id}/permanent - Xóa vĩnh viễn danh mục thành công")
+    void hardDeleteCategory_Success() throws Exception {
+        doNothing().when(categoryService).hardDeleteCategory(1L);
+
+        mockMvc.perform(delete("/api/v1/admin/categories/1/permanent"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("Xóa vĩnh viễn danh mục thành công!")));
+    }
 }

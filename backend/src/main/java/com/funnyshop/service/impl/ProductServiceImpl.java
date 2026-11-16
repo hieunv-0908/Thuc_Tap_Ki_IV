@@ -15,6 +15,7 @@ import com.funnyshop.entity.ProductVariant;
 import com.funnyshop.exception.ResourceAlreadyExistsException;
 import com.funnyshop.exception.ResourceNotFoundException;
 import com.funnyshop.repository.CategoryRepository;
+import com.funnyshop.repository.OrderItemRepository;
 import com.funnyshop.repository.ProductImageRepository;
 import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.repository.ProductVariantRepository;
@@ -39,6 +40,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ProductImageRepository productImageRepository;
+    private final OrderItemRepository orderItemRepository;
 
     @Override
     public Page<ProductResponse> getProducts(
@@ -309,9 +311,19 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void hardDeleteProduct(Long id) {
-        if (productRepository.hardDeleteById(id) == 0) {
-            throw new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + id));
+
+        // Ràng buộc toàn vẹn dữ liệu: Không được xóa sản phẩm đã có đơn hàng
+        boolean hasOrders = orderItemRepository.existsByProductIdOrVariantProductId(id);
+        if (hasOrders) {
+            throw new IllegalStateException("Không thể xóa vĩnh viễn sản phẩm này vì đã có dữ liệu đơn hàng liên quan. Dữ liệu được bảo toàn để phục vụ lịch sử giao dịch và kế toán!");
         }
+
+        // Không vướng đơn hàng nào -> Tiến hành xóa cứng thực sự khỏi CSDL (bỏ qua @SQLDelete bằng native query)
+        productImageRepository.deleteByProductId(id);
+        productVariantRepository.hardDeleteByProductId(id);
+        productRepository.hardDeleteById(id);
     }
 
     @Override

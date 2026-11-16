@@ -20,6 +20,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         SELECT p FROM Product p
         LEFT JOIN FETCH p.category
         WHERE (p.isDeleted = false)
+          AND (p.category IS NULL OR p.category.isDeleted = false)
           AND (:keyword IS NULL
                OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
           AND (:categoryId IS NULL
@@ -28,6 +29,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         countQuery = """
         SELECT count(p) FROM Product p
         WHERE (p.isDeleted = false)
+          AND (p.category IS NULL OR p.category.isDeleted = false)
           AND (:keyword IS NULL
                OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
           AND (:categoryId IS NULL
@@ -39,11 +41,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             Pageable pageable
     );
 
-    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.id = :id AND p.isDeleted = false")
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.id = :id AND p.isDeleted = false AND (p.category IS NULL OR p.category.isDeleted = false)")
     Optional<Product> findByIdWithCategory(@Param("id") Long id);
 
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.id = :id")
     Optional<Product> findByIdWithCategoryAdmin(@Param("id") Long id);
+
+    long countByCategoryId(Long categoryId);
+
+    long countByCategoryIdAndIsDeletedFalse(Long categoryId);
 
     Optional<Product> findByIdAndIsDeletedFalse(Long id);
 

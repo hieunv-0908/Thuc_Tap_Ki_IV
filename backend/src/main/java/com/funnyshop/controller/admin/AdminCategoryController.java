@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping({"/api/v1/admin/categories", "/api/admin/categories"})
 @RequiredArgsConstructor
@@ -18,6 +20,18 @@ import org.springframework.web.bind.annotation.*;
 public class AdminCategoryController {
 
     private final CategoryService categoryService;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllCategories() {
+        List<CategoryResponse> categories = categoryService.getAllCategoriesForAdmin();
+
+        return ResponseEntity.ok(
+                ApiResponse.<List<CategoryResponse>>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Lấy danh sách tất cả danh mục thành công!")
+                        .data(categories)
+                        .build());
+    }
 
     @PostMapping
     public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(
@@ -56,6 +70,29 @@ public class AdminCategoryController {
                 ApiResponse.<Void>builder()
                         .code(HttpStatus.OK.value())
                         .message("Ẩn/xóa mềm danh mục thành công!")
+                        .build());
+    }
+
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<ApiResponse<CategoryResponse>> restoreCategory(@PathVariable Long id) {
+        CategoryResponse response = categoryService.restoreCategory(id);
+
+        return ResponseEntity.ok(
+                ApiResponse.<CategoryResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Khôi phục danh mục thành công!")
+                        .data(response)
+                        .build());
+    }
+
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<ApiResponse<Void>> hardDeleteCategory(@PathVariable Long id) {
+        categoryService.hardDeleteCategory(id);
+
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Xóa vĩnh viễn danh mục thành công!")
                         .build());
     }
 }
