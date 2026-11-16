@@ -11,10 +11,6 @@ import {
   Sparkles,
   Layers,
   ClipboardList,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  ExternalLink,
 } from 'lucide-react';
 import StatCard from '../../components/admin/StatCard';
 import DonutChart from '../../components/admin/charts/DonutChart';
@@ -27,7 +23,7 @@ import { categoryApi } from '../../api/category';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
 import { toast } from '../../store/toastStore';
-import { ORDER_STATUS, getCategoryMeta } from '../../utils/constants';
+import { ORDER_STATUS } from '../../utils/constants';
 
 // Time filter options
 const TIME_RANGES = [
@@ -50,11 +46,8 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
 
   // Fetch all management data in parallel
-  const fetchDashboardData = useCallback(async (isRefresh = false) => {
+  const loadData = useCallback(async () => {
     try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-
       const [ordersRes, productsRes, categoriesRes, usersRes] = await Promise.allSettled([
         adminApi.getAllOrders({ page: 0, size: 100 }),
         adminApi.getProducts({ page: 0, size: 100 }),
@@ -81,22 +74,31 @@ export default function AdminDashboard() {
       if (usersRes.status === 'fulfilled') {
         setUsers(usersRes.value || []);
       }
-
-      if (isRefresh) {
-        toast.success('Đã cập nhật số liệu mới nhất!');
-      }
     } catch (err) {
       console.error('Lỗi tải dữ liệu dashboard:', err);
-      toast.error('Không thể tải đủ số liệu từ máy chủ. Đang hiển thị thống kê tổng hợp.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    let ignore = false;
+    async function init() {
+      await loadData();
+      if (!ignore) {
+        setLoading(false);
+      }
+    }
+    init();
+    return () => {
+      ignore = true;
+    };
+  }, [loadData]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+    toast.success('Đã cập nhật số liệu mới nhất!');
+  };
 
   // ── Metrics Calculation ───────────────────────────────────────────────────
   const metrics = useMemo(() => {
@@ -361,7 +363,7 @@ export default function AdminDashboard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => fetchDashboardData(true)}
+            onClick={handleRefresh}
             disabled={refreshing || loading}
             leftIcon={RefreshCw}
             className={`font-semibold ${refreshing ? 'animate-spin' : ''}`}
