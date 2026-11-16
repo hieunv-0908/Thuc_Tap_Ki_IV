@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  User,
-  Mail,
-  Lock,
-  Phone,
   AlertCircle,
   CheckCircle2,
   ArrowRight,

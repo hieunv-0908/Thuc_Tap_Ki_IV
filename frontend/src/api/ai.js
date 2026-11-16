@@ -297,8 +297,8 @@ async function getLocalFashionFallback(message) {
   }
 
   // Khớp sản phẩm và câu trả lời chi tiết theo từng nhu cầu thời trang cụ thể
-  let matched = [];
-  let customReply = '';
+  let matched;
+  let customReply;
 
   if (clean.includes('nam') || clean.includes('đồ nam') || clean.includes('áo nam') || clean.includes('quần nam')) {
     customReply = 'Dạ em hiểu nhu cầu của mình rồi nè! Đồ nam bên em thiết kế phom dáng trẻ trung, vải cotton thoáng mát và cực kỳ tôn dáng. Em gửi bạn xem mấy mẫu polo và sơ mi đang được chuộng nhất bên em nha: ✨';

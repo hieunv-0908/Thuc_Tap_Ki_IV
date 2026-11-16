@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Sparkles } from 'lucide-react';
+import { X } from 'lucide-react';
 
 const STORAGE_KEY = 'funnyshop_announcement_dismissed';
 

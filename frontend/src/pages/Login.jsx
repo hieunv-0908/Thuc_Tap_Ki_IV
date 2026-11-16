@@ -1,20 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-  User,
-  Lock,
   AlertCircle,
   CheckCircle2,
   ArrowRight,
-  ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 import { authApi } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 import { toast } from '../store/toastStore';
 import { isValidPassword } from '../utils/validators';
 import BrandLogo from '../components/ui/BrandLogo';
-import Input from '../components/ui/Input';
 
 /**
  * Login page - Japanese Minimalist v3.0 (Ma 間 & Kanso 簡素)

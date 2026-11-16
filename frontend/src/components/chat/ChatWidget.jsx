@@ -1,11 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  MessageCircle,
   X,
   Send,
-  Sparkles,
-  Bot,
   AlertCircle,
   Zap,
   ShoppingBag,

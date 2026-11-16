@@ -1,33 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Mail,
-  Lock,
-  KeyRound,
-  ShieldCheck,
   CheckCircle2,
   ArrowLeft,
   ArrowRight,
-  Sparkles,
-  Zap,
   RefreshCw,
   AlertCircle,
-  Check,
 } from 'lucide-react';
 import { authApi } from '../api/auth';
 import { toast } from '../store/toastStore';
 import { isValidEmail, isValidPassword } from '../utils/validators';
 import BrandLogo from '../components/ui/BrandLogo';
-import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
-import StepIndicator from '../components/ui/StepIndicator';
 
 const RESET_STEPS = ['Xác nhận tài khoản', 'Mã OTP & Mật khẩu', 'Hoàn tất'];
-const isMock = false;
 
 /**
- * ForgotPassword page complying with FunnyShop Design System
- * 3-step wizard with mock data support
+ * ForgotPassword page - Japanese Minimalist v3.0 (Ma 間 & Kanso 簡素)
+ * Thiết kế tinh tế, thanh lịch, đồng bộ phong cách với trang chủ FunnyShop.
  */
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -46,7 +35,6 @@ export default function ForgotPassword() {
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mockOtpHint, setMockOtpHint] = useState('');
   const [resendCountdown, setResendCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
@@ -113,7 +101,6 @@ export default function ForgotPassword() {
       });
 
       setUserEmail(trimmed);
-      setMockOtpHint(isMock ? (res?.mockOtp || '123456') : '');
       setResendCountdown(60);
       setCanResend(false);
       setCurrentStep(1);
@@ -135,11 +122,9 @@ export default function ForgotPassword() {
     setServerError('');
     try {
       // const res = await authApi.forgotPassword({ emailOrUsername: identifier.trim() });
-      const res = await authApi.forgotPassword({
+      await authApi.forgotPassword({
         email: userEmail,
       });
-      // Chỉ cập nhật OTP gợi ý khi ở chế độ Mock
-      setMockOtpHint(isMock ? (res.mockOtp || '123456') : '');
       setResendCountdown(60);
       setCanResend(false);
       toast.success('Đã gửi lại mã OTP mới!');
@@ -210,20 +195,6 @@ export default function ForgotPassword() {
       );
     } finally {
       setIsSubmitting(false);
-    }
-  };
-  // Quick fill sample account
-  const handleQuickFillAccount = (acc) => {
-    setIdentifier(acc);
-    setErrors({});
-    setServerError('');
-  };
-
-  // Quick fill OTP
-  const handleQuickFillOtp = () => {
-    setOtp('123456');
-    if (errors.otp) {
-      setErrors((prev) => ({ ...prev, otp: '' }));
     }
   };
 
