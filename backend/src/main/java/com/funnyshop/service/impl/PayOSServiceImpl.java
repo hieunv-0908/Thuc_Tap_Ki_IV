@@ -1,8 +1,5 @@
 package com.funnyshop.service.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.funnyshop.config.PayOSProperties;
 import com.funnyshop.dto.response.PayOSPaymentResponse;
 import com.funnyshop.entity.Order;
@@ -39,7 +36,6 @@ public class PayOSServiceImpl implements PayOSService {
     private final PayOSProperties payOSProperties;
     private final OrderRepository orderRepository;
     private final OrderStatusHistoryRepository orderStatusHistoryRepository;
-    private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
     private boolean isPayOSConfigured() {
@@ -190,19 +186,22 @@ public class PayOSServiceImpl implements PayOSService {
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
 
             log.info("[PayOS] Gửi yêu cầu tạo Payment Link cho Order ID: {}, OrderCode: {}", order.getId(), orderCode);
-            ResponseEntity<JsonNode> response = restTemplate.postForEntity(PAYOS_API_BASE_URL, requestEntity, JsonNode.class);
+            @SuppressWarnings("rawtypes")
+            ResponseEntity<Map> response = restTemplate.postForEntity(PAYOS_API_BASE_URL, requestEntity, Map.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JsonNode body = response.getBody();
-                String code = body.path("code").asText("");
+                @SuppressWarnings("unchecked")
+                Map<String, Object> body = (Map<String, Object>) response.getBody();
+                String code = String.valueOf(body.getOrDefault("code", ""));
                 if ("00".equals(code)) {
-                    JsonNode dataNode = body.path("data");
-                    String checkoutUrl = dataNode.path("checkoutUrl").asText("");
-                    String qrCode = dataNode.path("qrCode").asText("");
-                    String paymentLinkId = dataNode.path("paymentLinkId").asText("");
-                    String accountNumber = dataNode.path("accountNumber").asText("");
-                    String accountName = dataNode.path("accountName").asText("");
-                    String bin = dataNode.path("bin").asText("");
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> dataNode = (Map<String, Object>) body.get("data");
+                    String checkoutUrl = dataNode != null && dataNode.get("checkoutUrl") != null ? String.valueOf(dataNode.get("checkoutUrl")) : "";
+                    String qrCode = dataNode != null && dataNode.get("qrCode") != null ? String.valueOf(dataNode.get("qrCode")) : "";
+                    String paymentLinkId = dataNode != null && dataNode.get("paymentLinkId") != null ? String.valueOf(dataNode.get("paymentLinkId")) : "";
+                    String accountNumber = dataNode != null && dataNode.get("accountNumber") != null ? String.valueOf(dataNode.get("accountNumber")) : "";
+                    String accountName = dataNode != null && dataNode.get("accountName") != null ? String.valueOf(dataNode.get("accountName")) : "";
+                    String bin = dataNode != null && dataNode.get("bin") != null ? String.valueOf(dataNode.get("bin")) : "";
 
                     order.setPaymentMethod("PAYOS");
                     order.setPaymentStatus("PENDING");
@@ -226,7 +225,7 @@ public class PayOSServiceImpl implements PayOSService {
                             .status("PENDING")
                             .build();
                 } else {
-                    String desc = body.path("desc").asText("Không tạo được link thanh toán PayOS");
+                    String desc = String.valueOf(body.getOrDefault("desc", "Không tạo được link thanh toán PayOS"));
                     log.error("[PayOS] Phản hồi lỗi từ PayOS: code={}, desc={}", code, desc);
                     throw new AppException("Lỗi từ cổng thanh toán PayOS: " + desc, HttpStatus.BAD_REQUEST);
                 }
@@ -402,12 +401,16 @@ public class PayOSServiceImpl implements PayOSService {
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             String queryUrl = PAYOS_API_BASE_URL + "/" + orderCode;
-            ResponseEntity<JsonNode> response = restTemplate.exchange(queryUrl, HttpMethod.GET, entity, JsonNode.class);
+            @SuppressWarnings("rawtypes")
+            ResponseEntity<Map> response = restTemplate.exchange(queryUrl, HttpMethod.GET, entity, Map.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JsonNode body = response.getBody();
-                if ("00".equals(body.path("code").asText())) {
-                    String status = body.path("data").path("status").asText();
+                @SuppressWarnings("unchecked")
+                Map<String, Object> body = (Map<String, Object>) response.getBody();
+                if ("00".equals(String.valueOf(body.get("code")))) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> data = (Map<String, Object>) body.get("data");
+                    String status = data != null && data.get("status") != null ? String.valueOf(data.get("status")) : "";
                     if ("PAID".equalsIgnoreCase(status)) {
                         order.setPaymentStatus("PAID");
                         if (order.getStatus() == OrderStatus.PENDING) {
