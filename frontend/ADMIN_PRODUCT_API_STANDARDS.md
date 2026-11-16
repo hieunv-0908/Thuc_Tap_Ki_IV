@@ -392,8 +392,9 @@ Bảng phân rã công việc chi tiết dạng Checklist giúp đội ngũ Fron
   - [x] Cột **Trạng thái:** 
     - `isDeleted === false`: Badge xanh `Đang bán`.
     - `isDeleted === true`: Badge xám `Đã ẩn/Tạm ngừng`.
-  - [x] Nút **Ẩn sản phẩm (Xóa mềm):** Gọi `adminApi.deleteProduct(id)`, xác nhận qua Modal Confirm Dialog, cập nhật lại danh sách.
+  - [x] Nút **Ẩn sản phẩm (Xóa mềm):** Gọi `adminApi.softDeleteProduct(id)` qua `DELETE /api/v1/admin/products/{id}`, xác nhận rằng sản phẩm chỉ bị ẩn và có thể khôi phục, cập nhật lại danh sách.
   - [x] Nút **Khôi phục sản phẩm:** Thêm nút Khôi phục cạnh nút Ẩn, gọi `adminApi.restoreProduct(id)` kèm Toast thông báo thành công.
+  - [x] Nút **Thùng rác (Xóa cứng):** Gọi `adminApi.hardDeleteProduct(id)` qua `DELETE /api/v1/admin/products/{id}/permanent`; xác nhận rõ dữ liệu liên quan sẽ bị xóa vĩnh viễn và cập nhật lại danh sách.
 - **Tiêu chuẩn nghiệm thu (DoD):**
   - Khi khôi phục sản phẩm gốc thành công, toàn bộ các biến thể thuộc sản phẩm đó cũng tự động trở lại trạng thái khả dụng.
 
@@ -522,5 +523,4 @@ Bảng phân rã công việc chi tiết dạng Checklist giúp đội ngũ Fron
   - [ ] **Test Case 3:** Ngừng bán 1 biến thể (`DELETE variant`) -> Storefront chỉ còn biến thể còn lại; Admin vẫn thấy biến thể bị ẩn và khôi phục được.
   - [ ] **Test Case 4:** Xóa mềm toàn bộ sản phẩm (`DELETE product`) -> Cả sản phẩm và toàn bộ biến thể bị ẩn trên Storefront; khôi phục từ Admin (`PATCH restore`) thì quay lại bình thường.
   - [ ] **Test Case 5:** Chạy `npm --prefix frontend run lint` và `npm --prefix frontend run build` đạt kết quả `0 errors / 0 warnings`.
-
 

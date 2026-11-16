@@ -27,6 +27,7 @@ public interface ProductService {
     ProductResponse createProduct(ProductCreateRequest request);
     ProductResponse updateProduct(Long id, ProductUpdateRequest request);
     void deleteProduct(Long id);
+    void hardDeleteProduct(Long id);
     ProductResponse restoreProduct(Long id);
 
     // Variant Management

@@ -96,11 +96,16 @@ export const adminApi = {
     return res?.data !== undefined ? res.data : res;
   },
 
-  deleteProduct: async (id) => {
+  softDeleteProduct: async (id) => {
     // if (isMock) {
     //   return await mockEngine.adminDeleteProduct(id);
     // }
     const res = await apiClient.delete(`/api/v1/admin/products/${id}`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  hardDeleteProduct: async (id) => {
+    const res = await apiClient.delete(`/api/v1/admin/products/${id}/permanent`);
     return res?.data !== undefined ? res.data : res;
   },
 

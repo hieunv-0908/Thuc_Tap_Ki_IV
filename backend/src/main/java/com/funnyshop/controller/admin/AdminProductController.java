@@ -90,6 +90,17 @@ public class AdminProductController {
                         .build());
     }
 
+    @DeleteMapping("/products/{id}/permanent")
+    public ResponseEntity<ApiResponse<Void>> hardDeleteProduct(@PathVariable Long id) {
+        productService.hardDeleteProduct(id);
+
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Xóa vĩnh viễn sản phẩm và dữ liệu liên quan thành công!")
+                        .build());
+    }
+
     @PutMapping("/products/{id}/restore")
     public ResponseEntity<ApiResponse<ProductResponse>> restoreProductPut(@PathVariable Long id) {
         return restoreProduct(id);

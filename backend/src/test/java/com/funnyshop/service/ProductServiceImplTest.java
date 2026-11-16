@@ -202,6 +202,26 @@ class ProductServiceImplTest {
     }
 
     @Test
+    @DisplayName("hardDeleteProduct - Xóa vật lý sản phẩm qua repository")
+    void hardDeleteProduct_Success() {
+        when(productRepository.hardDeleteById(100L)).thenReturn(1);
+
+        productService.hardDeleteProduct(100L);
+
+        verify(productRepository).hardDeleteById(100L);
+    }
+
+    @Test
+    @DisplayName("hardDeleteProduct - Không tìm thấy sản phẩm")
+    void hardDeleteProduct_NotFound() {
+        when(productRepository.hardDeleteById(100L)).thenReturn(0);
+
+        assertThrows(ResourceNotFoundException.class, () -> productService.hardDeleteProduct(100L));
+
+        verify(productRepository).hardDeleteById(100L);
+    }
+
+    @Test
     @DisplayName("restoreProduct - Khôi phục sản phẩm đã xóa mềm và cascade variants")
     void restoreProduct_Success() {
         mockProduct.setIsDeleted(true);

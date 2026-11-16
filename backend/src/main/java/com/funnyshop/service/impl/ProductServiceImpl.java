@@ -308,6 +308,14 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    public void hardDeleteProduct(Long id) {
+        if (productRepository.hardDeleteById(id) == 0) {
+            throw new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + id);
+        }
+    }
+
+    @Override
+    @Transactional
     public ProductResponse restoreProduct(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() ->
