@@ -37,6 +37,10 @@ payos:
   return-url: ${PAYOS_RETURN_URL:http://localhost:5173/orders/{orderId}?payment=success}
   cancel-url: ${PAYOS_CANCEL_URL:http://localhost:5173/orders/{orderId}?payment=cancelled}
 
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-3.5-flash}
+
 logging:
   level:
     com.funnyshop: DEBUG

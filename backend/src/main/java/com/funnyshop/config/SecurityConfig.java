@@ -44,6 +44,8 @@ public class SecurityConfig {
             "/api/auth/**",
             "/api/v1/payments/payos-webhook",
             "/api/payments/payos-webhook",
+            "/api/v1/chat/**",
+            "/api/chat/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html"
@@ -113,6 +115,15 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/v1/vouchers/apply",
                                 "/api/vouchers/apply"
+                        ).permitAll()
+
+                        // Cho phép tạo đơn hàng (Checkout) công khai qua Chat hoặc Khách vãng lai
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/orders",
+                                "/api/v1/orders/checkout",
+                                "/api/orders",
+                                "/api/orders/checkout"
                         ).permitAll()
 
                         // Các API Admin

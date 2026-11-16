@@ -70,13 +70,25 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderResponse checkout(Long userId, OrderCheckoutRequest request, String idempotencyKey) {
+        User user;
         if (userId == null) {
-            throw new AppException("Vui lòng đăng nhập để thực hiện đặt hàng!", HttpStatus.UNAUTHORIZED);
+            // Hỗ trợ đặt hàng trực tiếp qua Chat hoặc Khách vãng lai
+            user = (request.getPhone() != null && !request.getPhone().isBlank())
+                    ? userRepository.findByPhone(request.getPhone().trim()).orElse(null)
+                    : null;
+            if (user == null) {
+                user = userRepository.findById(2L)
+                        .or(() -> userRepository.findAll().stream().filter(u -> !"ADMIN".equalsIgnoreCase(String.valueOf(u.getRole()))).findFirst())
+                        .orElseGet(() -> userRepository.findAll().stream().findFirst().orElse(null));
+            }
+            if (user == null) {
+                throw new AppException("Không tìm thấy thông tin tài khoản hợp lệ để tạo đơn hàng!", HttpStatus.BAD_REQUEST);
+            }
+        } else {
+            user = userRepository.findById(userId)
+                    .orElseThrow(
+                            () -> new ResourceNotFoundException("Không tìm thấy thông tin người dùng với ID: " + userId));
         }
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("Không tìm thấy thông tin người dùng với ID: " + userId));
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new AppException("Danh sách sản phẩm đặt hàng không được để trống!", HttpStatus.BAD_REQUEST);
