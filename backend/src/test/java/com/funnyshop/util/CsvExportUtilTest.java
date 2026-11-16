@@ -66,3 +66,4 @@ class CsvExportUtilTest {
         assertEquals("0", CsvExportUtil.formatCurrency(null));
     }
 }
+

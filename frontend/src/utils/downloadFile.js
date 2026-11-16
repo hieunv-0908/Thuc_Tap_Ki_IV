@@ -23,3 +23,4 @@ export function downloadBlob(data, filename) {
   }
   window.URL.revokeObjectURL(downloadUrl);
 }
+
