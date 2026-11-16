@@ -119,7 +119,7 @@ public class AdminProductController {
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
                         .code(HttpStatus.OK.value())
-                        .message("Chính sách Bảo toàn Dữ liệu: Sản phẩm đã được chuyển sang trạng thái Ẩn an toàn, không làm mất dữ liệu khỏi CSDL.")
+                        .message("Xóa vĩnh viễn sản phẩm thành công!")
                         .build());
     }
 

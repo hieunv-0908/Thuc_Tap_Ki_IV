@@ -211,18 +211,18 @@ export default function AdminCategories() {
     setHardDeleteTarget(cat);
   };
 
-  // Xác nhận xóa cứng theo chính sách Zero Data Loss (chỉ thông báo, không mất dữ liệu)
+  // Xác nhận xóa cứng vĩnh viễn
   const handleConfirmHardDelete = async () => {
     if (!hardDeleteTarget) return;
     try {
       setIsHardDeleting(true);
       const res = await adminApi.hardDeleteCategory(hardDeleteTarget.id);
-      toast.info(res?.message || `Chính sách bảo toàn dữ liệu: Danh mục "${hardDeleteTarget.name}" đã được lưu trữ an toàn ở trạng thái Ẩn, không làm mất dữ liệu khỏi CSDL.`);
+      toast.success(res?.message || `Đã xóa vĩnh viễn danh mục "${hardDeleteTarget.name}".`);
       setHardDeleteTarget(null);
       await fetchCategories();
     } catch (err) {
-      console.error('Lỗi khi xử lý danh mục:', err);
-      toast.error(err.response?.data?.message || err.message || 'Không thể xử lý yêu cầu.');
+      console.error('Lỗi khi xóa vĩnh viễn danh mục:', err);
+      toast.error(err.response?.data?.message || err.message || 'Không thể xóa vĩnh viễn danh mục.');
     } finally {
       setIsHardDeleting(false);
     }
@@ -511,15 +511,15 @@ export default function AdminCategories() {
         loading={isRestoring}
       />
 
-      {/* Confirm Hard Delete (Chính sách Zero Data Loss) */}
+      {/* Confirm Hard Delete (Xóa vĩnh viễn khỏi CSDL) */}
       <ConfirmDialog
         isOpen={Boolean(hardDeleteTarget)}
         onClose={() => setHardDeleteTarget(null)}
         onConfirm={handleConfirmHardDelete}
-        title="Chính sách bảo toàn dữ liệu (Không mất dữ liệu)"
-        message={`Danh mục "${hardDeleteTarget?.name}" sẽ được lưu trữ an toàn ở trạng thái Đã ẩn. Để bảo toàn tính toàn vẹn hệ thống, dữ liệu không bị xóa vĩnh viễn khỏi CSDL.`}
-        confirmText="Xác nhận lưu trữ an toàn"
-        confirmVariant="warning"
+        title={`Xóa vĩnh viễn danh mục "${hardDeleteTarget?.name}"?`}
+        message="Hành động này sẽ xóa hoàn toàn bản ghi danh mục khỏi cơ sở dữ liệu. Thao tác này chỉ thực hiện được khi danh mục không còn sản phẩm nào và không thể hoàn tác."
+        confirmText="Xác nhận xóa vĩnh viễn"
+        confirmVariant="danger"
         loading={isHardDeleting}
       />
     </div>

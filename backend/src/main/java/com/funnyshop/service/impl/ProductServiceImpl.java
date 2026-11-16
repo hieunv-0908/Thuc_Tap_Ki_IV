@@ -314,15 +314,16 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + id));
 
-        // Chính sách bảo toàn dữ liệu (Zero Data Loss):
-        // Xóa cứng không làm mất dữ liệu khỏi CSDL để bảo toàn toàn vẹn lịch sử đơn hàng và kế toán.
-        // Tự động chuyển và duy trì ở trạng thái xóa mềm (isDeleted = true)
-        product.setIsDeleted(true);
-        if (product.getVariants() != null) {
-            product.getVariants().forEach(v -> v.setIsDeleted(true));
+        // Ràng buộc toàn vẹn dữ liệu: Không được xóa sản phẩm đã có đơn hàng
+        boolean hasOrders = orderItemRepository.existsByProductIdOrVariantProductId(id);
+        if (hasOrders) {
+            throw new IllegalStateException("Không thể xóa vĩnh viễn sản phẩm này vì đã có dữ liệu đơn hàng liên quan. Dữ liệu được bảo toàn để phục vụ lịch sử giao dịch và kế toán!");
         }
-        productRepository.save(product);
-        productVariantRepository.updateIsDeletedByProductId(id, true);
+
+        // Không vướng đơn hàng nào -> Tiến hành xóa cứng thực sự khỏi CSDL (bỏ qua @SQLDelete bằng native query)
+        productImageRepository.deleteByProductId(id);
+        productVariantRepository.hardDeleteByProductId(id);
+        productRepository.hardDeleteById(id);
     }
 
     @Override

@@ -206,15 +206,27 @@ class ProductServiceImplTest {
     }
 
     @Test
-    @DisplayName("hardDeleteProduct - Áp dụng chính sách bảo toàn dữ liệu (chuyển sang isDeleted = true)")
+    @DisplayName("hardDeleteProduct - Xóa cứng sản phẩm thành công khi chưa từng có đơn hàng")
     void hardDeleteProduct_Success() {
         when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
+        when(orderItemRepository.existsByProductIdOrVariantProductId(100L)).thenReturn(false);
 
         productService.hardDeleteProduct(100L);
 
-        assertTrue(mockProduct.getIsDeleted());
-        verify(productRepository).save(mockProduct);
-        verify(productVariantRepository).updateIsDeletedByProductId(100L, true);
+        verify(productImageRepository).deleteByProductId(100L);
+        verify(productVariantRepository).hardDeleteByProductId(100L);
+        verify(productRepository).hardDeleteById(100L);
+    }
+
+    @Test
+    @DisplayName("hardDeleteProduct - Chặn xóa cứng khi sản phẩm đã phát sinh đơn hàng")
+    void hardDeleteProduct_HasOrders_ThrowsException() {
+        when(productRepository.findById(100L)).thenReturn(Optional.of(mockProduct));
+        when(orderItemRepository.existsByProductIdOrVariantProductId(100L)).thenReturn(true);
+
+        assertThrows(IllegalStateException.class, () -> productService.hardDeleteProduct(100L));
+
+        verify(productRepository, never()).hardDeleteById(anyLong());
     }
 
     @Test

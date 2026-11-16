@@ -57,6 +57,10 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     @Query("UPDATE ProductVariant pv SET pv.isDeleted = :isDeleted WHERE pv.product.id = :productId")
     int updateIsDeletedByProductId(@Param("productId") Long productId, @Param("isDeleted") boolean isDeleted);
 
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "DELETE FROM product_variants WHERE product_id = :productId", nativeQuery = true)
+    int hardDeleteByProductId(@Param("productId") Long productId);
+
     boolean existsBySku(String sku);
 
     boolean existsBySkuAndIdNot(String sku, Long id);

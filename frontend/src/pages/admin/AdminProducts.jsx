@@ -226,18 +226,18 @@ export default function AdminProducts() {
     }
   };
 
-  // Handle permanent delete (Zero Data Loss Policy)
+  // Handle permanent delete
   const handleHardDeleteConfirm = async () => {
     if (!hardDeleteTarget) return;
     try {
       setIsHardDeleting(true);
       const res = await adminApi.hardDeleteProduct(hardDeleteTarget.id);
-      toast.info(res?.message || `Chính sách bảo toàn dữ liệu: Sản phẩm "${hardDeleteTarget.name}" đã được lưu trữ an toàn ở trạng thái Ẩn, không làm mất dữ liệu khỏi CSDL.`);
+      toast.success(res?.message || `Đã xóa vĩnh viễn sản phẩm "${hardDeleteTarget.name}".`);
       setHardDeleteTarget(null);
       await fetchData();
     } catch (err) {
-      console.error('Lỗi khi xử lý sản phẩm:', err);
-      toast.error(err.message || 'Không thể xử lý yêu cầu. Vui lòng thử lại.');
+      console.error('Lỗi khi xóa vĩnh viễn sản phẩm:', err);
+      toast.error(err.response?.data?.message || err.message || 'Không thể xóa vĩnh viễn sản phẩm.');
     } finally {
       setIsHardDeleting(false);
     }
@@ -663,16 +663,16 @@ export default function AdminProducts() {
         onSuccess={fetchData}
       />
 
-      {/* Confirm permanent delete dialog (Zero Data Loss Policy) */}
+      {/* Confirm permanent delete dialog */}
       <ConfirmDialog
         isOpen={Boolean(hardDeleteTarget)}
         onClose={() => !isHardDeleting && setHardDeleteTarget(null)}
         onConfirm={handleHardDeleteConfirm}
-        title="Chính sách bảo toàn dữ liệu (Không mất dữ liệu)"
-        description={`Theo chính sách bảo toàn dữ liệu, sản phẩm "${hardDeleteTarget?.name}" sẽ được lưu trữ an toàn ở trạng thái Đã ẩn. Để bảo toàn lịch sử giao dịch và kế toán, hệ thống không xóa vĩnh viễn dữ liệu khỏi CSDL.`}
-        confirmText="Xác nhận lưu trữ an toàn"
+        title={`Xóa vĩnh viễn sản phẩm "${hardDeleteTarget?.name}"?`}
+        description={`Bạn sắp xóa vĩnh viễn sản phẩm "${hardDeleteTarget?.name}" cùng toàn bộ biến thể và hình ảnh khỏi cơ sở dữ liệu. Thao tác này chỉ thực hiện được khi sản phẩm chưa có đơn hàng liên quan và không thể hoàn tác.`}
+        confirmText="Xác nhận xóa vĩnh viễn"
         cancelText="Hủy"
-        variant="warning"
+        variant="danger"
         loading={isHardDeleting}
       />
 

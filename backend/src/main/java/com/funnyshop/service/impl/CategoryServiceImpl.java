@@ -108,11 +108,16 @@ public class CategoryServiceImpl implements CategoryService {
                         )
                 );
 
-        // Chính sách bảo toàn dữ liệu (Zero Data Loss):
-        // Xóa cứng không làm mất dữ liệu khỏi CSDL để bảo toàn dữ liệu.
-        // Tự động chuyển và duy trì ở trạng thái xóa mềm (isDeleted = true).
-        category.setIsDeleted(true);
-        categoryRepository.save(category);
+        long productCount = productRepository.countByCategoryId(id);
+        if (productCount > 0) {
+            throw new IllegalStateException(
+                    "Không thể xóa vĩnh viễn danh mục này vì vẫn còn " + productCount
+                    + " sản phẩm đang liên kết. Dữ liệu được bảo toàn!"
+            );
+        }
+
+        // Không còn sản phẩm liên kết -> Thực hiện xóa cứng hoàn toàn khỏi CSDL
+        categoryRepository.hardDeleteById(id);
     }
 
     // Khôi phục danh mục đã xóa mềm
