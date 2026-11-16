@@ -19,5 +19,13 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
     @Modifying(flushAutomatically = true)
     @Query("UPDATE ProductImage pi SET pi.isPrimary = false WHERE pi.product.id = :productId")
     int resetPrimaryByProductId(@Param("productId") Long productId);
+
+    // Xóa vật lý toàn bộ hình ảnh thuộc sản phẩm
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+            value = "DELETE FROM product_images WHERE product_id = :productId",
+            nativeQuery = true
+    )
+    int hardDeleteByProductId(@Param("productId") Long productId);
 }
 

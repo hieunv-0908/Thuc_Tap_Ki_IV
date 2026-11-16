@@ -60,5 +60,13 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     boolean existsBySku(String sku);
 
     boolean existsBySkuAndIdNot(String sku, Long id);
+
+    // Xóa vật lý toàn bộ biến thể thuộc sản phẩm
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+            value = "DELETE FROM product_variants WHERE product_id = :productId",
+            nativeQuery = true
+    )
+    int hardDeleteByProductId(@Param("productId") Long productId);
 }
 
