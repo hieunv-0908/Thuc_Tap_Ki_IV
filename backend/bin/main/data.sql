@@ -91,3 +91,10 @@ INSERT INTO product_images (id, product_id, variant_id, image_url, is_primary, c
 (10, 6, 18, 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800', TRUE, NOW()),
 (11, 6, 19, 'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=800', FALSE, NOW())
 ON DUPLICATE KEY UPDATE image_url = VALUES(image_url);
+
+-- 6. Insert Vouchers (Mã giảm giá mẫu)
+INSERT INTO vouchers (id, code, name, description, discount_type, discount_value, max_discount_amount, min_order_value, usage_limit, used_count, per_user_limit, start_date, end_date, is_active, created_at, updated_at) VALUES
+(1, 'WELCOME50K', 'Giảm 50.000đ cho khách hàng mới', 'Áp dụng cho đơn hàng từ 200.000đ', 'FIXED_AMOUNT', 50000.00, NULL, 200000.00, 100, 0, 1, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), TRUE, NOW(), NOW()),
+(2, 'SALE10', 'Giảm 10% tối đa 100.000đ', 'Áp dụng cho đơn hàng từ 300.000đ', 'PERCENTAGE', 10.00, 100000.00, 300000.00, 200, 0, 2, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 60 DAY), TRUE, NOW(), NOW()),
+(3, 'VIP20', 'Giảm 20% tối đa 200.000đ cho khách VIP', 'Áp dụng cho đơn hàng từ 500.000đ', 'PERCENTAGE', 20.00, 200000.00, 500000.00, 50, 0, 1, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 90 DAY), TRUE, NOW(), NOW())
+ON DUPLICATE KEY UPDATE updated_at = NOW();
