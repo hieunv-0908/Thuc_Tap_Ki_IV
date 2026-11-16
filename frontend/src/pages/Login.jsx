@@ -100,15 +100,20 @@ export default function Login() {
       loginToStore(res.token, res.refreshToken, res.user);
       toast.success(`Chào mừng ${res.user?.fullName || res.user?.username || 'bạn'} trở lại!`);
 
-      // Role-based redirect
+      // Role-based redirect (Bảo toàn state checkoutItems/isDirectBuy nếu có)
+      const redirectState = {
+        checkoutItems: location.state?.checkoutItems,
+        isDirectBuy: location.state?.isDirectBuy,
+      };
+
       if (res.user?.role === 'ADMIN') {
-        navigate(fromPath !== '/' ? fromPath : '/admin/products');
+        navigate(fromPath !== '/' ? fromPath : '/admin/products', { state: redirectState });
       } else {
         if (fromPath.startsWith('/admin')) {
           toast.info('Tài khoản của bạn không có quyền quản trị. Đã chuyển về trang chủ.');
           navigate('/');
         } else {
-          navigate(fromPath);
+          navigate(fromPath, { state: redirectState });
         }
       }
     } catch (err) {

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   CheckCircle2,
   AlertCircle,
@@ -32,8 +32,18 @@ import Button from '../components/ui/Button';
  */
 export default function Checkout() {
   const navigate = useNavigate();
-  const { items, clearCart, getTotalPrice, getTotalCount } = useCartStore();
+  const location = useLocation();
+  const { items, removeItems } = useCartStore();
   const { user } = useAuthStore();
+
+  // Xác định danh sách sản phẩm cần thanh toán (từ state Mua ngay / Chọn trong giỏ, hoặc fallback giỏ hàng)
+  const isDirectBuy = Boolean(location.state?.isDirectBuy);
+  const checkoutItems = useMemo(() => {
+    if (Array.isArray(location.state?.checkoutItems) && location.state.checkoutItems.length > 0) {
+      return location.state.checkoutItems;
+    }
+    return items;
+  }, [location.state?.checkoutItems, items]);
 
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
@@ -54,8 +64,16 @@ export default function Checkout() {
       : 'order-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
   });
 
-  const totalPrice = getTotalPrice();
-  const totalCount = getTotalCount();
+  const totalPrice = useMemo(() => {
+    return checkoutItems.reduce((acc, i) => {
+      const p = Number(i.price ?? i.product?.price ?? 0);
+      return acc + p * (i.quantity || 1);
+    }, 0);
+  }, [checkoutItems]);
+
+  const totalCount = useMemo(() => {
+    return checkoutItems.reduce((acc, i) => acc + (i.quantity || 1), 0);
+  }, [checkoutItems]);
 
   // Voucher states
   const [voucherInput, setVoucherInput] = useState('');
@@ -93,12 +111,12 @@ export default function Checkout() {
     toast.info('Đã hủy áp dụng mã giảm giá');
   };
 
-  // Redirect if cart is empty and no order has just been created
+  // Redirect if checkout list is empty and no order has just been created
   useEffect(() => {
-    if (items.length === 0 && !createdOrder) {
+    if (checkoutItems.length === 0 && !createdOrder) {
       navigate('/cart', { replace: true });
     }
-  }, [items.length, createdOrder, navigate]);
+  }, [checkoutItems.length, createdOrder, navigate]);
 
   const validateField = (name, value) => {
     let error = '';
@@ -168,7 +186,7 @@ export default function Checkout() {
         paymentMethod: 'COD',
         idempotencyKey,
         voucherCode: appliedVoucher ? appliedVoucher.voucherCode : undefined,
-        items: items.map((i) => ({
+        items: checkoutItems.map((i) => ({
           variantId: i.variantId || undefined,
           productId: i.productId || i.product?.id,
           quantity: i.quantity,
@@ -176,7 +194,18 @@ export default function Checkout() {
       };
 
       const result = await orderApi.createOrder(orderPayload);
-      clearCart();
+
+      // Cập nhật giỏ hàng:
+      if (isDirectBuy) {
+        // Mua ngay trực tiếp: KHÔNG xóa giỏ hàng
+      } else {
+        // Mua từ giỏ hàng: Chỉ xóa các sản phẩm vừa thanh toán, giữ lại các món chưa chọn
+        const paidKeys = checkoutItems.map(
+          (i) => i.cartItemId || (i.variantId ? `var-${i.variantId}` : `prod-${i.productId || i.id}`)
+        );
+        removeItems(paidKeys);
+      }
+
       setCreatedOrder(result);
       // Reset cấp key mới cho phiên tiếp theo
       if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -494,7 +523,7 @@ export default function Checkout() {
 
             {/* Mini items list with quantity badge */}
             <div className="max-h-72 overflow-y-auto divide-y divide-line pr-1 space-y-2">
-              {items.map((item) => {
+              {checkoutItems.map((item) => {
                 const img = item.imageUrl || item.product?.imageUrl;
                 const name = item.name || item.product?.name;
                 const price = item.price ?? item.product?.price ?? 0;
