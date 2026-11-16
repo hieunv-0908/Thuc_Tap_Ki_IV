@@ -7,19 +7,16 @@ import {
   Phone,
   AlertCircle,
   CheckCircle2,
-  Gift,
-  ShieldCheck,
-  Zap,
+  ArrowRight,
 } from 'lucide-react';
 import { authApi } from '../api/auth';
 import { toast } from '../store/toastStore';
 import { isValidEmail, isValidPassword } from '../utils/validators';
-import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
+import BrandLogo from '../components/ui/BrandLogo';
 
 /**
- * Register page component complying with Design.md 7.3 (v2.0)
- * 2-column layout on lg: with brand panel and password strength meter
+ * Register page - Japanese Minimalist v3.0 (Ma 間 & Kanso 簡素)
+ * Thiết kế tinh tế, thanh lịch, đồng bộ phong cách với trang chủ FunnyShop.
  */
 export default function Register() {
   const navigate = useNavigate();
@@ -163,90 +160,77 @@ export default function Register() {
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 py-8 md:py-16 bg-gradient-to-br from-primary-50 via-white to-secondary-50 overflow-hidden">
-      {/* 2 Decorative Soft Blobs */}
-      <div
-        className="absolute top-10 left-10 size-64 rounded-full bg-primary-200/40 blur-3xl pointer-events-none select-none"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute bottom-10 right-10 size-72 rounded-full bg-secondary-200/40 blur-3xl pointer-events-none select-none"
-        aria-hidden="true"
-      />
+    <div className="min-h-[calc(100vh-72px)] bg-[#EDEDF0] flex items-center justify-center px-4 py-10 sm:py-16">
+      <div className="w-full max-w-4xl border border-line bg-white grid grid-cols-1 lg:grid-cols-12 overflow-hidden shadow-xs">
+        {/* Left: Editorial Lookbook Panel (Only lg:) */}
+        <div className="hidden lg:flex lg:col-span-5 bg-[#121214] text-paper p-10 flex-col justify-between relative overflow-hidden">
+          {/* Subtle editorial atmospheric background */}
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none select-none grayscale"
+            style={{
+              backgroundImage:
+                "url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1000&auto=format&fit=crop&q=80')",
+            }}
+          />
 
-      <div className="relative z-10 w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-        {/* Left: Brand Panel (Only lg:) */}
-        <div className="hidden lg:flex flex-col justify-between h-full rounded-3xl bg-gradient-to-br from-primary-600 to-secondary-600 p-10 text-white relative overflow-hidden shadow-brand">
-          <span
-            className="absolute top-6 right-6 text-5xl opacity-40 animate-[float_5s_ease-in-out_infinite] select-none pointer-events-none"
-            aria-hidden="true"
-          >
-            🎁
-          </span>
-          <span
-            className="absolute bottom-8 right-8 text-4xl opacity-30 animate-[float-slow_8s_ease-in-out_infinite] select-none pointer-events-none"
-            aria-hidden="true"
-          >
-            ⭐
-          </span>
+          <div className="relative z-10">
+            <Link to="/" className="inline-block mb-12">
+              <BrandLogo onDark size="md" />
+            </Link>
 
-          <div>
-            <div className="inline-flex items-center gap-2 text-2xl font-bold tracking-tight mb-8">
-              <span>🎈</span>
-              <span>FunnyShop</span>
+            <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-zinc-400 font-light mb-4">
+              <span className="size-1.5 bg-vermilion inline-block" />
+              <span>Gia nhập FunnyShop</span>
             </div>
 
-            <h2 className="text-3xl font-extrabold tracking-tight leading-snug mb-4">
-              Gia nhập đại gia đình FunnyShop!
+            <h2 className="font-serif text-2xl xl:text-3xl font-light text-zinc-100 leading-snug tracking-wide mb-4">
+              Khởi đầu phong cách tối giản cùng chúng tôi.
             </h2>
-            <p className="text-sm text-white/90 leading-relaxed mb-8">
-              Tạo tài khoản nhanh chóng chỉ trong 30 giây để tận hưởng thế giới quà tặng độc lạ và nhận ngay những quyền lợi thành viên:
+
+            <p className="text-xs font-light text-zinc-400 leading-relaxed mb-10">
+              Đăng ký tài khoản thành viên chỉ trong 30 giây để tận hưởng đặc quyền đặt hàng nhanh, lưu địa chỉ và theo dõi hành trình đơn hàng.
             </p>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="size-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <Gift className="size-4.5 text-white" />
-                </div>
-                <span className="text-sm font-medium">Nhận thông báo ưu đãi và bộ sưu tập mới sớm nhất</span>
+            <div className="space-y-4 border-t border-zinc-800/80 pt-6">
+              <div className="flex items-center gap-3 text-xs font-light text-zinc-300">
+                <span className="text-[10px] font-mono text-zinc-500">01</span>
+                <span>Cập nhật bộ sưu tập mới và ưu đãi thành viên</span>
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="size-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <Zap className="size-4.5 text-white" />
-                </div>
-                <span className="text-sm font-medium">Đặt hàng nhanh chóng chỉ với một chạm</span>
+              <div className="flex items-center gap-3 text-xs font-light text-zinc-300">
+                <span className="text-[10px] font-mono text-zinc-500">02</span>
+                <span>Đặt hàng 1 chạm trực tiếp qua Stylist AI</span>
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="size-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <ShieldCheck className="size-4.5 text-white" />
-                </div>
-                <span className="text-sm font-medium">Bảo mật thông tin thanh toán tuyệt đối</span>
+              <div className="flex items-center gap-3 text-xs font-light text-zinc-300">
+                <span className="text-[10px] font-mono text-zinc-500">03</span>
+                <span>Bảo mật dữ liệu cá nhân theo tiêu chuẩn cao cấp</span>
               </div>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/20 text-xs text-white/80">
-            Trải nghiệm mua sắm tiện lợi và an tâm.
+          <div className="relative z-10 pt-8 border-t border-zinc-800/80 text-[10px] uppercase tracking-widest text-zinc-500 font-light">
+            FunnyShop • Triết lý Kanso 簡素
           </div>
         </div>
 
         {/* Right: Registration Form Card */}
-        <div className="w-full max-w-md mx-auto bg-white rounded-2xl border border-line shadow-soft p-6 sm:p-8 animate-in fade-in duration-200">
+        <div className="lg:col-span-7 p-6 sm:p-10 md:p-12 flex flex-col justify-center bg-white">
           {/* Header */}
-          <div className="text-center mb-6">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1.5 text-2xl font-bold tracking-tight mb-2"
-            >
-              <span className="text-3xl" aria-hidden="true">🎈</span>
-              <span className="text-primary-700">Funny</span>
-              <span className="text-secondary-500">Shop</span>
-            </Link>
-            <h1 className="text-2xl font-bold text-ink">Tạo tài khoản mới</h1>
-            <p className="text-sm text-ink-muted mt-1">
-              Điền thông tin bên dưới để đăng ký tài khoản FunnyShop
+          <div className="mb-8">
+            <div className="lg:hidden mb-6">
+              <Link to="/">
+                <BrandLogo size="md" />
+              </Link>
+            </div>
+
+            <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-mute mb-1.5">
+              <span className="size-1.5 bg-vermilion inline-block" />
+              <span>Đăng ký thành viên</span>
+            </div>
+            <h1 className="font-serif text-2xl sm:text-3xl font-light text-ink tracking-wide">
+              Tạo tài khoản mới
+            </h1>
+            <p className="text-xs font-light text-mute mt-1.5">
+              Vui lòng điền thông tin để đăng ký thành viên FunnyShop.
             </p>
           </div>
 
@@ -254,78 +238,147 @@ export default function Register() {
           {serverError && (
             <div
               role="alert"
-              className="mb-5 flex items-start gap-3 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm animate-in shake duration-200"
+              className="mb-6 flex items-start gap-2.5 p-3.5 bg-red-50/70 border border-vermilion/30 text-vermilion text-xs font-light"
             >
-              <AlertCircle className="size-5 shrink-0 mt-0.5 text-red-600" aria-hidden="true" />
-              <div className="flex-1 font-medium">{serverError}</div>
+              <AlertCircle className="size-4 shrink-0 mt-0.5 text-vermilion" aria-hidden="true" />
+              <div className="flex-1 leading-relaxed">{serverError}</div>
             </div>
           )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            <Input
-              label="Tên đăng nhập"
-              id="register-username"
-              name="username"
-              type="text"
-              value={formData.username}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Ví dụ: nguyen_van_an"
-              error={errors.username}
-              leftIcon={User}
-              required
-              disabled={isSubmitting}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="register-username"
+                  className="block text-[11px] uppercase tracking-widest text-mute font-light mb-1.5"
+                >
+                  Tên đăng nhập <span className="text-vermilion">*</span>
+                </label>
+                <input
+                  id="register-username"
+                  name="username"
+                  type="text"
+                  value={formData.username}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Ví dụ: nguyen_van_a"
+                  disabled={isSubmitting}
+                  className={`w-full h-11 px-3 bg-white border text-xs sm:text-sm text-ink placeholder:text-mute/60 font-light transition-colors focus:outline-none ${
+                    errors.username
+                      ? 'border-vermilion focus:border-vermilion'
+                      : 'border-line focus:border-ink'
+                  }`}
+                />
+                {errors.username && (
+                  <p className="text-xs text-vermilion font-light mt-1 flex items-center gap-1">
+                    <AlertCircle className="size-3" />
+                    <span>{errors.username}</span>
+                  </p>
+                )}
+              </div>
 
-            <Input
-              label="Họ và tên"
-              id="register-fullname"
-              name="fullName"
-              type="text"
-              value={formData.fullName}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Ví dụ: Nguyễn Văn An"
-              error={errors.fullName}
-              leftIcon={User}
-              required
-              disabled={isSubmitting}
-            />
+              <div>
+                <label
+                  htmlFor="register-fullname"
+                  className="block text-[11px] uppercase tracking-widest text-mute font-light mb-1.5"
+                >
+                  Họ và tên <span className="text-vermilion">*</span>
+                </label>
+                <input
+                  id="register-fullname"
+                  name="fullName"
+                  type="text"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Ví dụ: Nguyễn Văn An"
+                  disabled={isSubmitting}
+                  className={`w-full h-11 px-3 bg-white border text-xs sm:text-sm text-ink placeholder:text-mute/60 font-light transition-colors focus:outline-none ${
+                    errors.fullName
+                      ? 'border-vermilion focus:border-vermilion'
+                      : 'border-line focus:border-ink'
+                  }`}
+                />
+                {errors.fullName && (
+                  <p className="text-xs text-vermilion font-light mt-1 flex items-center gap-1">
+                    <AlertCircle className="size-3" />
+                    <span>{errors.fullName}</span>
+                  </p>
+                )}
+              </div>
+            </div>
 
-            <Input
-              label="Địa chỉ Email"
-              id="register-email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="name@example.com"
-              error={errors.email}
-              leftIcon={Mail}
-              required
-              disabled={isSubmitting}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="register-email"
+                  className="block text-[11px] uppercase tracking-widest text-mute font-light mb-1.5"
+                >
+                  Email <span className="text-vermilion">*</span>
+                </label>
+                <input
+                  id="register-email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="name@example.com"
+                  disabled={isSubmitting}
+                  className={`w-full h-11 px-3 bg-white border text-xs sm:text-sm text-ink placeholder:text-mute/60 font-light transition-colors focus:outline-none ${
+                    errors.email
+                      ? 'border-vermilion focus:border-vermilion'
+                      : 'border-line focus:border-ink'
+                  }`}
+                />
+                {errors.email && (
+                  <p className="text-xs text-vermilion font-light mt-1 flex items-center gap-1">
+                    <AlertCircle className="size-3" />
+                    <span>{errors.email}</span>
+                  </p>
+                )}
+              </div>
 
-            <Input
-              label="Số điện thoại"
-              id="register-phone"
-              name="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Ví dụ: 0987654321"
-              error={errors.phone}
-              leftIcon={Phone}
-              required
-              disabled={isSubmitting}
-            />
+              <div>
+                <label
+                  htmlFor="register-phone"
+                  className="block text-[11px] uppercase tracking-widest text-mute font-light mb-1.5"
+                >
+                  Số điện thoại <span className="text-vermilion">*</span>
+                </label>
+                <input
+                  id="register-phone"
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Ví dụ: 0987654321"
+                  disabled={isSubmitting}
+                  className={`w-full h-11 px-3 bg-white border text-xs sm:text-sm text-ink placeholder:text-mute/60 font-light transition-colors focus:outline-none ${
+                    errors.phone
+                      ? 'border-vermilion focus:border-vermilion'
+                      : 'border-line focus:border-ink'
+                  }`}
+                />
+                {errors.phone && (
+                  <p className="text-xs text-vermilion font-light mt-1 flex items-center gap-1">
+                    <AlertCircle className="size-3" />
+                    <span>{errors.phone}</span>
+                  </p>
+                )}
+              </div>
+            </div>
 
             <div>
-              <Input
-                label="Mật khẩu"
+              <label
+                htmlFor="register-password"
+                className="block text-[11px] uppercase tracking-widest text-mute font-light mb-1.5"
+              >
+                Mật khẩu <span className="text-vermilion">*</span>
+              </label>
+              <input
                 id="register-password"
                 name="password"
                 type="password"
@@ -333,43 +386,51 @@ export default function Register() {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 placeholder="Tối thiểu 6 ký tự"
-                error={errors.password}
-                leftIcon={Lock}
-                required
                 disabled={isSubmitting}
+                className={`w-full h-11 px-3 bg-paper border text-xs sm:text-sm text-ink placeholder:text-mute/60 font-light transition-colors focus:outline-none ${
+                  errors.password
+                    ? 'border-vermilion focus:border-vermilion'
+                    : 'border-line focus:border-ink'
+                }`}
               />
+              {errors.password && (
+                <p className="text-xs text-vermilion font-light mt-1 flex items-center gap-1">
+                  <AlertCircle className="size-3" />
+                  <span>{errors.password}</span>
+                </p>
+              )}
 
-              {/* Password strength meter (Design.md 7.3) */}
+              {/* Minimalist discrete password strength ticks */}
               {formData.password && (
                 <div className="mt-2 space-y-1">
-                  <div className="flex items-center justify-between text-xs font-medium">
-                    <span className="text-ink-subtle">Độ mạnh mật khẩu:</span>
+                  <div className="flex items-center justify-between text-[11px] font-light text-mute">
+                    <span>Độ an toàn:</span>
                     <span
                       className={
                         passwordStrength.level === 1
-                          ? 'text-red-600 font-semibold'
+                          ? 'text-vermilion font-normal'
                           : passwordStrength.level === 2
-                          ? 'text-amber-600 font-semibold'
-                          : 'text-green-600 font-semibold'
+                          ? 'text-amber-600 font-normal'
+                          : 'text-emerald-700 font-normal'
                       }
                     >
                       {passwordStrength.label}
                     </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-1.5">
+                  <div className="grid grid-cols-3 gap-1">
                     <div
-                      className={`h-1.5 rounded-full transition-all ${
-                        passwordStrength.level >= 1 ? 'bg-red-500' : 'bg-gray-200'
+                      className={`h-0.5 transition-all ${
+                        passwordStrength.level >= 1 ? 'bg-vermilion' : 'bg-line'
                       }`}
                     />
                     <div
-                      className={`h-1.5 rounded-full transition-all ${
-                        passwordStrength.level >= 2 ? 'bg-amber-500' : 'bg-gray-200'
+                      className={`h-0.5 transition-all ${
+                        passwordStrength.level >= 2 ? 'bg-amber-500' : 'bg-line'
                       }`}
                     />
                     <div
-                      className={`h-1.5 rounded-full transition-all ${
-                        passwordStrength.level >= 3 ? 'bg-green-600' : 'bg-gray-200'
+                      className={`h-0.5 transition-all ${
+                        passwordStrength.level >= 3 ? 'bg-emerald-600' : 'bg-line'
                       }`}
                     />
                   </div>
@@ -378,47 +439,64 @@ export default function Register() {
             </div>
 
             <div className="relative">
-              <Input
-                label="Xác nhận mật khẩu"
+              <label
+                htmlFor="register-confirmpassword"
+                className="block text-[11px] uppercase tracking-widest text-mute font-light mb-1.5"
+              >
+                Xác nhận mật khẩu <span className="text-vermilion">*</span>
+              </label>
+              <input
                 id="register-confirmpassword"
                 name="confirmPassword"
                 type="password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                placeholder="Nhập lại mật khẩu vừa tạo"
-                error={errors.confirmPassword}
-                leftIcon={Lock}
-                required
+                placeholder="Nhập lại mật khẩu"
                 disabled={isSubmitting}
+                className={`w-full h-11 px-3 bg-paper border text-xs sm:text-sm text-ink placeholder:text-mute/60 font-light transition-colors focus:outline-none ${
+                  errors.confirmPassword
+                    ? 'border-vermilion focus:border-vermilion'
+                    : 'border-line focus:border-ink'
+                }`}
               />
               {isConfirmMatching && (
-                <div className="absolute right-10 top-9 text-green-600 pointer-events-none">
-                  <CheckCircle2 className="size-5" />
+                <div className="absolute right-3 top-9 text-emerald-600 pointer-events-none">
+                  <CheckCircle2 className="size-4" />
                 </div>
+              )}
+              {errors.confirmPassword && (
+                <p className="text-xs text-vermilion font-light mt-1 flex items-center gap-1">
+                  <AlertCircle className="size-3" />
+                  <span>{errors.confirmPassword}</span>
+                </p>
               )}
             </div>
 
-            <div className="pt-2">
-              <Button
+            <div className="pt-3">
+              <button
                 type="submit"
-                variant="primary"
-                size="lg"
-                fullWidth
-                loading={isSubmitting}
-                className="font-bold text-base shadow-brand"
+                disabled={isSubmitting}
+                className="w-full h-11 bg-ink text-paper text-xs uppercase tracking-[0.2em] font-light hover:bg-ink/85 border border-ink transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                Tạo tài khoản
-              </Button>
+                {isSubmitting ? (
+                  <span>Đang khởi tạo tài khoản...</span>
+                ) : (
+                  <>
+                    <span>Tạo tài khoản</span>
+                    <ArrowRight className="size-3.5" />
+                  </>
+                )}
+              </button>
             </div>
           </form>
 
           {/* Footer Link to Login */}
-          <div className="mt-6 text-center text-sm text-ink-muted">
-            Đã có tài khoản?{' '}
+          <div className="mt-8 pt-6 border-t border-line text-center text-xs font-light text-mute">
+            Đã có tài khoản thành viên?{' '}
             <Link
               to="/login"
-              className="font-bold text-primary-700 hover:text-primary-800 hover:underline transition-colors ml-1"
+              className="text-ink hover:text-vermilion underline underline-offset-4 transition-colors ml-1 font-normal"
             >
               Đăng nhập ngay
             </Link>

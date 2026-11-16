@@ -5,20 +5,20 @@ import {
   Lock,
   AlertCircle,
   CheckCircle2,
-  ClipboardList,
-  MapPin,
-  Bot,
+  ArrowRight,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { authApi } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 import { toast } from '../store/toastStore';
 import { isValidPassword } from '../utils/validators';
+import BrandLogo from '../components/ui/BrandLogo';
 import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
 
 /**
- * Login page complying with Design.md 7.3 (v2.0)
- * 2-column layout on lg: with brand panel
+ * Login page - Japanese Minimalist v3.0 (Ma 間 & Kanso 簡素)
+ * Thiết kế tinh tế, tĩnh lặng, chuẩn triết lý thời trang tối giản FunnyShop.
  */
 export default function Login() {
   const navigate = useNavigate();
@@ -128,92 +128,77 @@ export default function Login() {
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 py-8 md:py-16 bg-gradient-to-br from-primary-50 via-white to-secondary-50 overflow-hidden">
-      {/* 2 Decorative Soft Blobs (Design.md 2.7.3) */}
-      <div
-        className="absolute top-10 left-10 size-64 rounded-full bg-primary-200/40 blur-3xl pointer-events-none select-none"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute bottom-10 right-10 size-72 rounded-full bg-secondary-200/40 blur-3xl pointer-events-none select-none"
-        aria-hidden="true"
-      />
+    <div className="min-h-[calc(100vh-72px)] bg-[#EDEDF0] flex items-center justify-center px-4 py-10 sm:py-16">
+      <div className="w-full max-w-4xl border border-line bg-white grid grid-cols-1 lg:grid-cols-12 overflow-hidden shadow-xs">
+        {/* Left: Editorial Lookbook Panel (Only lg:) */}
+        <div className="hidden lg:flex lg:col-span-5 bg-[#121214] text-paper p-10 flex-col justify-between relative overflow-hidden">
+          {/* Subtle editorial atmospheric background */}
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none select-none grayscale"
+            style={{
+              backgroundImage:
+                "url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1000&auto=format&fit=crop&q=80')",
+            }}
+          />
 
-      <div className="relative z-10 w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-        {/* Left: Brand Panel (Only lg:) */}
-        <div className="hidden lg:flex flex-col justify-between h-full rounded-3xl bg-gradient-to-br from-primary-600 to-secondary-600 p-10 text-white relative overflow-hidden shadow-brand">
-          {/* Floating emoji in brand panel */}
-          <span
-            className="absolute top-6 right-6 text-5xl opacity-40 animate-[float_5s_ease-in-out_infinite] select-none pointer-events-none"
-            aria-hidden="true"
-          >
-            🎈
-          </span>
-          <span
-            className="absolute bottom-8 right-8 text-4xl opacity-30 animate-[float-slow_8s_ease-in-out_infinite] select-none pointer-events-none"
-            aria-hidden="true"
-          >
-            🧸
-          </span>
+          <div className="relative z-10">
+            <Link to="/" className="inline-block mb-12">
+              <BrandLogo onDark size="md" />
+            </Link>
 
-          <div>
-            <div className="inline-flex items-center gap-2 text-2xl font-bold tracking-tight mb-8">
-              <span>🎈</span>
-              <span>FunnyShop</span>
+            <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-zinc-400 font-light mb-4">
+              <span className="size-1.5 bg-vermilion inline-block" />
+              <span>Authentic Minimalist</span>
             </div>
 
-            <h2 className="text-3xl font-extrabold tracking-tight leading-snug mb-4">
-              Chào mừng trở lại FunnyShop!
+            <h2 className="font-serif text-2xl xl:text-3xl font-light text-zinc-100 leading-snug tracking-wide mb-4">
+              Đơn giản trong đường nét, tinh tế trong trải nghiệm.
             </h2>
-            <p className="text-sm text-white/90 leading-relaxed mb-8">
-              Đăng nhập ngay để theo dõi các đơn hàng quà tặng vui nhộn và nhận ưu đãi độc quyền.
+
+            <p className="text-xs font-light text-zinc-400 leading-relaxed mb-10">
+              Đăng nhập để quản lý đơn hàng, theo dõi lịch sử mua sắm và nhận gợi ý trang phục độc quyền từ Stylist AI.
             </p>
 
-            {/* 3 benefit bullets */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="size-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <ClipboardList className="size-4.5 text-white" />
-                </div>
-                <span className="text-sm font-medium">Theo dõi tình trạng đơn hàng dễ dàng</span>
+            <div className="space-y-4 border-t border-zinc-800/80 pt-6">
+              <div className="flex items-center gap-3 text-xs font-light text-zinc-300">
+                <span className="text-[10px] font-mono text-zinc-500">01</span>
+                <span>Tư vấn trang phục cá nhân hóa với Stylist AI</span>
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="size-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <MapPin className="size-4.5 text-white" />
-                </div>
-                <span className="text-sm font-medium">Lưu địa chỉ nhận hàng thuận tiện</span>
+              <div className="flex items-center gap-3 text-xs font-light text-zinc-300">
+                <span className="text-[10px] font-mono text-zinc-500">02</span>
+                <span>Thanh toán linh hoạt COD &amp; VietQR PayOS 24/7</span>
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="size-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <Bot className="size-4.5 text-white" />
-                </div>
-                <span className="text-sm font-medium">Hỏi trợ lý AI thông minh chọn quà</span>
+              <div className="flex items-center gap-3 text-xs font-light text-zinc-300">
+                <span className="text-[10px] font-mono text-zinc-500">03</span>
+                <span>Chính sách đổi size / đổi mẫu trong 7 ngày</span>
               </div>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/20 text-xs text-white/80">
-            Nền tảng quà tặng độc lạ hàng đầu cho giới trẻ Việt Nam.
+          <div className="relative z-10 pt-8 border-t border-zinc-800/80 text-[10px] uppercase tracking-widest text-zinc-500 font-light">
+            FunnyShop • Triết lý Kanso 簡素
           </div>
         </div>
 
         {/* Right: Form Card */}
-        <div className="w-full max-w-md mx-auto bg-white rounded-2xl border border-line shadow-soft p-6 sm:p-8 animate-in fade-in duration-200">
+        <div className="lg:col-span-7 p-6 sm:p-10 md:p-12 flex flex-col justify-center bg-white">
           {/* Header */}
-          <div className="text-center mb-6">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1.5 text-2xl font-bold tracking-tight mb-2"
-            >
-              <span className="text-3xl" aria-hidden="true">🎈</span>
-              <span className="text-primary-700">Funny</span>
-              <span className="text-secondary-500">Shop</span>
-            </Link>
-            <h1 className="text-2xl font-bold text-ink">Đăng nhập tài khoản</h1>
-            <p className="text-sm text-ink-muted mt-1">
-              Điền thông tin để đăng nhập vào tài khoản của bạn
+          <div className="mb-8">
+            <div className="lg:hidden mb-6">
+              <Link to="/">
+                <BrandLogo size="md" />
+              </Link>
+            </div>
+
+            <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-mute mb-1.5">
+              <span className="size-1.5 bg-vermilion inline-block" />
+              <span>Tài khoản thành viên</span>
+            </div>
+            <h1 className="font-serif text-2xl sm:text-3xl font-light text-ink tracking-wide">
+              Đăng nhập
+            </h1>
+            <p className="text-xs font-light text-mute mt-1.5">
+              Vui lòng nhập thông tin để truy cập tài khoản của bạn.
             </p>
           </div>
 
@@ -221,10 +206,10 @@ export default function Login() {
           {successNotice && !serverError && (
             <div
               role="status"
-              className="mb-5 flex items-start gap-3 p-3.5 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm animate-in fade-in duration-200"
+              className="mb-6 flex items-start gap-2.5 p-3.5 bg-emerald-50/60 border border-emerald-200 text-emerald-800 text-xs font-light"
             >
-              <CheckCircle2 className="size-5 shrink-0 mt-0.5 text-green-600" aria-hidden="true" />
-              <div className="flex-1 font-medium">{successNotice}</div>
+              <CheckCircle2 className="size-4 shrink-0 mt-0.5 text-emerald-600" aria-hidden="true" />
+              <div className="flex-1 leading-relaxed">{successNotice}</div>
             </div>
           )}
 
@@ -232,78 +217,115 @@ export default function Login() {
           {serverError && (
             <div
               role="alert"
-              className="mb-5 flex items-start gap-3 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm animate-in shake duration-200"
+              className="mb-6 flex items-start gap-2.5 p-3.5 bg-red-50/70 border border-vermilion/30 text-vermilion text-xs font-light"
             >
-              <AlertCircle className="size-5 shrink-0 mt-0.5 text-red-600" aria-hidden="true" />
-              <div className="flex-1 font-medium">{serverError}</div>
+              <AlertCircle className="size-4 shrink-0 mt-0.5 text-vermilion" aria-hidden="true" />
+              <div className="flex-1 leading-relaxed">{serverError}</div>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            <Input
-              label="Tên đăng nhập"
-              id="login-username"
-              name="username"
-              type="text"
-              value={formData.username}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Nhập tên đăng nhập"
-              error={errors.username}
-              leftIcon={User}
-              required
-              disabled={isSubmitting}
-              autoFocus={!registeredUsername}
-            />
-
-            <Input
-              label="Mật khẩu"
-              id="login-password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Nhập tối thiểu 6 ký tự"
-              error={errors.password}
-              leftIcon={Lock}
-              required
-              disabled={isSubmitting}
-              autoFocus={Boolean(registeredUsername)}
-            />
-
-            <div className="flex items-center justify-end -mt-1">
-              <Link
-                to="/forgot-password"
-                className="text-xs font-semibold text-primary-700 hover:text-primary-800 hover:underline transition-colors"
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+            <div>
+              <label
+                htmlFor="login-username"
+                className="block text-[11px] uppercase tracking-widest text-mute font-light mb-1.5"
               >
-                Quên mật khẩu?
-              </Link>
+                Tên đăng nhập <span className="text-vermilion">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  id="login-username"
+                  name="username"
+                  type="text"
+                  value={formData.username}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Nhập tên tài khoản"
+                  disabled={isSubmitting}
+                  autoFocus={!registeredUsername}
+                  className={`w-full h-11 px-3 bg-white border text-xs sm:text-sm text-ink placeholder:text-mute/60 font-light transition-colors focus:outline-none ${
+                    errors.username
+                      ? 'border-vermilion focus:border-vermilion'
+                      : 'border-line focus:border-ink'
+                  }`}
+                />
+              </div>
+              {errors.username && (
+                <p className="text-xs text-vermilion font-light mt-1 flex items-center gap-1">
+                  <AlertCircle className="size-3" />
+                  <span>{errors.username}</span>
+                </p>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  htmlFor="login-password"
+                  className="block text-[11px] uppercase tracking-widest text-mute font-light"
+                >
+                  Mật khẩu <span className="text-vermilion">*</span>
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-[11px] font-light text-mute hover:text-ink underline underline-offset-4 transition-colors"
+                >
+                  Quên mật khẩu?
+                </Link>
+              </div>
+              <div className="relative">
+                <input
+                  id="login-password"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Tối thiểu 6 ký tự"
+                  disabled={isSubmitting}
+                  autoFocus={Boolean(registeredUsername)}
+                  className={`w-full h-11 px-3 bg-white border text-xs sm:text-sm text-ink placeholder:text-mute/60 font-light transition-colors focus:outline-none ${
+                    errors.password
+                      ? 'border-vermilion focus:border-vermilion'
+                      : 'border-line focus:border-ink'
+                  }`}
+                />
+              </div>
+              {errors.password && (
+                <p className="text-xs text-vermilion font-light mt-1 flex items-center gap-1">
+                  <AlertCircle className="size-3" />
+                  <span>{errors.password}</span>
+                </p>
+              )}
             </div>
 
             <div className="pt-2">
-              <Button
+              <button
                 type="submit"
-                variant="primary"
-                size="lg"
-                fullWidth
-                loading={isSubmitting}
-                className="font-bold text-base shadow-brand"
+                disabled={isSubmitting}
+                className="w-full h-11 bg-ink text-paper text-xs uppercase tracking-[0.2em] font-light hover:bg-ink/85 border border-ink transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                Đăng nhập
-              </Button>
+                {isSubmitting ? (
+                  <span>Đang xác thực...</span>
+                ) : (
+                  <>
+                    <span>Đăng nhập</span>
+                    <ArrowRight className="size-3.5" />
+                  </>
+                )}
+              </button>
             </div>
           </form>
 
           {/* Footer Link to Register */}
-          <div className="mt-6 text-center text-sm text-ink-muted">
+          <div className="mt-8 pt-6 border-t border-line text-center text-xs font-light text-mute">
             Chưa có tài khoản?{' '}
             <Link
               to="/register"
-              className="font-bold text-primary-700 hover:text-primary-800 hover:underline transition-colors ml-1"
+              className="text-ink hover:text-vermilion underline underline-offset-4 transition-colors ml-1 font-normal"
             >
-              Đăng ký ngay
+              Đăng ký tài khoản mới
             </Link>
           </div>
         </div>
