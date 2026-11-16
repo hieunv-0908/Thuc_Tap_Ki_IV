@@ -9,8 +9,10 @@ import {
   X,
   Phone,
   Calendar,
+  Download,
 } from 'lucide-react';
 import Table from '../../components/ui/Table';
+import Button from '../../components/ui/Button';
 import Pagination from '../../components/ui/Pagination';
 import { OrderBadge } from '../../components/ui/Badge';
 import CancelOrderModal from '../../components/order/CancelOrderModal';
@@ -21,6 +23,7 @@ import { orderApi } from '../../api/order';
 import { toast } from '../../store/toastStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
+import { downloadBlob } from '../../utils/downloadFile';
 import {
   ORDER_STATUS,
   ORDER_STATUS_LABELS,
@@ -41,6 +44,9 @@ export default function AdminOrders() {
 
   // Detail Modal
   const [selectedOrder, setSelectedOrder] = useState(null);
+
+  // Export CSV
+  const [isExporting, setIsExporting] = useState(false);
 
   // Cancel Confirm Dialog
   const [cancelTarget, setCancelTarget] = useState(null); // { id }
@@ -185,6 +191,26 @@ export default function AdminOrders() {
     }
   };
 
+  // Export orders to CSV
+  const handleExportCsv = async () => {
+    try {
+      setIsExporting(true);
+      const params = {};
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (statusFilter !== 'ALL') params.status = statusFilter;
+
+      const blob = await adminApi.exportOrdersCsv(params);
+      const dateStr = new Date().toISOString().slice(0, 10);
+      downloadBlob(blob, `don_hang_funnyshop_${dateStr}.csv`);
+      toast.success('Xuất file CSV đơn hàng thành công!');
+    } catch (err) {
+      console.error('Lỗi xuất file CSV:', err);
+      toast.error(err.message || 'Không thể xuất file CSV đơn hàng.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Status Filter Chips definition
   const filterChips = [
     { key: 'ALL', label: 'Tất cả đơn', count: orders.length },
@@ -319,13 +345,24 @@ export default function AdminOrders() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-ink">
-          Quản lý đơn hàng
-        </h1>
-        <p className="text-sm text-ink-muted mt-0.5">
-          Theo dõi tiến độ, xem chi tiết và chuyển trạng thái xử lý đơn hàng của khách hàng
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-ink">
+            Quản lý đơn hàng
+          </h1>
+          <p className="text-sm text-ink-muted mt-0.5">
+            Theo dõi tiến độ, xem chi tiết và chuyển trạng thái xử lý đơn hàng của khách hàng
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          leftIcon={Download}
+          loading={isExporting}
+          onClick={handleExportCsv}
+          className="shrink-0"
+        >
+          Xuất CSV
+        </Button>
       </div>
 
       {/* StatCards Row */}

@@ -12,6 +12,7 @@ import {
   X,
   RotateCcw,
   EyeOff,
+  Download,
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Table from '../../components/ui/Table';
@@ -25,6 +26,7 @@ import { adminApi } from '../../api/admin';
 import { toast } from '../../store/toastStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getCategoryMeta } from '../../utils/constants';
+import { downloadBlob } from '../../utils/downloadFile';
 
 const ITEMS_PER_PAGE = 8;
 
@@ -49,6 +51,7 @@ export default function AdminProducts() {
   const [isHardDeleting, setIsHardDeleting] = useState(false);
   const [restoreTarget, setRestoreTarget] = useState(null); // { id, name }
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Fetch data for user actions (retry, after delete/restore)
   const fetchData = useCallback(async () => {
@@ -254,6 +257,26 @@ export default function AdminProducts() {
       toast.error(err.message || 'Không thể khôi phục sản phẩm. Vui lòng thử lại.');
     } finally {
       setIsRestoring(false);
+    }
+  };
+
+  // Handle Export CSV
+  const handleExportCsv = async () => {
+    try {
+      setIsExporting(true);
+      const params = {};
+      if (searchQuery.trim()) params.keyword = searchQuery.trim();
+      if (selectedCategory) params.categoryId = selectedCategory;
+
+      const blob = await adminApi.exportProductsCsv(params);
+      const dateStr = new Date().toISOString().slice(0, 10);
+      downloadBlob(blob, `san_pham_funnyshop_${dateStr}.csv`);
+      toast.success('Xuất file CSV danh sách sản phẩm thành công!');
+    } catch (err) {
+      console.error('Lỗi xuất file CSV sản phẩm:', err);
+      toast.error(err.message || 'Không thể xuất file CSV sản phẩm.');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -469,6 +492,16 @@ export default function AdminProducts() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="outline"
+            leftIcon={Download}
+            loading={isExporting}
+            onClick={handleExportCsv}
+            title="Xuất danh sách sản phẩm ra file CSV (Excel)"
+          >
+            Xuất CSV
+          </Button>
+
           <Button
             variant="secondary"
             leftIcon={Sparkles}

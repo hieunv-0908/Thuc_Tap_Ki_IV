@@ -205,6 +205,20 @@ export const adminApi = {
     return res?.data !== undefined ? res.data : res;
   },
 
+  exportOrdersCsv: async (params = {}) => {
+    return await apiClient.get('/api/v1/admin/orders/export/csv', {
+      params,
+      responseType: 'blob',
+    });
+  },
+
+  exportProductsCsv: async (params = {}) => {
+    return await apiClient.get('/api/v1/admin/products/export/csv', {
+      params,
+      responseType: 'blob',
+    });
+  },
+
   // ── Categories ──────────────────────────────────────────────────────────
   createCategory: async ({ name, description = '' }) => {
     const res = await apiClient.post('/api/v1/admin/categories', { name, description });

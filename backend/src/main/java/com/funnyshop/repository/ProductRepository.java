@@ -80,4 +80,18 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             Pageable pageable
     );
 
+    @Query("""
+        SELECT DISTINCT p FROM Product p
+        LEFT JOIN FETCH p.category
+        LEFT JOIN FETCH p.variants pv
+        WHERE (:isDeleted IS NULL OR p.isDeleted = :isDeleted)
+          AND (:keyword IS NULL OR :keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :keyword, '%')))
+          AND (:categoryId IS NULL OR p.category.id = :categoryId)
+        ORDER BY p.id ASC
+    """)
+    java.util.List<Product> findProductsForExport(
+            @Param("keyword") String keyword,
+            @Param("categoryId") Long categoryId,
+            @Param("isDeleted") Boolean isDeleted
+    );
 }
