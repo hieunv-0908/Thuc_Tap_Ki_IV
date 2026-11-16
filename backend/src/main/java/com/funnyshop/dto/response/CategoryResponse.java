@@ -20,7 +20,7 @@ public class CategoryResponse {
     private Long productCount;
 
     public static CategoryResponse fromEntity(Category category) {
-        return fromEntity(category, 0L);
+        return fromEntity(category, null);
     }
 
     public static CategoryResponse fromEntity(Category category, Long productCount) {
@@ -32,7 +32,7 @@ public class CategoryResponse {
                 .name(category.getName())
                 .description(category.getDescription())
                 .isDeleted(category.getIsDeleted())
-                .productCount(productCount != null ? productCount : 0L)
+                .productCount(productCount)
                 .build();
     }
 }

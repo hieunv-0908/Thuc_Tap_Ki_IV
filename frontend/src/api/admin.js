@@ -245,6 +245,11 @@ export const adminApi = {
     return res?.data !== undefined ? res.data : res;
   },
 
+  hardDeleteCategory: async (id) => {
+    const res = await apiClient.delete(`/api/v1/admin/categories/${id}/permanent`);
+    return res?.data !== undefined ? res.data : res;
+  },
+
   // ── Users ───────────────────────────────────────────────────────────────
   getUsers: async () => {
     // if (isMock) {

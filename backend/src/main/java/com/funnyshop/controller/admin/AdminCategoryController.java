@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping({"/api/v1/admin/categories", "/api/admin/categories"})
 @RequiredArgsConstructor
@@ -20,13 +22,13 @@ public class AdminCategoryController {
     private final CategoryService categoryService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<java.util.List<CategoryResponse>>> getAllCategoriesAdmin() {
-        java.util.List<CategoryResponse> categories = categoryService.getAllCategoriesAdmin();
+    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllCategories() {
+        List<CategoryResponse> categories = categoryService.getAllCategoriesForAdmin();
 
         return ResponseEntity.ok(
-                ApiResponse.<java.util.List<CategoryResponse>>builder()
+                ApiResponse.<List<CategoryResponse>>builder()
                         .code(HttpStatus.OK.value())
-                        .message("Lấy toàn bộ danh sách danh mục quản trị thành công!")
+                        .message("Lấy danh sách tất cả danh mục thành công!")
                         .data(categories)
                         .build());
     }
@@ -80,6 +82,17 @@ public class AdminCategoryController {
                         .code(HttpStatus.OK.value())
                         .message("Khôi phục danh mục thành công!")
                         .data(response)
+                        .build());
+    }
+
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<ApiResponse<Void>> hardDeleteCategory(@PathVariable Long id) {
+        categoryService.hardDeleteCategory(id);
+
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Xóa vĩnh viễn danh mục thành công!")
                         .build());
     }
 }

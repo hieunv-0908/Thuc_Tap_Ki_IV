@@ -15,6 +15,7 @@ import com.funnyshop.entity.ProductVariant;
 import com.funnyshop.exception.ResourceAlreadyExistsException;
 import com.funnyshop.exception.ResourceNotFoundException;
 import com.funnyshop.repository.CategoryRepository;
+import com.funnyshop.repository.OrderItemRepository;
 import com.funnyshop.repository.ProductImageRepository;
 import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.repository.ProductVariantRepository;
@@ -39,6 +40,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ProductImageRepository productImageRepository;
+    private final OrderItemRepository orderItemRepository;
 
     @Override
     public Page<ProductResponse> getProducts(
@@ -309,9 +311,18 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void hardDeleteProduct(Long id) {
-        if (productRepository.hardDeleteById(id) == 0) {
-            throw new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + id));
+
+        // Ràng buộc toàn vẹn lịch sử đơn hàng: Không cho phép xóa vĩnh viễn nếu đã phát sinh trong đơn hàng
+        if (orderItemRepository.existsByProductIdOrVariantProductId(id)) {
+            throw new IllegalStateException(
+                    "Sản phẩm này đã có trong lịch sử đơn hàng của khách. Để bảo toàn số liệu kế toán và hóa đơn, bạn chỉ có thể 'Dừng bán' (Ẩn sản phẩm) chứ không thể xóa vĩnh viễn!"
+            );
         }
+
+        // Xóa cascade an toàn các ảnh và biến thể trước khi xóa sản phẩm
+        productRepository.delete(product);
     }
 
     @Override

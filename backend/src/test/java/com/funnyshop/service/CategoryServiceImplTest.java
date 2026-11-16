@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 import java.util.Optional;
@@ -87,20 +88,21 @@ class CategoryServiceImplTest {
                 .description("Mô tả mới")
                 .build();
 
-        when(categoryRepository.findByIdAndIsDeletedFalse(1L)).thenReturn(Optional.of(sampleCategory));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(sampleCategory));
         when(categoryRepository.save(any(Category.class))).thenAnswer(i -> i.getArgument(0));
+        when(productRepository.countByCategoryId(1L)).thenReturn(2L);
 
         CategoryResponse response = categoryService.updateCategory(1L, request);
 
         assertNotNull(response);
         assertEquals("Thời trang Nam Nữ", response.getName());
+        assertEquals(2L, response.getProductCount());
     }
 
     @Test
-    @DisplayName("deleteCategory - Xóa mềm danh mục khi không có sản phẩm liên kết (isDeleted = true)")
+    @DisplayName("deleteCategory - Xóa mềm danh mục thành công khi không có sản phẩm liên kết")
     void deleteCategory_SoftDelete_Success() {
-        when(categoryRepository.findByIdAndIsDeletedFalse(1L)).thenReturn(Optional.of(sampleCategory));
-        when(productRepository.countByCategoryIdAndIsDeletedFalse(1L)).thenReturn(0L);
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(sampleCategory));
         when(productRepository.countByCategoryId(1L)).thenReturn(0L);
         when(categoryRepository.save(any(Category.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -111,31 +113,37 @@ class CategoryServiceImplTest {
     }
 
     @Test
-    @DisplayName("getAllCategoriesAdmin - Lấy toàn bộ danh mục kèm số lượng sản phẩm")
-    void getAllCategoriesAdmin_Success() {
-        when(categoryRepository.findAllByOrderByIdAsc()).thenReturn(List.of(sampleCategory));
-        when(productRepository.countByCategoryId(1L)).thenReturn(10L);
+    @DisplayName("deleteCategory - Chặn xóa mềm khi danh mục vẫn còn sản phẩm liên kết")
+    void deleteCategory_HasProducts_ThrowsException() {
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(sampleCategory));
+        when(productRepository.countByCategoryId(1L)).thenReturn(5L);
 
-        List<CategoryResponse> result = categoryService.getAllCategoriesAdmin();
+        assertThrows(IllegalStateException.class, () -> categoryService.deleteCategory(1L));
 
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(10L, result.get(0).getProductCount());
+        verify(categoryRepository, never()).save(any(Category.class));
     }
 
     @Test
-    @DisplayName("deleteCategory - Chặn xóa danh mục khi vẫn còn sản phẩm liên kết")
-    void deleteCategory_FailWhenHasProducts() {
-        when(categoryRepository.findByIdAndIsDeletedFalse(1L)).thenReturn(Optional.of(sampleCategory));
-        when(productRepository.countByCategoryIdAndIsDeletedFalse(1L)).thenReturn(5L);
+    @DisplayName("hardDeleteCategory - Xóa vĩnh viễn khi không còn sản phẩm")
+    void hardDeleteCategory_Success() {
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(sampleCategory));
+        when(productRepository.countByCategoryId(1L)).thenReturn(0L);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
-            categoryService.deleteCategory(1L);
-        });
+        categoryService.hardDeleteCategory(1L);
 
-        assertTrue(ex.getMessage().toLowerCase().contains("không thể ẩn hoặc xóa"));
-        assertFalse(sampleCategory.getIsDeleted());
-        verify(categoryRepository, never()).save(sampleCategory);
+        verify(categoryRepository).delete(sampleCategory);
+    }
+
+    @Test
+    @DisplayName("getAllCategoriesForAdmin - Trả về đầy đủ danh mục kèm số lượng sản phẩm")
+    void getAllCategoriesForAdmin_Success() {
+        when(categoryRepository.findAll(any(Sort.class))).thenReturn(List.of(sampleCategory));
+        when(productRepository.countByCategoryId(1L)).thenReturn(8L);
+
+        List<CategoryResponse> result = categoryService.getAllCategoriesForAdmin();
+
+        assertEquals(1, result.size());
+        assertEquals(8L, result.get(0).getProductCount());
     }
 }
 

@@ -10,6 +10,5 @@ import java.util.Optional;
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findAllByIsDeletedFalse();
-    List<Category> findAllByOrderByIdAsc();
     Optional<Category> findByIdAndIsDeletedFalse(Long id);
 }
