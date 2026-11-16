@@ -35,8 +35,8 @@ flowchart TD
 |---|---|---|---|---|
 | **Phase 1** | Tách biệt giỏ hàng theo tài khoản / khách; xử lý dọn dẹp khi đăng xuất | Frontend Zustand Store, LocalStorage Partitioning, Session Context | 🔴 P0 (Cao nhất - Sửa lỗi bảo mật/UX) | `[x] Đã hoàn thành` |
 | **Phase 2** | Quản lý & Áp dụng Voucher (DB, Service, Validation, Checkout Lock, UI) | MySQL Schema, Spring JPA, Pessimistic Locking, Checkout API, React Modal | 🔴 P0 (Nghiệp vụ cốt lõi) | `[x] Đã hoàn thành` |
-| **Phase 3** | Quản lý & Phân tích Doanh thu (Aggregations, Period Filter, Timeline API) | SQL Aggregation, Time-series Query, Spring Service, Admin UI | 🟡 P1 (Nghiệp vụ quản trị) | `[ ] Chưa làm` |
-| **Phase 4** | Xuất dữ liệu Đơn hàng & Sản phẩm ra CSV chuẩn UTF-8 BOM | Spring Streaming CSV, OpenCSV / Writer, Blob Download Client | 🟡 P1 (Tiện ích vận hành) | `[ ] Chưa làm` |
+| **Phase 3** | Quản lý & Phân tích Doanh thu (Aggregations, Period Filter, Timeline API) | SQL Aggregation, Time-series Query, Spring Service, Admin UI | 🟡 P1 (Nghiệp vụ quản trị) | `[x] Đã tích hợp sẵn (Dashboard Analytics)` |
+| **Phase 4** | Xuất dữ liệu Đơn hàng & Sản phẩm ra CSV chuẩn UTF-8 BOM | Spring Streaming CSV, OpenCSV / Writer, Blob Download Client | 🟡 P1 (Tiện ích vận hành) | `[ ] Đang triển khai` |
 | **Phase 5** | Xây dựng Dashboard tổng quan toàn hệ thống cho Admin | Recharts / Chart.js, StatCards, Realtime Recent Orders, KPI Summary | 🟢 P2 (Trải nghiệm quản trị) | `[ ] Chưa làm` |
 | **Phase 6** | Kiểm thử tích hợp E2E, Kiểm tra tải & concurrency, Tối ưu & Bàn giao | JUnit 5, Integration Test, Postman / Playwright, Data Verification | 🟢 P2 (Đảm bảo chất lượng) | `[ ] Chưa làm` |
 
@@ -223,8 +223,9 @@ ALTER TABLE orders
 ---
 
 ### --------------------------------------------------------------------------------
-### 🔹 GIAI ĐOẠN 4: XUẤT DỮ LIỆU ĐƠN HÀNG VÀ SẢN PHẨM RA CSV
-*(Data Export to CSV with UTF-8 BOM)*
+### 🔹 GIAI ĐOẠN 4: XUẤT DỮ LIỆU ĐƠN HÀNG VÀ SẢN PHẨM RA CSV - [x] Đã hoàn thành
+*(Data Export to CSV with UTF-8 BOM)*  
+**Tài liệu chi tiết:** [PLAN_PHASE_4_CSV_EXPORT.md](file:///d:/thuc_tap/Thuc_Tap_Ki_IV/docs/PLAN_PHASE_4_CSV_EXPORT.md)
 
 #### 1. Quy chuẩn Kỹ thuật
 - **Đảm bảo không lỗi font tiếng Việt trong Excel:** Bắt buộc ghi ký tự Byte Order Mark (BOM `\uFEFF`) ở đầu file CSV trước khi ghi dữ liệu.

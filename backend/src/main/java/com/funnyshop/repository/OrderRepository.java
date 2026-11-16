@@ -2,6 +2,7 @@ package com.funnyshop.repository;
 
 import com.funnyshop.entity.Order;
 import com.funnyshop.entity.User;
+import com.funnyshop.enums.OrderStatus;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
 
 import java.util.List;
 import java.util.Optional;
@@ -61,4 +64,26 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findWithItemsByIdempotencyKey(@Param("key") String key);
 
     Optional<Order> findByIdempotencyKey(String idempotencyKey);
+
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.user " +
+           "LEFT JOIN FETCH o.orderItems oi " +
+           "LEFT JOIN FETCH oi.productVariant pv " +
+           "LEFT JOIN FETCH pv.product " +
+           "LEFT JOIN FETCH o.voucher " +
+           "WHERE (:status IS NULL OR o.status = :status) " +
+           "AND (:startDate IS NULL OR o.createdAt >= :startDate) " +
+           "AND (:endDate IS NULL OR o.createdAt <= :endDate) " +
+           "AND (:search IS NULL OR :search = '' OR " +
+           "     LOWER(o.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "     LOWER(o.phone) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "     LOWER(o.voucherCode) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "     CAST(o.id AS string) LIKE CONCAT('%', :search, '%')) " +
+           "ORDER BY o.createdAt DESC")
+    List<Order> findOrdersForExport(
+            @Param("search") String search,
+            @Param("status") OrderStatus status,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
 }

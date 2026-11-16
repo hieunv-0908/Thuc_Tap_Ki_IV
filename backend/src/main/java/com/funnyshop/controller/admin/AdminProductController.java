@@ -9,14 +9,21 @@ import com.funnyshop.dto.response.ApiResponse;
 import com.funnyshop.dto.response.ProductImageResponse;
 import com.funnyshop.dto.response.ProductResponse;
 import com.funnyshop.dto.response.ProductVariantResponse;
+import com.funnyshop.service.CsvExportService;
 import com.funnyshop.service.ProductService;
+import com.funnyshop.util.CsvExportUtil;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping({ "/api/v1/admin", "/api/admin" })
@@ -25,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminProductController {
 
     private final ProductService productService;
+    private final CsvExportService csvExportService;
 
     // ==========================================
     // PHẦN A: QUẢN LÝ SẢN PHẨM GỐC (Base Product)
@@ -48,6 +56,20 @@ public class AdminProductController {
                         .message("Lấy danh sách tất cả sản phẩm thành công!")
                         .data(products)
                         .build());
+    }
+
+    @GetMapping("/products/export/csv")
+    public void exportProductsCsv(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Boolean isDeleted,
+            HttpServletResponse response
+    ) throws IOException {
+        String filename = "san_pham_funnyshop_" + CsvExportUtil.formatFileTimestamp(LocalDateTime.now()) + ".csv";
+        response.setContentType("text/csv; charset=UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+        csvExportService.exportProductsToCsv(response.getWriter(), keyword, categoryId, isDeleted);
     }
 
     @PostMapping("/products")
