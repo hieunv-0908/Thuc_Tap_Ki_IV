@@ -47,6 +47,7 @@ export default function AdminVouchers() {
 
   const fetchVouchers = useCallback(async () => {
     try {
+      setLoading(true);
       const res = await voucherApi.adminGetVouchers({
         page: currentPage - 1,
         size: ITEMS_PER_PAGE,
@@ -54,10 +55,11 @@ export default function AdminVouchers() {
         isActive: activeFilter === '' ? null : activeFilter === 'true',
       });
 
-      const content = res?.content || (Array.isArray(res) ? res : []);
+      const raw = res?.data !== undefined ? res.data : res;
+      const content = Array.isArray(raw) ? raw : (raw?.content || []);
       setVouchers(content);
-      setTotalPages(res?.totalPages || 1);
-      setTotalElements(res?.totalElements || content.length);
+      setTotalPages(raw?.totalPages || 1);
+      setTotalElements(raw?.totalElements ?? content.length);
       setError(null);
     } catch (err) {
       console.error('Lỗi tải danh sách voucher:', err);
@@ -78,10 +80,11 @@ export default function AdminVouchers() {
           isActive: activeFilter === '' ? null : activeFilter === 'true',
         });
         if (!ignore) {
-          const content = res?.content || (Array.isArray(res) ? res : []);
+          const raw = res?.data !== undefined ? res.data : res;
+          const content = Array.isArray(raw) ? raw : (raw?.content || []);
           setVouchers(content);
-          setTotalPages(res?.totalPages || 1);
-          setTotalElements(res?.totalElements || content.length);
+          setTotalPages(raw?.totalPages || 1);
+          setTotalElements(raw?.totalElements ?? content.length);
           setError(null);
         }
       } catch (err) {
@@ -186,24 +189,24 @@ export default function AdminVouchers() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
           icon={Ticket}
-          title="Tổng số Voucher"
+          label="Tổng số Voucher"
           value={totalElements}
-          color="primary"
-          subtitle="Tất cả mã trong hệ thống"
+          variant="primary"
+          subtext="Tất cả mã trong hệ thống"
         />
         <StatCard
           icon={CheckCircle2}
-          title="Đang khả dụng"
+          label="Đang khả dụng"
           value={activeCount}
-          color="emerald"
-          subtitle="Đang kích hoạt & còn hạn"
+          variant="success"
+          subtext="Đang kích hoạt & còn hạn"
         />
         <StatCard
           icon={Clock}
-          title="Hết hạn / Tạm dừng"
+          label="Hết hạn / Tạm dừng"
           value={expiredCount}
-          color="amber"
-          subtitle="Không còn áp dụng được"
+          variant="warning"
+          subtext="Không còn áp dụng được"
         />
       </div>
 

@@ -3,6 +3,7 @@ import ErrorState from './ErrorState';
 
 /**
  * Reusable Table component per Design.md 6.7
+ * Supports both props-based columns/data and JSX compound components
  */
 export default function Table({
   columns = [], // [{ key, header, render, className, headerClassName }]
@@ -14,7 +15,20 @@ export default function Table({
   emptyDescription = 'Hiện tại danh sách đang trống.',
   emptyIcon = undefined,
   className = '',
+  children,
 }) {
+  if (children) {
+    return (
+      <div className={`w-full overflow-hidden rounded-xl border border-line bg-white shadow-xs ${className}`}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            {children}
+          </table>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`w-full overflow-hidden rounded-xl border border-line bg-white shadow-xs ${className}`}>
       <div className="overflow-x-auto">
@@ -87,3 +101,43 @@ export default function Table({
     </div>
   );
 }
+
+Table.Header = function TableHeader({ children, className = '' }) {
+  return (
+    <thead className={`bg-gray-50 text-xs font-semibold uppercase tracking-wider text-ink-muted border-b border-line ${className}`}>
+      {children}
+    </thead>
+  );
+};
+
+Table.Body = function TableBody({ children, className = '' }) {
+  return (
+    <tbody className={`divide-y divide-line text-sm text-ink ${className}`}>
+      {children}
+    </tbody>
+  );
+};
+
+Table.Row = function TableRow({ children, className = '', ...props }) {
+  return (
+    <tr className={`transition-colors hover:bg-gray-50/80 ${className}`} {...props}>
+      {children}
+    </tr>
+  );
+};
+
+Table.Head = function TableHead({ children, className = '', ...props }) {
+  return (
+    <th scope="col" className={`px-4 py-3.5 whitespace-nowrap ${className}`} {...props}>
+      {children}
+    </th>
+  );
+};
+
+Table.Cell = function TableCell({ children, className = '', ...props }) {
+  return (
+    <td className={`px-4 py-3.5 ${className}`} {...props}>
+      {children}
+    </td>
+  );
+};
