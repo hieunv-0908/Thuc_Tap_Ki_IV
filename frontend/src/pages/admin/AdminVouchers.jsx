@@ -138,7 +138,7 @@ export default function AdminVouchers() {
       fetchVouchers();
     } catch (err) {
       console.error('Lỗi đổi trạng thái:', err);
-      toast.error(err.response?.data?.message || 'Không thể đổi trạng thái.');
+      toast.error(err.response?.data?.message || err.message || 'Không thể đổi trạng thái.');
     }
   };
 
@@ -152,7 +152,7 @@ export default function AdminVouchers() {
       fetchVouchers();
     } catch (err) {
       console.error('Lỗi xóa voucher:', err);
-      toast.error(err.response?.data?.message || 'Không thể xóa voucher.');
+      toast.error(err.response?.data?.message || err.message || 'Không thể xóa voucher.');
     } finally {
       setIsDeleting(false);
     }

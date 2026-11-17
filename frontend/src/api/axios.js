@@ -149,18 +149,47 @@ apiClient.interceptors.response.use(
       }
 
       // Chuẩn hóa lỗi trả về cho các component
+      let message = data?.message;
+      if (!message || typeof message !== 'string' || message.trim() === '') {
+        if (status === 400) message = 'Dữ liệu yêu cầu không hợp lệ.';
+        else if (status === 401) message = 'Phiên đăng nhập đã hết hạn hoặc không hợp lệ.';
+        else if (status === 403) message = 'Bạn không có quyền thực hiện thao tác này.';
+        else if (status === 404) message = 'Không tìm thấy tài nguyên yêu cầu.';
+        else if (status === 409) message = 'Dữ liệu đang xung đột hoặc đã tồn tại trên hệ thống.';
+        else if (status >= 500) message = 'Đã có lỗi xảy ra từ hệ thống, vui lòng thử lại sau.';
+        else message = 'Đã có lỗi xảy ra. Vui lòng thử lại sau.';
+      }
+
       const formattedError = {
         status,
-        message: data?.message || 'Đã có lỗi xảy ra từ máy chủ.',
+        message,
         errors: data?.errors || null,
+        response: {
+          status,
+          data: {
+            message,
+            errors: data?.errors || null,
+          },
+        },
       };
       return Promise.reject(formattedError);
     }
 
-    // Lỗi mạng (không nhận được response)
+    // Lỗi mạng hoặc quá thời gian chờ (không nhận được response từ máy chủ)
+    const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
+    const networkMessage = isTimeout
+      ? 'Yêu cầu quá thời gian chờ (timeout). Vui lòng thử lại sau.'
+      : 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại đường truyền mạng.';
+
     return Promise.reject({
       status: 0,
-      message: error.message || 'Không thể kết nối đến máy chủ.',
+      message: networkMessage,
+      response: {
+        status: 0,
+        data: {
+          message: networkMessage,
+        },
+      },
     });
   }
 );
