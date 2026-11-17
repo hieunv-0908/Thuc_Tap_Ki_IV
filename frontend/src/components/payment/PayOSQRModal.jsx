@@ -107,7 +107,7 @@ export default function PayOSQRModal({
         if (onSuccess) onSuccess();
       }, 1200);
     } catch (err) {
-      toast.error('Không thể mô phỏng thanh toán: ' + (err.message || 'Lỗi server'));
+      toast.error(err.message || 'Không thể mô phỏng thanh toán. Vui lòng thử lại sau.');
     } finally {
       setIsSimulating(false);
     }

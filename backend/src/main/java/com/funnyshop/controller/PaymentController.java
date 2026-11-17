@@ -65,7 +65,10 @@ public class PaymentController {
         } catch (Exception e) {
             log.error("[PayOS Webhook] Xử lý webhook thất bại: {}", e.getMessage(), e);
             response.put("code", "01");
-            response.put("desc", e.getMessage());
+            String desc = (e instanceof AppException || e instanceof IllegalArgumentException)
+                    ? e.getMessage()
+                    : "Xử lý webhook thanh toán thất bại!";
+            response.put("desc", desc);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
