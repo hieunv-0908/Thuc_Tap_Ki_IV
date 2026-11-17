@@ -4,11 +4,18 @@
 export default function StatCard({
   icon: Icon,
   label,
+  title,
   value,
   subtext,
-  variant = 'primary', // 'primary' | 'secondary' | 'warning' | 'danger' | 'success'
+  subtitle,
+  variant,
+  color,
   className = '',
 }) {
+  const displayLabel = label || title;
+  const displaySubtext = subtext || subtitle;
+  const resolvedVariant = variant || (color === 'emerald' ? 'success' : color === 'amber' ? 'warning' : color) || 'primary';
+
   const variantStyles = {
     primary: {
       bg: 'bg-primary-100',
@@ -32,7 +39,7 @@ export default function StatCard({
     },
   };
 
-  const currentStyle = variantStyles[variant] || variantStyles.primary;
+  const currentStyle = variantStyles[resolvedVariant] || variantStyles.primary;
 
   return (
     <div
@@ -47,13 +54,13 @@ export default function StatCard({
       )}
       <div className="min-w-0 flex-1">
         <p className="text-xs sm:text-sm font-medium text-ink-muted truncate">
-          {label}
+          {displayLabel}
         </p>
         <p className="text-xl sm:text-2xl font-bold text-ink tabular-nums mt-0.5">
           {value !== undefined ? value : '—'}
         </p>
-        {subtext && (
-          <p className="text-xs text-ink-subtle mt-0.5 truncate">{subtext}</p>
+        {displaySubtext && (
+          <p className="text-xs text-ink-subtle mt-0.5 truncate">{displaySubtext}</p>
         )}
       </div>
     </div>
