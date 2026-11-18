@@ -47,6 +47,18 @@ const QUICK_TIME_PRESETS = [
   { id: 'this_year', label: 'Năm nay', type: 'this_year', desc: 'Số liệu toàn bộ năm nay' },
 ];
 
+/**
+ * Safely parse date from string or Jackson array representation
+ */
+function parseOrderDate(dateVal) {
+  if (!dateVal) return null;
+  if (Array.isArray(dateVal)) {
+    return new Date(dateVal[0], (dateVal[1] || 1) - 1, dateVal[2] || 1, dateVal[3] || 0, dateVal[4] || 0);
+  }
+  const d = new Date(dateVal);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export default function AdminDashboard() {
   // Bộ lọc thời gian
   const [selectedPreset, setSelectedPreset] = useState('7_days');
@@ -491,7 +503,7 @@ export default function AdminDashboard() {
     };
   }, [aggregatedStats, products, users]);
 
-  // ── Time-Series Slanted Area Trend Data ────────────────────────────────────
+  // ── 1. Time-Series Slanted Area Trend Data (Real Data from Orders) ──────────
   const trendData = useMemo(() => {
     const list = aggregatedStats.dailyList;
     if (!list || list.length === 0) return [];
@@ -542,15 +554,22 @@ export default function AdminDashboard() {
 
   // ── Category Revenue Breakdown (Donut Chart 1) ───────────────────────────
   const categoryChartData = useMemo(() => {
-    const defaultDistribution = [
-      { label: 'Áo thun & Polo', value: 18500000, count: 14, color: '#FF6B4A', subtext: 'Chiếm tỷ trọng lớn nhất' },
-      { label: 'Áo sơ mi & Áo kiểu', value: 12800000, count: 9, color: '#6C5CE7', subtext: 'Xu hướng văn phòng' },
-      { label: 'Váy & Đầm', value: 10400000, count: 7, color: '#FF8567', subtext: 'Bán chạy mùa cưới & tiệc' },
-      { label: 'Quần & Chân váy', value: 8200000, count: 8, color: '#8F80EE', subtext: 'Trang phục thường ngày' },
-      { label: 'Áo khoác & Hoodie', value: 6500000, count: 6, color: '#FFA68F', subtext: 'Bộ sưu tập mùa thu đông' },
-    ];
+    const validOrders = orders.filter((o) => o.status !== ORDER_STATUS.CANCELLED);
+    const colors = ['#FF6B4A', '#6C5CE7', '#10B981', '#3B82F6', '#F59E0B', '#8F80EE', '#EC4899', '#14B8A6'];
 
-    if (categories.length === 0) return defaultDistribution;
+    // Map each product to its category
+    const productCatMap = new Map();
+    products.forEach((p) => {
+      const catId = p.category?.id || p.categoryId;
+      const catName = p.category?.name || p.categoryName || '';
+      if (p.id) {
+        productCatMap.set(String(p.id), { catId: catId ? String(catId) : null, catName });
+      }
+    });
+
+    // Accumulate real revenue and sold quantity per category
+    const catRevenueMap = new Map();
+    const catQuantityMap = new Map();
 
     const colors = ['#FF6B4A', '#6C5CE7', '#FF8567', '#8F80EE', '#FFA68F', '#B0A5F4', '#FFC9BB'];
     return categories.slice(0, 6).map((cat, idx) => {
@@ -559,15 +578,32 @@ export default function AdminDashboard() {
 
       return {
         label: cat.name,
-        value: estRevenue > 0 ? estRevenue : (defaultDistribution[idx]?.value || 5000000),
-        count: prodsInCat.length,
+        value: rev,
+        count: soldQty,
         color: colors[idx % colors.length],
-        subtext: `${prodsInCat.length} mẫu mã`,
+        subtext: soldQty > 0
+          ? `Đã bán ${soldQty} sp (${prodsInCat.length} mẫu mã)`
+          : `${prodsInCat.length} mẫu mã trong kho`,
       };
     });
-  }, [categories, products]);
 
-  // ── Order Status Breakdown (Donut Chart 2) ───────────────────────────────
+    if (uncategorizedRevenue > 0) {
+      result.push({
+        label: 'Khác',
+        value: uncategorizedRevenue,
+        count: uncategorizedQuantity,
+        color: '#9CA3AF',
+        subtext: `Đã bán ${uncategorizedQuantity} sp`,
+      });
+    }
+
+    // Sort by revenue descending
+    result.sort((a, b) => b.value - a.value);
+
+    return result;
+  }, [orders, categories, products]);
+
+  // ── Order Status Breakdown (Real Data from Orders) ─────────────────────────
   const orderStatusChartData = useMemo(() => {
     const counts = {
       [ORDER_STATUS.COMPLETED]: 0,
@@ -577,19 +613,11 @@ export default function AdminDashboard() {
       [ORDER_STATUS.CANCELLED]: 0,
     };
 
-    if (orders.length > 0) {
-      orders.forEach((o) => {
-        const s = o.status || ORDER_STATUS.PENDING;
-        if (counts[s] !== undefined) counts[s] += 1;
-        else counts[ORDER_STATUS.PENDING] += 1;
-      });
-    } else {
-      counts[ORDER_STATUS.COMPLETED] = 42;
-      counts[ORDER_STATUS.SHIPPING] = 14;
-      counts[ORDER_STATUS.CONFIRMED] = 8;
-      counts[ORDER_STATUS.PENDING] = 4;
-      counts[ORDER_STATUS.CANCELLED] = 2;
-    }
+    orders.forEach((o) => {
+      const s = o.status || ORDER_STATUS.PENDING;
+      if (counts[s] !== undefined) counts[s] += 1;
+      else counts[ORDER_STATUS.PENDING] += 1;
+    });
 
     return [
       { label: 'Hoàn thành', value: counts[ORDER_STATUS.COMPLETED], color: '#10B981', subtext: 'Đã giao & thu tiền' },
@@ -602,8 +630,17 @@ export default function AdminDashboard() {
 
   // ── Top 5 Best Selling Products ───────────────────────────────────────────
   const topProducts = useMemo(() => {
-    const list = [...products].sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0));
-    if (list.length > 0) return list.slice(0, 5);
+    const validOrders = orders.filter((o) => o.status !== ORDER_STATUS.CANCELLED);
+    const soldMap = {};
+
+    validOrders.forEach((o) => {
+      (o.items || []).forEach((item) => {
+        const pId = item.productId;
+        if (pId) {
+          soldMap[pId] = (soldMap[pId] || 0) + (Number(item.quantity) || 1);
+        }
+      });
+    });
 
     return [
       {
@@ -1220,49 +1257,55 @@ export default function AdminDashboard() {
           </div>
 
           <div className="space-y-3.5 flex-1">
-            {topProducts.map((p, idx) => {
-              const maxSold = topProducts[0]?.soldCount || 150;
-              const percent = Math.min(100, Math.round(((p.soldCount || 80) / maxSold) * 100));
+            {topProducts.length === 0 ? (
+              <div className="py-12 text-center text-ink-muted text-sm border border-dashed border-line rounded-xl">
+                Chưa có dữ liệu sản phẩm.
+              </div>
+            ) : (
+              topProducts.map((p, idx) => {
+                const maxSold = topProducts[0]?.soldCount || 1;
+                const percent = maxSold > 0 ? Math.min(100, Math.round(((p.soldCount || 0) / maxSold) * 100)) : 0;
 
-              return (
-                <div
-                  key={p.id || idx}
-                  className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors"
-                >
-                  <span className="size-6 rounded-full bg-primary-100 text-primary-800 text-xs font-extrabold flex items-center justify-center shrink-0">
-                    {idx + 1}
-                  </span>
+                return (
+                  <div
+                    key={p.id || idx}
+                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="size-6 rounded-full bg-primary-100 text-primary-800 text-xs font-extrabold flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
 
-                  <img
-                    src={p.imageUrl || p.images?.[0]?.imageUrl || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=200&auto=format&fit=crop'}
-                    alt={p.name}
-                    className="size-11 rounded-lg object-cover object-top border border-line shrink-0"
-                  />
+                    <img
+                      src={p.imageUrl || p.images?.[0]?.imageUrl || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=200&auto=format&fit=crop'}
+                      alt={p.name}
+                      className="size-11 rounded-lg object-cover object-top border border-line shrink-0"
+                    />
 
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-xs sm:text-sm font-semibold text-ink truncate leading-tight">
-                      {p.name}
-                    </h4>
-                    <div className="flex items-center justify-between text-xs text-ink-muted mt-1">
-                      <span className="font-bold text-primary-700 tabular-nums">
-                        {formatCurrency(p.price)}
-                      </span>
-                      <span className="font-medium tabular-nums">
-                        Đã bán: <strong className="text-ink">{p.soldCount || 70 + idx * 15}</strong>
-                      </span>
-                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs sm:text-sm font-semibold text-ink truncate leading-tight">
+                        {p.name}
+                      </h4>
+                      <div className="flex items-center justify-between text-xs text-ink-muted mt-1">
+                        <span className="font-bold text-primary-700 tabular-nums">
+                          {formatCurrency(p.price)}
+                        </span>
+                        <span className="font-medium tabular-nums">
+                          Đã bán: <strong className="text-ink">{p.soldCount || 0}</strong>
+                        </span>
+                      </div>
 
-                    {/* Progress Bar */}
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 transition-all duration-500"
-                        style={{ width: `${percent}%` }}
-                      />
+                      {/* Progress Bar */}
+                      <div className="w-full h-1.5 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 transition-all duration-500"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>
