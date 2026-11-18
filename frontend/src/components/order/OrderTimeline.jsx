@@ -65,7 +65,15 @@ export default function OrderTimeline({ status, cancelReason, timeline = [] }) {
     );
   }
 
-  const currentIdx = STEPS.findIndex((s) => s.key === status);
+  const isReturnFlow =
+    status === ORDER_STATUS.RETURN_REQUESTED ||
+    status === ORDER_STATUS.RETURNING ||
+    status === ORDER_STATUS.RETURNED ||
+    status === ORDER_STATUS.RETURN_REJECTED;
+
+  const currentIdx = isReturnFlow
+    ? STEPS.length - 1
+    : STEPS.findIndex((s) => s.key === status);
   const activeIndex = currentIdx >= 0 ? currentIdx : 0;
 
   return (

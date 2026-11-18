@@ -81,6 +81,10 @@ public final class CsvExportUtil {
             case SHIPPING -> "Đang giao hàng";
             case COMPLETED -> "Hoàn thành";
             case CANCELLED -> "Đã hủy";
+            case RETURN_REQUESTED -> "Yêu cầu trả hàng";
+            case RETURNING -> "Đang trả hàng";
+            case RETURNED -> "Đã trả hàng";
+            case RETURN_REJECTED -> "Trả hàng bị từ chối";
         };
     }
 }

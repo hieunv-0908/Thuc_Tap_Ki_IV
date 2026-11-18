@@ -1,5 +1,6 @@
 package com.funnyshop.service.impl;
 
+import com.funnyshop.entity.ReturnRequest;
 import com.funnyshop.event.OrderCancelledEvent;
 import com.funnyshop.event.OrderCreatedEvent;
 import com.funnyshop.event.OrderItemEventDto;
@@ -173,5 +174,127 @@ public class EmailServiceImpl implements EmailService {
             log.error("[Email] Không thể gửi email thông báo hủy đơn #{}: {}", event.getOrderId(), ex.getMessage());
         }
     }
-}
 
+    @Override
+    public void sendReturnRejectedEmail(ReturnRequest returnRequest) {
+        if (returnRequest == null || returnRequest.getOrder() == null || returnRequest.getUser() == null) return;
+        String recipient = returnRequest.getUser().getEmail();
+        if (recipient == null || recipient.isBlank()) {
+            log.info("[Email] Yêu cầu trả hàng #{} bị từ chối nhưng không có email khách, bỏ qua.", returnRequest.getId());
+            return;
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(senderEmail, "FunnyShop");
+            helper.setTo(recipient);
+            helper.setSubject("❌ [FunnyShop] Yêu cầu trả hàng đơn #" + returnRequest.getOrder().getId() + " đã bị từ chối");
+
+            String customerName = returnRequest.getUser().getFullName() != null
+                    ? returnRequest.getUser().getFullName() : "Quý khách";
+            Long orderId = returnRequest.getOrder().getId();
+            String reason = returnRequest.getReason() != null ? returnRequest.getReason() : "";
+            String adminNote = (returnRequest.getAdminNote() != null && !returnRequest.getAdminNote().isBlank())
+                    ? returnRequest.getAdminNote() : "Shop chưa cung cấp lý do chi tiết.";
+            String formattedAmount = returnRequest.getRefundAmount() != null
+                    ? CURRENCY_FORMAT.format(returnRequest.getRefundAmount()) : "0 đ";
+
+            String htmlContent = """
+                    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;'>
+                        <div style='background-color: #dc3545; color: #fff; padding: 20px; text-align: center;'>
+                            <h2 style='margin: 0;'>FunnyShop - Yêu cầu trả hàng bị từ chối</h2>
+                        </div>
+                        <div style='padding: 24px; color: #333;'>
+                            <p>Xin chào <strong>%s</strong>,</p>
+                            <p>Chúng tôi rất tiếc phải thông báo rằng yêu cầu trả hàng của bạn cho <strong>đơn hàng #%d</strong> đã <strong style='color:#dc3545;'>bị từ chối</strong>.</p>
+
+                            <div style='background-color: #fff5f5; border: 1px solid #f5c6cb; border-radius: 6px; padding: 16px; margin: 16px 0;'>
+                                <p style='margin: 4px 0;'><strong>Lý do bạn khai:</strong> %s</p>
+                                <p style='margin: 4px 0;'><strong>Số tiền yêu cầu hoàn:</strong> %s</p>
+                            </div>
+
+                            <div style='background-color: #f8f9fa; padding: 14px 16px; border-left: 4px solid #dc3545; border-radius: 4px; margin: 16px 0;'>
+                                <p style='margin: 0 0 4px 0; font-weight: bold; color: #dc3545;'>Lý do từ chối từ Shop:</p>
+                                <p style='margin: 0; color: #333;'>%s</p>
+                            </div>
+
+                            <p>Nếu bạn không đồng ý với quyết định này hoặc có thêm bằng chứng, bạn có thể <strong>gửi yêu cầu trả hàng mới</strong> trực tiếp tại trang đơn hàng của mình.</p>
+
+                            <hr style='border: none; border-top: 1px solid #eee; margin: 24px 0;'/>
+                            <p style='color: #666; font-size: 13px;'>Mọi thắc mắc, vui lòng liên hệ bộ phận CSKH FunnyShop để được hỗ trợ.</p>
+                        </div>
+                    </div>
+                    """.formatted(customerName, orderId, reason, formattedAmount, adminNote);
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+            log.info("[Email] Đã gửi thông báo từ chối trả hàng #{} tới {}", returnRequest.getId(), recipient);
+
+        } catch (Exception ex) {
+            log.error("[Email] Không thể gửi email từ chối trả hàng #{}: {}", returnRequest.getId(), ex.getMessage());
+        }
+    }
+
+    @Override
+    public void sendReturnApprovedEmail(ReturnRequest returnRequest) {
+        if (returnRequest == null || returnRequest.getOrder() == null || returnRequest.getUser() == null) return;
+        String recipient = returnRequest.getUser().getEmail();
+        if (recipient == null || recipient.isBlank()) {
+            log.info("[Email] Yêu cầu trả hàng #{} được duyệt nhưng không có email khách, bỏ qua.", returnRequest.getId());
+            return;
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(senderEmail, "FunnyShop");
+            helper.setTo(recipient);
+            helper.setSubject("✅ [FunnyShop] Yêu cầu trả hàng đơn #" + returnRequest.getOrder().getId() + " đã được duyệt");
+
+            String customerName = returnRequest.getUser().getFullName() != null
+                    ? returnRequest.getUser().getFullName() : "Quý khách";
+            Long orderId = returnRequest.getOrder().getId();
+            String adminNote = (returnRequest.getAdminNote() != null && !returnRequest.getAdminNote().isBlank())
+                    ? returnRequest.getAdminNote()
+                    : "Vui lòng đóng gói cẩn thận và gửi hàng về địa chỉ kho của FunnyShop.";
+            String formattedAmount = returnRequest.getRefundAmount() != null
+                    ? CURRENCY_FORMAT.format(returnRequest.getRefundAmount()) : "0 đ";
+
+            String htmlContent = """
+                    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;'>
+                        <div style='background-color: #28a745; color: #fff; padding: 20px; text-align: center;'>
+                            <h2 style='margin: 0;'>FunnyShop - Yêu cầu trả hàng được chấp thuận!</h2>
+                        </div>
+                        <div style='padding: 24px; color: #333;'>
+                            <p>Xin chào <strong>%s</strong>,</p>
+                            <p>Yêu cầu trả hàng của bạn cho <strong>đơn hàng #%d</strong> đã được <strong style='color:#28a745;'>chấp thuận</strong>.</p>
+
+                            <div style='background-color: #f0fff4; border: 1px solid #c3e6cb; border-radius: 6px; padding: 16px; margin: 16px 0;'>
+                                <p style='margin: 4px 0;'><strong>Số tiền sẽ được hoàn:</strong> <span style='color:#28a745; font-size:16px; font-weight:bold;'>%s</span></p>
+                            </div>
+
+                            <div style='background-color: #f8f9fa; padding: 14px 16px; border-left: 4px solid #28a745; border-radius: 4px; margin: 16px 0;'>
+                                <p style='margin: 0 0 4px 0; font-weight: bold; color: #28a745;'>Hướng dẫn gửi hàng từ Shop:</p>
+                                <p style='margin: 0; color: #333;'>%s</p>
+                            </div>
+
+                            <p><strong>Lưu ý:</strong> Sau khi Shop xác nhận đã nhận hàng hoàn, số tiền <strong>%s</strong> sẽ được chuyển khoản vào tài khoản ngân hàng bạn đã cung cấp.</p>
+
+                            <hr style='border: none; border-top: 1px solid #eee; margin: 24px 0;'/>
+                            <p style='color: #666; font-size: 13px;'>Mọi thắc mắc, vui lòng liên hệ bộ phận CSKH FunnyShop để được hỗ trợ.</p>
+                        </div>
+                    </div>
+                    """.formatted(customerName, orderId, formattedAmount, adminNote, formattedAmount);
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+            log.info("[Email] Đã gửi thông báo duyệt trả hàng #{} tới {}", returnRequest.getId(), recipient);
+
+        } catch (Exception ex) {
+            log.error("[Email] Không thể gửi email duyệt trả hàng #{}: {}", returnRequest.getId(), ex.getMessage());
+        }
+    }
+}
