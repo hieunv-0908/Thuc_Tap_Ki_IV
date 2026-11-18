@@ -19,6 +19,7 @@ import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { isValidPhone, isValidAddress } from '../../utils/validators';
 import PayOSQRModal from '../payment/PayOSQRModal';
+import apiClient from '../../api/axios';
 
 let messageCounter = 0;
 function createMessageId(prefix) {
@@ -49,6 +50,9 @@ export default function ChatWidget({ onSelectProduct }) {
 
   // Trạng thái Đặt hàng nhanh qua Chat
   const [orderingProduct, setOrderingProduct] = useState(null);
+  const [selectedVariantId, setSelectedVariantId] = useState(null);
+  const [availableVariants, setAvailableVariants] = useState([]);
+  const [isLoadingVariants, setIsLoadingVariants] = useState(false);
   const [orderQuantity, setOrderQuantity] = useState(1);
   const [orderFullName, setOrderFullName] = useState(user?.fullName || '');
   const [orderPhone, setOrderPhone] = useState(user?.phone || '');
@@ -82,7 +86,7 @@ export default function ChatWidget({ onSelectProduct }) {
     }
   }, [messages, isOpen, isLoading, orderingProduct]);
 
-  const handleStartQuickOrder = (product) => {
+  const handleStartQuickOrder = async (product) => {
     setOrderingProduct(product);
     setOrderQuantity(1);
     if (user) {
@@ -90,22 +94,45 @@ export default function ChatWidget({ onSelectProduct }) {
       if (!orderPhone) setOrderPhone(user.phone || '');
       if (!orderAddress) setOrderAddress(user.shippingAddress || user.address || '');
     }
+
+    // Tải và khởi tạo danh sách biến thể của sản phẩm
+    if (product.variants && product.variants.length > 0) {
+      setAvailableVariants(product.variants);
+      const inStockVar = product.variants.find((v) => (v.stockQuantity ?? 1) > 0) || product.variants[0];
+      setSelectedVariantId(inStockVar ? inStockVar.id : null);
+    } else {
+      setIsLoadingVariants(true);
+      try {
+        const res = await apiClient.get(`/api/v1/products/${product.id}`);
+        const fullProduct = res?.data || res;
+        const vars = fullProduct?.variants || [];
+        setAvailableVariants(vars);
+        const inStockVar = vars.find((v) => (v.stockQuantity ?? 1) > 0) || vars[0];
+        setSelectedVariantId(inStockVar ? inStockVar.id : null);
+      } catch {
+        setAvailableVariants([]);
+        setSelectedVariantId(null);
+      } finally {
+        setIsLoadingVariants(false);
+      }
+    }
   };
 
   const handleGoToFullCheckout = (product, quantity = 1) => {
+    const activeVariant = availableVariants.find((v) => v.id === selectedVariantId) || availableVariants[0];
     const directItem = {
-      cartItemId: `chat-direct-${product.id}`,
+      cartItemId: `chat-direct-${product.id}-${activeVariant?.id || 'default'}`,
       id: product.id,
-      variantId: product.variantId || (product.variants && product.variants[0]?.id) || null,
+      variantId: activeVariant?.id || product.variantId || null,
       productId: product.id,
       product,
       name: product.name,
-      sku: product.sku || `SKU-${product.id}`,
-      color: '',
-      size: '',
-      price: Number(product.price ?? 0),
+      sku: activeVariant?.sku || product.sku || `SKU-${product.id}`,
+      color: activeVariant?.color || '',
+      size: activeVariant?.size || '',
+      price: activeVariant?.price != null ? Number(activeVariant.price) : Number(product.price ?? 0),
       imageUrl: product.imageUrl,
-      stock: product.stockQuantity ?? product.stock ?? 10,
+      stock: activeVariant?.stockQuantity ?? product.stockQuantity ?? product.stock ?? 10,
       quantity,
     };
 
@@ -145,6 +172,10 @@ export default function ChatWidget({ onSelectProduct }) {
 
     setIsSubmittingOrder(true);
     try {
+      const activeVariant = availableVariants.find((v) => v.id === selectedVariantId) || availableVariants[0];
+      const resolvedVariantId = selectedVariantId || activeVariant?.id || orderingProduct.variantId || null;
+      const unitPrice = activeVariant?.price != null ? Number(activeVariant.price) : Number(orderingProduct.price || 0);
+
       const payload = {
         fullName: orderFullName.trim(),
         phone: orderPhone.trim(),
@@ -153,7 +184,7 @@ export default function ChatWidget({ onSelectProduct }) {
         items: [
           {
             productId: orderingProduct.id,
-            variantId: orderingProduct.variantId || (orderingProduct.variants && orderingProduct.variants[0]?.id) || null,
+            variantId: resolvedVariantId,
             quantity: orderQuantity,
           },
         ],
@@ -163,7 +194,8 @@ export default function ChatWidget({ onSelectProduct }) {
       const orderRes = await orderApi.createOrder(payload);
       const createdOrder = orderRes?.data || orderRes;
       const orderId = createdOrder?.id || createdOrder?.orderId;
-      const totalPrice = orderingProduct.price * orderQuantity;
+      const totalPrice = unitPrice * orderQuantity;
+      const variantDesc = [activeVariant?.color, activeVariant?.size].filter(Boolean).join(' - ');
 
       if (orderPaymentMethod === 'PAYOS') {
         setPendingPayOSOrder(createdOrder);
@@ -173,7 +205,7 @@ export default function ChatWidget({ onSelectProduct }) {
         const orderSuccessMsg = {
           id: createMessageId('ai'),
           sender: 'ai',
-          text: `🎉 Chúc mừng bạn! Đơn hàng **#${orderId}** (${formatCurrency(totalPrice)}) đã được đặt thành công qua FunnyShop AI.\nĐịa chỉ giao: ${orderAddress.trim()}.\nShop sẽ liên hệ xác nhận và giao hàng cho bạn trong 2 - 4 ngày tới nhé! 🚚`,
+          text: `🎉 Chúc mừng bạn! Đơn hàng **#${orderId}** (${formatCurrency(totalPrice)}) đã được đặt thành công qua FunnyShop AI.\nSản phẩm: **${orderingProduct.name}**${variantDesc ? ` (${variantDesc})` : ''} x${orderQuantity}\nĐịa chỉ giao: ${orderAddress.trim()}.\nShop sẽ liên hệ xác nhận và giao hàng cho bạn trong 2 - 4 ngày tới nhé! 🚚`,
           orderAction: { id: orderId },
         };
         setMessages((prev) => [...prev, orderSuccessMsg]);
@@ -527,36 +559,98 @@ export default function ChatWidget({ onSelectProduct }) {
               </div>
 
               {/* Product mini info & quantity stepper */}
-              <div className="flex items-center gap-2 p-1.5 bg-white rounded-lg border border-line">
-                <img
-                  src={orderingProduct.imageUrl}
-                  alt={orderingProduct.name}
-                  className="size-10 rounded-md object-cover bg-gray-100 shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-ink truncate">{orderingProduct.name}</p>
-                  <p className="text-xs font-bold text-primary-700">
-                    {formatCurrency(orderingProduct.price * orderQuantity)}
-                  </p>
-                </div>
-                <div className="flex items-center border border-line rounded-md bg-gray-50">
-                  <button
-                    type="button"
-                    onClick={() => setOrderQuantity(Math.max(1, orderQuantity - 1))}
-                    className="px-2 py-0.5 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-l-md cursor-pointer"
-                  >
-                    -
-                  </button>
-                  <span className="px-2 text-xs font-semibold text-ink">{orderQuantity}</span>
-                  <button
-                    type="button"
-                    onClick={() => setOrderQuantity(orderQuantity + 1)}
-                    className="px-2 py-0.5 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-r-md cursor-pointer"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
+              {(() => {
+                const activeVariant = availableVariants.find((v) => v.id === selectedVariantId) || availableVariants[0];
+                const unitPrice = activeVariant?.price != null ? Number(activeVariant.price) : Number(orderingProduct.price || 0);
+                const totalPrice = unitPrice * orderQuantity;
+                const variantDesc = [activeVariant?.color, activeVariant?.size].filter(Boolean).join(' - ');
+
+                return (
+                  <>
+                    <div className="flex items-center gap-2 p-1.5 bg-white rounded-lg border border-line">
+                      <img
+                        src={orderingProduct.imageUrl}
+                        alt={orderingProduct.name}
+                        className="size-10 rounded-md object-cover bg-gray-100 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-ink truncate">{orderingProduct.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs font-bold text-primary-700">
+                            {formatCurrency(totalPrice)}
+                          </span>
+                          {variantDesc && (
+                            <span className="text-[10px] bg-sand px-1.5 py-0.5 rounded text-ink-muted">
+                              {variantDesc}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center border border-line rounded-md bg-gray-50">
+                        <button
+                          type="button"
+                          onClick={() => setOrderQuantity(Math.max(1, orderQuantity - 1))}
+                          className="px-2 py-0.5 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-l-md cursor-pointer"
+                        >
+                          -
+                        </button>
+                        <span className="px-2 text-xs font-semibold text-ink">{orderQuantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => setOrderQuantity(orderQuantity + 1)}
+                          className="px-2 py-0.5 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-r-md cursor-pointer"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Variant Selector Chips */}
+                    {isLoadingVariants ? (
+                      <div className="flex items-center gap-1.5 text-[11px] text-mute py-1 px-1">
+                        <Loader2 className="size-3 animate-spin text-primary-600" />
+                        <span>Đang tải phân loại sản phẩm...</span>
+                      </div>
+                    ) : availableVariants.length > 0 ? (
+                      <div className="flex flex-col gap-1 p-2 bg-white rounded-lg border border-line">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-ink">Chọn phân loại (Màu / Size):</span>
+                          {activeVariant && (
+                            <span className="text-[10px] text-mute">
+                              Kho: {activeVariant.stockQuantity ?? 'Sẵn hàng'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                          {availableVariants.map((v) => {
+                            const isSelected = (selectedVariantId || activeVariant?.id) === v.id;
+                            const label = [v.color, v.size].filter(Boolean).join(' - ') || v.sku || `Mẫu #${v.id}`;
+                            const isOutOfStock = v.stockQuantity === 0;
+                            return (
+                              <button
+                                key={v.id}
+                                type="button"
+                                disabled={isOutOfStock}
+                                onClick={() => setSelectedVariantId(v.id)}
+                                className={`px-2 py-1 text-[11px] rounded border transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-ink text-paper border-ink font-semibold'
+                                    : isOutOfStock
+                                    ? 'bg-gray-100 text-gray-400 border-dashed border-gray-300 cursor-not-allowed'
+                                    : 'bg-white text-ink border-line hover:border-ink'
+                                }`}
+                              >
+                                {label}
+                                {isOutOfStock && ' (Hết)'}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                );
+              })()}
 
               {/* Input fields */}
               <div className="grid grid-cols-2 gap-1.5">
@@ -626,7 +720,13 @@ export default function ChatWidget({ onSelectProduct }) {
                   ) : (
                     <Zap className="size-3.5" />
                   )}
-                  <span>Xác nhận đặt hàng • {formatCurrency(orderingProduct.price * orderQuantity)}</span>
+                  {(() => {
+                    const activeVariant = availableVariants.find((v) => v.id === selectedVariantId) || availableVariants[0];
+                    const unitPrice = activeVariant?.price != null ? Number(activeVariant.price) : Number(orderingProduct.price || 0);
+                    return (
+                      <span>Xác nhận đặt hàng • {formatCurrency(unitPrice * orderQuantity)}</span>
+                    );
+                  })()}
                 </button>
 
                 <button

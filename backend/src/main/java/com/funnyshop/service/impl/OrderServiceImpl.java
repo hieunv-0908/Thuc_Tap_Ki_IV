@@ -114,19 +114,19 @@ public class OrderServiceImpl implements OrderService {
                 }
                 productsWithMissingVariant.add(itemReq.getProductId());
 
-                // Tương thích ngược: Lấy biến thể đầu tiên của sản phẩm nếu client cũ chỉ
-                // truyền productId
+                // Tương thích ngược & Hỗ trợ đặt hàng qua AI khi chưa chọn biến thể cụ thể:
+                // Tự động chọn biến thể khả dụng còn đủ số lượng tồn kho (hoặc biến thể đầu tiên)
                 List<ProductVariant> variants = productVariantRepository
                         .findByProductIdAndIsDeletedFalse(itemReq.getProductId());
                 if (variants.isEmpty()) {
                     throw new ResourceNotFoundException(
                             "Không tìm thấy biến thể khả dụng cho sản phẩm ID: " + itemReq.getProductId());
                 }
-                if (variants.size() > 1) {
-                    throw new AppException("Sản phẩm có nhiều biến thể, vui lòng chọn kích cỡ/màu sắc cụ thể!",
-                            HttpStatus.BAD_REQUEST);
-                }
-                targetVariantId = variants.get(0).getId();
+                ProductVariant chosenVariant = variants.stream()
+                        .filter(v -> v.getStockQuantity() != null && v.getStockQuantity() >= itemReq.getQuantity())
+                        .findFirst()
+                        .orElse(variants.get(0));
+                targetVariantId = chosenVariant.getId();
             }
 
             if (targetVariantId == null) {

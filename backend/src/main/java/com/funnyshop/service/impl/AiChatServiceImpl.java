@@ -3,6 +3,7 @@ package com.funnyshop.service.impl;
 import com.funnyshop.config.GeminiProperties;
 import com.funnyshop.dto.response.ChatResponse;
 import com.funnyshop.dto.response.ProductSummaryResponse;
+import com.funnyshop.dto.response.ProductVariantResponse;
 import com.funnyshop.entity.Product;
 import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.service.AiChatService;
@@ -26,6 +27,9 @@ import java.util.regex.Pattern;
 @Service
 @RequiredArgsConstructor
 public class AiChatServiceImpl implements AiChatService {
+
+    public static final String OFF_TOPIC_REFUSAL_MESSAGE =
+            "Dạ, em là trợ lý ảo của FunnyShop nên chỉ có thể hỗ trợ các thông tin liên quan đến sản phẩm, dịch vụ và chính sách của shop thôi ạ. Bạn có cần em hỗ trợ tìm kiếm sản phẩm hoặc đặt hàng không ạ? 😊";
 
     private static final String GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
     private static final Pattern PRODUCT_IDS_PATTERN = Pattern.compile("(?i)RECOMMENDED_PRODUCT_IDS:\\s*\\[(.*?)\\]");
@@ -90,6 +94,15 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         String userMsg = message.trim();
+
+        // 1. Kiểm tra câu hỏi ngoài lề (thời tiết, toán học, code, tin tức...) -> Phản hồi từ chối khéo léo cố định
+        if (isOffTopicQuestion(userMsg)) {
+            return ChatResponse.builder()
+                    .reply(OFF_TOPIC_REFUSAL_MESSAGE)
+                    .products(Collections.emptyList())
+                    .build();
+        }
+
         List<Product> availableProducts = loadAvailableProducts();
 
         String apiKey = geminiProperties != null ? geminiProperties.getApiKey() : null;
@@ -223,6 +236,11 @@ public class AiChatServiceImpl implements AiChatService {
                 catalog +
                 "\n" +
                 "QUY TẮC BẮT BUỘC:\n" +
+                "0. TỪ CHỐI CÂU HỎI NGOÀI LỀ (QUAN TRỌNG NHẤT):\n" +
+                "   - Nếu khách hàng hỏi bất kỳ câu hỏi nào ngoài lề, không liên quan đến thời trang, sản phẩm, dịch vụ hoặc đơn hàng của FunnyShop (ví dụ: thời tiết, tin tức, chính trị, toán học, lập trình, game, đố vui, dịch thuật, lịch sử, văn học, y tế...):\n" +
+                "   - BẠN BẮT BUỘC CHỈ ĐƯỢC PHÉP TRẢ LỜI DUY NHẤT BẰNG CÂU SAU ĐÂY:\n" +
+                "     \"" + OFF_TOPIC_REFUSAL_MESSAGE + "\"\n" +
+                "   - TUYỆT ĐỐI KHÔNG trả lời giải thích câu hỏi ngoài lề đó và TUYỆT ĐỐI KHÔNG ghi kèm RECOMMENDED_PRODUCT_IDS.\n" +
                 "1. ĐÚNG DANH MỤC & ĐỐI TƯỢNG:\n" +
                 "   - Khi khách tìm/cần đồ nam ('thời trang nam', 'đồ nam', 'áo nam', 'quần nam', 'đang cần đồ nam'): CHỈ tư vấn và gợi ý các sản phẩm thời trang Nam. Tuyệt đối không đưa váy đầm nữ.\n" +
                 "   - Khi khách tìm/cần đồ nữ ('thời trang nữ', 'đồ nữ', 'váy', 'đầm', 'đang cần đồ nữ'): CHỈ tư vấn sản phẩm thời trang Nữ.\n" +
@@ -281,6 +299,14 @@ public class AiChatServiceImpl implements AiChatService {
             }
         }
 
+        // Nếu Gemini phát hiện và trả về lời từ chối ngoài lề
+        if (cleanReply.contains("trợ lý ảo của FunnyShop") || cleanReply.contains("chỉ có thể hỗ trợ các thông tin liên quan đến sản phẩm")) {
+            return ChatResponse.builder()
+                    .reply(OFF_TOPIC_REFUSAL_MESSAGE)
+                    .products(Collections.emptyList())
+                    .build();
+        }
+
         List<ProductSummaryResponse> recommended = new ArrayList<>();
         Map<Long, Product> productMap = new HashMap<>();
         for (Product p : availableProducts) {
@@ -313,13 +339,121 @@ public class AiChatServiceImpl implements AiChatService {
                 ? p.getCategory().getName()
                 : "FunnyShop";
 
+        List<ProductVariantResponse> variantResponses = Collections.emptyList();
+        try {
+            if (p.getVariants() != null && !p.getVariants().isEmpty()) {
+                variantResponses = p.getVariants().stream()
+                        .filter(v -> v != null && !Boolean.TRUE.equals(v.getIsDeleted()))
+                        .map(ProductVariantResponse::fromEntity)
+                        .toList();
+            }
+        } catch (Exception ignored) {
+            // Trường hợp lazy loading ngoài transaction
+        }
+
         return ProductSummaryResponse.builder()
                 .id(p.getId())
                 .name(p.getName())
                 .price(p.getPrice())
                 .imageUrl(p.getImageUrl())
                 .categoryName(catName)
+                .variants(variantResponses)
                 .build();
+    }
+
+    private boolean hasFashionOrShopKeyword(String lower) {
+        if (lower == null || lower.isBlank()) return false;
+        String[] fashionAndShopKeywords = {
+                "áo", "quần", "váy", "đầm", "polo", "sơ mi", "so mi", "jean", "jeans", "blazer", "hoodie",
+                "thun", "khoác", "chân váy", "set đồ", "bộ đồ", "outfit", "phối đồ", "mặc", "thời trang",
+                "size", "cỡ", "màu", "giá", "tiền", "mua", "đặt", "order", "lên đơn", "chốt đơn",
+                "ship", "giao hàng", "vận chuyển", "đổi trả", "thanh toán", "cod", "payos", "vietqr",
+                "shop", "funnyshop", "cửa hàng", "voucher", "giảm giá", "khuyến mãi", "sale",
+                "sản phẩm", "chất liệu", "vải", "cotton", "form", "phom", "hàng", "nam", "nữ", "unisex",
+                "tư vấn", "gợi ý", "quần áo", "đồ mặc", "mẫu", "bộ sưu tập"
+        };
+        for (String kw : fashionAndShopKeywords) {
+            if (lower.contains(kw)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isOffTopicQuestion(String text) {
+        if (text == null || text.isBlank()) return false;
+        String lower = text.toLowerCase().trim();
+
+        // 1. Lời chào không phải câu hỏi ngoài lề
+        if (isSimpleGreeting(lower)) {
+            return false;
+        }
+
+        // 2. Hỏi danh tính của trợ lý AI / FunnyShop
+        if (lower.contains("bạn là ai") || lower.contains("em là ai") || lower.contains("ai đấy")
+                || lower.contains("bạn tên gì") || lower.contains("em tên gì") || lower.contains("trợ lý")
+                || lower.contains("stylist") || lower.contains("shop bán gì") || lower.contains("shop có gì")) {
+            return false;
+        }
+
+        // Danh sách các từ khóa thời trang cụ thể
+        String[] specificFashionKeywords = {
+                "áo", "quần", "váy", "đầm", "polo", "sơ mi", "so mi", "jean", "jeans", "blazer", "hoodie",
+                "thun", "khoác", "chân váy", "set đồ", "bộ đồ", "outfit", "phối đồ", "mặc", "thời trang",
+                "cotton", "denim", "vải", "chất liệu", "tôn dáng", "che khuyết điểm", "size", "cỡ", "màu sắc",
+                "quần áo", "đồ mặc", "đồ nam", "đồ nữ", "đồ công sở", "đồ đi chơi", "đồ đi tiệc"
+        };
+        boolean hasFashion = false;
+        for (String kw : specificFashionKeywords) {
+            if (lower.contains(kw)) {
+                hasFashion = true;
+                break;
+            }
+        }
+
+        // Danh sách từ khóa ngoài lề rõ ràng (ẩm thực, ăn uống, thời tiết, khoa học, tin tức...)
+        String[] explicitOffTopicKeywords = {
+                // Ẩm thực, ăn uống
+                "ăn", "uống", "bánh mì", "bánh", "cơm", "phở", "bún", "mì", "miến", "cháo", "lẩu", "nướng",
+                "trà sữa", "cà phê", "cafe", "nước ngọt", "sinh tố", "quán ăn", "nhà hàng", "quán nước",
+                "món ăn", "nấu ăn", "đồ ăn", "thức ăn", "thực phẩm", "đói", "ẩm thực",
+                // Thời tiết, thiên văn
+                "thời tiết", "dự báo thời tiết", "trời mưa", "trời nắng", "nhiệt độ", "bão", "mưa", "nắng", "gió",
+                // Khoa học, toán học, học tập
+                "toán", "giải toán", "phương trình", "đạo hàm", "tích phân", "hóa học", "vật lý", "sinh học",
+                "bài tập", "lịch sử", "địa lý", "triều đại", "chiến dịch",
+                // Công nghệ, lập trình
+                "lập trình", "viết code", "code", "python", "javascript", "java", "c++", "c#", "html", "css", "sql", "thuật toán", "debug",
+                // Chính trị, xã hội, tin tức
+                "chính trị", "tổng thống", "thủ tướng", "chiến tranh", "quân đội", "bầu cử", "thủ đô", "dân số",
+                // Giải trí, bói toán, cờ bạc
+                "kể chuyện", "chuyện cười", "hát", "bài hát", "làm thơ", "đọc thơ", "tâm sự", "người yêu", "tỏ tình",
+                "tử vi", "bói", "cung hoàng đạo", "xổ số", "lô đề", "vietlott", "bóng đá", "ronaldo", "messi", "ngoại hạng", "world cup",
+                // Tài chính, crypto
+                "bitcoin", "crypto", "tiền ảo", "chứng khoán", "cổ phiếu", "giá vàng",
+                // Y tế, dịch thuật
+                "dịch tiếng", "dịch sang", "tiếng anh", "tiếng trung", "tiếng nhật", "y tế", "thuốc", "bệnh", "bác sĩ",
+                // Câu hỏi chung
+                "ai là", "tại sao", "giải thích", "cho tôi biết về", "thủ đô của"
+        };
+
+        for (String kw : explicitOffTopicKeywords) {
+            if (lower.contains(kw) && !hasFashion) {
+                return true;
+            }
+        }
+
+        // Kiểm tra biểu thức toán học hoặc câu hỏi giờ giấc / ngày tháng thông thường
+        if (lower.matches(".*\\b(\\d+\\s*[+\\-*/=]\\s*\\d+|bằng mấy|mấy giờ|thứ mấy|ngày mấy)\\b.*")) {
+            return true;
+        }
+
+        // Nếu KHÔNG có từ khóa thời trang hay mua bán/shop -> Ngoại lệ ngoài lề
+        if (!hasFashionOrShopKeyword(lower)) {
+            return true;
+        }
+
+        return false;
     }
 
     private boolean isSimpleGreeting(String lower) {
@@ -335,13 +469,25 @@ public class AiChatServiceImpl implements AiChatService {
 
         return lower.equals("hi") || lower.equals("hello") || lower.equals("alo") || lower.equals("alô")
                 || lower.equals("chào") || lower.equals("chào shop") || lower.equals("chào bạn")
+                || lower.equals("xin chào") || lower.equals("xin chào shop") || lower.equals("xin chào bạn")
                 || lower.equals("bạn ơi") || lower.equals("shop ơi") || lower.equals("ad ơi")
                 || lower.equals("hey") || lower.equals("ê") || lower.equals("có ai không")
-                || lower.startsWith("chào shop") || lower.startsWith("chào bạn");
+                || lower.equals("cảm ơn") || lower.equals("cảm ơn shop") || lower.equals("thanks") || lower.equals("thank you")
+                || lower.startsWith("chào shop") || lower.startsWith("chào bạn")
+                || lower.startsWith("xin chào");
     }
 
     private ChatResponse buildFallbackResponse(String userMsg, List<Product> products) {
         String lower = userMsg.toLowerCase().trim();
+
+        // 1. Nếu là câu hỏi ngoài lề, từ chối khéo léo cố định và không trả về sản phẩm
+        if (isOffTopicQuestion(lower)) {
+            return ChatResponse.builder()
+                    .reply(OFF_TOPIC_REFUSAL_MESSAGE)
+                    .products(Collections.emptyList())
+                    .build();
+        }
+
         List<ProductSummaryResponse> recommended = new ArrayList<>();
 
         // Danh sách sản phẩm khả dụng: nếu database trống thì dùng catalog dự phòng chuẩn
@@ -447,9 +593,14 @@ public class AiChatServiceImpl implements AiChatService {
             if (recommended.isEmpty()) {
                 pool.stream().limit(3).forEach(recommended::add);
             }
-        } else {
+        } else if (hasFashionOrShopKeyword(lower)) {
             reply = "Dạ em hiểu nhu cầu của mình rồi nè! Để em gửi bạn tham khảo trước mấy mẫu thời trang đang được yêu thích nhất bên em nha. Bạn thích phong cách nào cứ bảo em nhé: ❤️";
             pool.stream().limit(3).forEach(recommended::add);
+        } else {
+            return ChatResponse.builder()
+                    .reply(OFF_TOPIC_REFUSAL_MESSAGE)
+                    .products(Collections.emptyList())
+                    .build();
         }
 
         return ChatResponse.builder()
