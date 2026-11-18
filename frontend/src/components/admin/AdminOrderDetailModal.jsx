@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   User,
   Phone,
@@ -9,6 +9,9 @@ import {
   AlertTriangle,
   Clock,
   History,
+  RotateCcw,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
@@ -16,25 +19,90 @@ import { OrderBadge } from '../ui/Badge';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
 import { orderApi } from '../../api/order';
+import { returnApi } from '../../api/return';
+import { toast } from '../../store/toastStore';
 
-function AdminOrderDetailModalContent({ onClose, order }) {
+function AdminOrderDetailModalContent({ onClose, order, onOrderUpdated }) {
   const [timeline, setTimeline] = useState([]);
+  const [returnRequest, setReturnRequest] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewAction, setReviewAction] = useState('APPROVE'); // 'APPROVE' | 'REJECT'
+  const [adminNote, setAdminNote] = useState('');
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadData = useCallback(() => {
     orderApi
       .getOrderTimeline(order.id)
-      .then((data) => {
-        if (isMounted) setTimeline(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        if (isMounted) setTimeline([]);
-      });
+      .then((data) => setTimeline(Array.isArray(data) ? data : []))
+      .catch(() => setTimeline([]));
 
-    return () => {
-      isMounted = false;
-    };
+    returnApi
+      .getReturnRequestByOrder(order.id)
+      .then((data) => setReturnRequest(data))
+      .catch(() => setReturnRequest(null));
   }, [order.id]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleOpenReview = (action) => {
+    setReviewAction(action);
+    setAdminNote(
+      action === 'APPROVE'
+        ? 'Shop đã đồng ý yêu cầu trả hàng. Vui lòng đóng gói cẩn thận và gửi về địa chỉ kho của shop.'
+        : ''
+    );
+    setShowReviewModal(true);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!returnRequest) return;
+    if (reviewAction === 'REJECT' && !adminNote.trim()) {
+      toast.error('Bắt buộc phải nhập lý do từ chối yêu cầu trả hàng.');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      await returnApi.adminReviewReturn(returnRequest.id, {
+        action: reviewAction,
+        adminNote: adminNote.trim(),
+      });
+      toast.success(
+        reviewAction === 'APPROVE'
+          ? 'Đã phê duyệt yêu cầu trả hàng!'
+          : 'Đã từ chối yêu cầu trả hàng!'
+      );
+      setShowReviewModal(false);
+      loadData();
+      if (onOrderUpdated) onOrderUpdated();
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Lỗi khi duyệt yêu cầu.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCompleteReturn = async () => {
+    if (!returnRequest) return;
+    const confirmed = window.confirm(
+      'Xác nhận bạn đã nhận được hàng hoàn về kho?\nHệ thống sẽ tự động hoàn lại tồn kho nguyên tử cho các sản phẩm trong đơn.'
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsProcessing(true);
+      await returnApi.adminCompleteReturn(returnRequest.id, 'Đã nhận hàng tại kho & hoàn tiền');
+      toast.success('Đã hoàn tất trả hàng! Tồn kho đã được hoàn lại thành công.');
+      loadData();
+      if (onOrderUpdated) onOrderUpdated();
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Lỗi khi hoàn tất trả hàng.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const items = order.items || [];
   const subtotal = items.reduce(
@@ -68,6 +136,120 @@ function AdminOrderDetailModalContent({ onClose, order }) {
           </div>
         </div>
       </div>
+
+      {/* Return Request Management Block (nếu có yêu cầu đổi trả) */}
+      {returnRequest && (
+        <div className="p-4.5 rounded-xl border border-orange-200 bg-orange-50/60 text-orange-950 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-orange-200/80 pb-3">
+            <div className="flex items-center gap-2">
+              <RotateCcw className="size-5 text-orange-700" />
+              <h5 className="font-bold text-sm text-orange-900">
+                Thông tin yêu cầu trả hàng #{returnRequest.id}
+              </h5>
+            </div>
+            <div>
+              {returnRequest.status === 'PENDING' && (
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900">
+                  Chờ duyệt
+                </span>
+              )}
+              {returnRequest.status === 'APPROVED' && (
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-200 text-purple-900">
+                  Đã duyệt (Chờ khách gửi hàng)
+                </span>
+              )}
+              {returnRequest.status === 'REJECTED' && (
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-200 text-red-900">
+                  Đã từ chối
+                </span>
+              )}
+              {returnRequest.status === 'COMPLETED' && (
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-green-200 text-green-900">
+                  Đã hoàn tất & hoàn kho
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs sm:text-sm">
+            <div className="space-y-1.5">
+              <p><span className="text-ink-muted">Lý do khách khai:</span> <strong className="text-ink">{returnRequest.reason}</strong></p>
+              {returnRequest.description && (
+                <p><span className="text-ink-muted">Mô tả chi tiết:</span> <span className="text-ink">{returnRequest.description}</span></p>
+              )}
+              <p><span className="text-ink-muted">Tiền hoàn:</span> <strong className="text-primary-700">{formatCurrency(returnRequest.refundAmount)}</strong></p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-white/90 border border-orange-200 text-xs space-y-1">
+              <p className="font-semibold text-ink">Thông tin STK hoàn tiền:</p>
+              <p><span className="text-ink-muted">Ngân hàng:</span> <strong>{returnRequest.bankName}</strong></p>
+              <p><span className="text-ink-muted">STK:</span> <strong className="font-mono">{returnRequest.bankAccountNumber}</strong></p>
+              <p><span className="text-ink-muted">Chủ TK:</span> <strong>{returnRequest.bankAccountName}</strong></p>
+            </div>
+          </div>
+
+          {returnRequest.adminNote && (
+            <div className="p-2.5 rounded-lg bg-white border border-orange-200 text-xs">
+              <p className="font-bold text-ink mb-0.5">Ghi chú của Admin:</p>
+              <p className="text-ink-muted">{returnRequest.adminNote}</p>
+            </div>
+          )}
+
+          {returnRequest.evidenceImages?.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-ink-muted mb-1.5">Ảnh bằng chứng:</p>
+              <div className="flex flex-wrap gap-2">
+                {returnRequest.evidenceImages.map((img, idx) => (
+                  <a key={idx} href={img} target="_blank" rel="noreferrer" className="block size-14 rounded-lg border border-line overflow-hidden hover:opacity-80">
+                    <img src={img} alt="Bằng chứng" className="size-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Admin Return Actions */}
+          <div className="pt-2 border-t border-orange-200/80 flex flex-wrap items-center justify-end gap-2">
+            {returnRequest.status === 'PENDING' && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-red-700 border-red-300 hover:bg-red-50 text-xs"
+                  onClick={() => handleOpenReview('REJECT')}
+                  disabled={isProcessing}
+                >
+                  <XCircle className="size-3.5 mr-1" />
+                  Từ chối yêu cầu
+                </Button>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="bg-green-700 hover:bg-green-800 text-xs"
+                  onClick={() => handleOpenReview('APPROVE')}
+                  disabled={isProcessing}
+                >
+                  <CheckCircle2 className="size-3.5 mr-1" />
+                  Duyệt yêu cầu trả hàng
+                </Button>
+              </>
+            )}
+
+            {returnRequest.status === 'APPROVED' && (
+              <Button
+                size="sm"
+                variant="primary"
+                className="bg-purple-700 hover:bg-purple-800 text-xs"
+                onClick={handleCompleteReturn}
+                loading={isProcessing}
+              >
+                <CheckCircle2 className="size-3.5 mr-1" />
+                Xác nhận đã nhận hàng hoàn & Hoàn kho
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Cancel Banner (nếu đơn hàng bị hủy) */}
       {order.status === 'CANCELLED' && (
@@ -137,7 +319,9 @@ function AdminOrderDetailModalContent({ onClose, order }) {
             <CreditCard className="size-4 text-ink-subtle shrink-0 mt-0.5" />
             <div>
               <span className="text-xs text-ink-subtle block">Phương thức thanh toán:</span>
-              <span className="font-medium text-ink">Thanh toán khi nhận hàng (COD)</span>
+              <span className="font-medium text-ink">
+                {order.paymentMethod === 'PAYOS' ? 'Thanh toán online (PayOS / VietQR)' : 'Thanh toán khi nhận hàng (COD)'}
+              </span>
             </div>
           </div>
         </div>
@@ -244,6 +428,49 @@ function AdminOrderDetailModalContent({ onClose, order }) {
         </div>
       )}
 
+      {/* Review Modal Prompt */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white rounded-2xl p-5 shadow-2xl border border-line space-y-4">
+            <h4 className="font-bold text-base text-ink">
+              {reviewAction === 'APPROVE' ? 'Phê duyệt yêu cầu trả hàng' : 'Từ chối yêu cầu trả hàng'}
+            </h4>
+            <div>
+              <label className="block text-xs font-semibold text-ink mb-1.5">
+                {reviewAction === 'APPROVE'
+                  ? 'Hướng dẫn gửi hàng (hiển thị cho khách):'
+                  : 'Lý do từ chối (bắt buộc):'}
+              </label>
+              <textarea
+                rows={3}
+                value={adminNote}
+                onChange={(e) => setAdminNote(e.target.value)}
+                placeholder={
+                  reviewAction === 'APPROVE'
+                    ? 'Nhập địa chỉ nhận hàng hoàn và hướng dẫn đóng gói...'
+                    : 'Nhập lý do từ chối yêu cầu trả hàng...'
+                }
+                className="w-full p-2.5 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setShowReviewModal(false)} disabled={isProcessing}>
+                Hủy
+              </Button>
+              <Button
+                size="sm"
+                variant="primary"
+                className={reviewAction === 'APPROVE' ? 'bg-green-700 hover:bg-green-800' : 'bg-red-700 hover:bg-red-800'}
+                onClick={handleSubmitReview}
+                loading={isProcessing}
+              >
+                Xác nhận
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer actions */}
       <div className="flex justify-end pt-2">
         <Button variant="outline" onClick={onClose}>
@@ -254,7 +481,7 @@ function AdminOrderDetailModalContent({ onClose, order }) {
   );
 }
 
-export default function AdminOrderDetailModal({ isOpen, onClose, order }) {
+export default function AdminOrderDetailModal({ isOpen, onClose, order, onOrderUpdated }) {
   if (!isOpen || !order) return null;
 
   return (
@@ -264,7 +491,7 @@ export default function AdminOrderDetailModal({ isOpen, onClose, order }) {
       title={`Chi tiết đơn hàng #${order.id}`}
       maxWidth="max-w-2xl"
     >
-      <AdminOrderDetailModalContent onClose={onClose} order={order} />
+      <AdminOrderDetailModalContent onClose={onClose} order={order} onOrderUpdated={onOrderUpdated} />
     </Modal>
   );
 }

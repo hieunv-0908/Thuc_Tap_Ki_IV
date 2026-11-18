@@ -42,10 +42,53 @@ class OrderStatusTest {
     }
 
     @Test
-    @DisplayName("COMPLETED là trạng thái kết thúc, không được chuyển sang trạng thái nào")
-    void completedTerminalState() {
+    @DisplayName("COMPLETED có thể chuyển sang RETURN_REQUESTED")
+    void completedTransitions() {
+        assertTrue(OrderStatus.COMPLETED.canTransitionTo(OrderStatus.RETURN_REQUESTED));
+        assertFalse(OrderStatus.COMPLETED.canTransitionTo(OrderStatus.PENDING));
+        assertFalse(OrderStatus.COMPLETED.canTransitionTo(OrderStatus.PROCESSING));
+        assertFalse(OrderStatus.COMPLETED.canTransitionTo(OrderStatus.SHIPPING));
+        assertFalse(OrderStatus.COMPLETED.canTransitionTo(OrderStatus.CANCELLED));
+        assertFalse(OrderStatus.COMPLETED.canTransitionTo(OrderStatus.RETURNED));
+    }
+
+    @Test
+    @DisplayName("RETURN_REQUESTED có thể chuyển sang RETURNING, RETURN_REJECTED hoặc RETURNED")
+    void returnRequestedTransitions() {
+        assertTrue(OrderStatus.RETURN_REQUESTED.canTransitionTo(OrderStatus.RETURNING));
+        assertTrue(OrderStatus.RETURN_REQUESTED.canTransitionTo(OrderStatus.RETURN_REJECTED));
+        assertTrue(OrderStatus.RETURN_REQUESTED.canTransitionTo(OrderStatus.RETURNED));
+        assertFalse(OrderStatus.RETURN_REQUESTED.canTransitionTo(OrderStatus.COMPLETED));
+        assertFalse(OrderStatus.RETURN_REQUESTED.canTransitionTo(OrderStatus.PENDING));
+        assertFalse(OrderStatus.RETURN_REQUESTED.canTransitionTo(OrderStatus.SHIPPING));
+        assertFalse(OrderStatus.RETURN_REQUESTED.canTransitionTo(OrderStatus.CANCELLED));
+    }
+
+    @Test
+    @DisplayName("RETURN_REJECTED có thể chuyển sang RETURN_REQUESTED khi khách gửi lại yêu cầu")
+    void returnRejectedTransitions() {
+        assertTrue(OrderStatus.RETURN_REJECTED.canTransitionTo(OrderStatus.RETURN_REQUESTED));
+        assertFalse(OrderStatus.RETURN_REJECTED.canTransitionTo(OrderStatus.RETURNING));
+        assertFalse(OrderStatus.RETURN_REJECTED.canTransitionTo(OrderStatus.RETURNED));
+        assertFalse(OrderStatus.RETURN_REJECTED.canTransitionTo(OrderStatus.COMPLETED));
+        assertFalse(OrderStatus.RETURN_REJECTED.canTransitionTo(OrderStatus.PENDING));
+    }
+
+    @Test
+    @DisplayName("RETURNING chỉ có thể chuyển sang RETURNED")
+    void returningTransitions() {
+        assertTrue(OrderStatus.RETURNING.canTransitionTo(OrderStatus.RETURNED));
+        assertFalse(OrderStatus.RETURNING.canTransitionTo(OrderStatus.PENDING));
+        assertFalse(OrderStatus.RETURNING.canTransitionTo(OrderStatus.PROCESSING));
+        assertFalse(OrderStatus.RETURNING.canTransitionTo(OrderStatus.COMPLETED));
+    }
+
+    @Test
+    @DisplayName("RETURNED và CANCELLED là trạng thái kết thúc, không được chuyển sang trạng thái nào")
+    void terminalStates() {
         for (OrderStatus target : OrderStatus.values()) {
-            assertFalse(OrderStatus.COMPLETED.canTransitionTo(target));
+            assertFalse(OrderStatus.RETURNED.canTransitionTo(target));
+            assertFalse(OrderStatus.CANCELLED.canTransitionTo(target));
         }
     }
 

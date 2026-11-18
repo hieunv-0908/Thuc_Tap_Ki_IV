@@ -13,6 +13,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { orderApi } from '../api/order';
+import { returnApi } from '../api/return';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate } from '../utils/formatDate';
 import { ORDER_STATUS } from '../utils/constants';
@@ -22,6 +23,7 @@ import ErrorState from '../components/ui/ErrorState';
 import Button from '../components/ui/Button';
 import CancelOrderModal from '../components/order/CancelOrderModal';
 import PayOSQRModal from '../components/payment/PayOSQRModal';
+import ReturnRequestModal from '../components/order/ReturnRequestModal';
 import { useCartStore } from '../store/cartStore';
 import { toast } from '../store/toastStore';
 
@@ -42,17 +44,22 @@ export default function OrderDetail() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [showPayOSModal, setShowPayOSModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
+  const [returnRequest, setReturnRequest] = useState(null);
 
   const fetchOrder = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const [orderData, timelineData] = await Promise.all([
+      const [orderData, timelineData, returnData] = await Promise.all([
         orderApi.getOrderById(id),
         orderApi.getOrderTimeline(id).catch(() => []),
+        returnApi.getReturnRequestByOrder(id).catch(() => null),
       ]);
       setOrder(orderData);
       setTimeline(Array.isArray(timelineData) ? timelineData : []);
+      setReturnRequest(returnData);
     } catch (err) {
       setError(err.message || 'Không tìm thấy thông tin đơn hàng.');
     } finally {
@@ -67,11 +74,13 @@ export default function OrderDetail() {
     Promise.all([
       orderApi.getOrderById(id),
       orderApi.getOrderTimeline(id).catch(() => []),
+      returnApi.getReturnRequestByOrder(id).catch(() => null),
     ])
-      .then(([orderData, timelineData]) => {
+      .then(([orderData, timelineData, returnData]) => {
         if (!isMounted) return;
         setOrder(orderData);
         setTimeline(Array.isArray(timelineData) ? timelineData : []);
+        setReturnRequest(returnData);
         setLoading(false);
       })
       .catch((err) => {
@@ -194,6 +203,22 @@ export default function OrderDetail() {
     }
   };
 
+  const handleSubmitReturn = async (payload) => {
+    if (!order) return;
+    try {
+      setIsSubmittingReturn(true);
+      const res = await returnApi.createReturnRequest(order.id, payload);
+      toast.success('Gửi yêu cầu trả hàng thành công! Đang chờ quản trị viên xét duyệt.');
+      setShowReturnModal(false);
+      setReturnRequest(res);
+      await fetchOrder();
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Không thể gửi yêu cầu trả hàng.');
+    } finally {
+      setIsSubmittingReturn(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-6 md:py-10 space-y-6">
@@ -227,6 +252,8 @@ export default function OrderDetail() {
   const items = order.items || [];
   const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
   const isCompleted = order.status === ORDER_STATUS.COMPLETED;
+  // Cho phép gửi yêu cầu mới khi đơn bị từ chối (RETURN_REJECTED)
+  const isReturnRejected = order.status === ORDER_STATUS.RETURN_REJECTED;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-6 md:py-10 space-y-6">
@@ -278,7 +305,7 @@ export default function OrderDetail() {
                 Hủy đơn
               </Button>
             )}
-            {isCompleted && (
+            {(isCompleted || isReturnRejected) && (
               <Button
                 variant="soft"
                 size="sm"
@@ -287,6 +314,18 @@ export default function OrderDetail() {
                 className="font-semibold"
               >
                 Mua lại
+              </Button>
+            )}
+            {/* Nút yêu cầu trả hàng: chỉ hiện khi COMPLETED và chưa có request nào.
+                Khi RETURN_REJECTED, nút gửi lại nằm trong banner đỏ bên dưới. */}
+            {isCompleted && !returnRequest && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowReturnModal(true)}
+                className="font-semibold text-orange-700 border-orange-300 hover:bg-orange-50"
+              >
+                Yêu cầu trả hàng
               </Button>
             )}
             <div className="text-left sm:text-right">
@@ -310,6 +349,132 @@ export default function OrderDetail() {
           timeline={timeline}
         />
       </div>
+
+      {/* Return Request Banner & Details */}
+      {returnRequest && (
+        <div className={`bg-white rounded-2xl border p-5 sm:p-6 shadow-soft space-y-4 ${
+          returnRequest.status === 'REJECTED' ? 'border-red-300' : 'border-line'
+        }`}>
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-line pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className={`size-9 rounded-xl flex items-center justify-center font-bold ${
+                returnRequest.status === 'REJECTED'
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-orange-100 text-orange-700'
+              }`}>
+                ↩
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-ink">Yêu cầu trả hàng & hoàn tiền</h3>
+                <p className="text-xs text-ink-muted">Gửi lúc: {formatDate(returnRequest.createdAt)}</p>
+              </div>
+            </div>
+            <div>
+              {returnRequest.status === 'PENDING' && (
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
+                  ⏳ Đang chờ Shop xét duyệt
+                </span>
+              )}
+              {returnRequest.status === 'APPROVED' && (
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
+                  ✓ Đã duyệt • Vui lòng gửi hàng về kho
+                </span>
+              )}
+              {returnRequest.status === 'REJECTED' && (
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                  ✕ Yêu cầu bị từ chối
+                </span>
+              )}
+              {returnRequest.status === 'COMPLETED' && (
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                  ✓ Đã hoàn tiền thành công
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* REJECTED: Banner cảnh báo nổi bật */}
+          {returnRequest.status === 'REJECTED' && (
+            <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-900 space-y-2">
+              <div className="flex items-start gap-2.5">
+                <span className="text-xl">🚫</span>
+                <div className="flex-1">
+                  <p className="font-bold text-sm text-red-800 mb-0.5">Yêu cầu trả hàng của bạn đã bị từ chối</p>
+                  {returnRequest.adminNote ? (
+                    <div className="text-xs sm:text-sm text-red-700 leading-relaxed">
+                      <span className="font-semibold">Lý do từ Shop: </span>
+                      {returnRequest.adminNote}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-red-600">Shop chưa cung cấp lý do chi tiết. Vui lòng liên hệ hỗ trợ.</p>
+                  )}
+                </div>
+              </div>
+              {/* Nút gửi lại yêu cầu mới ngay tại đây */}
+              {(isCompleted || isReturnRejected) && (
+                <div className="pt-2 border-t border-red-200 flex flex-wrap items-center gap-2 justify-between">
+                  <p className="text-xs text-red-600 italic">
+                    Nếu bạn không đồng ý với quyết định này, bạn có thể gửi yêu cầu mới với lý do khác.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowReturnModal(true)}
+                    className="font-semibold text-red-700 border-red-400 hover:bg-red-50 shrink-0"
+                  >
+                    Gửi yêu cầu trả hàng mới
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Chi tiết yêu cầu (ẩn khi REJECTED để tránh rối mắt) */}
+          {returnRequest.status !== 'REJECTED' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
+              <div className="space-y-2">
+                <p><span className="text-ink-muted">Lý do trả hàng:</span> <strong className="text-ink">{returnRequest.reason}</strong></p>
+                {returnRequest.description && (
+                  <p><span className="text-ink-muted">Mô tả:</span> <span className="text-ink">{returnRequest.description}</span></p>
+                )}
+                <p><span className="text-ink-muted">Số tiền hoàn dự kiến:</span> <strong className="text-primary-700">{formatCurrency(returnRequest.refundAmount)}</strong></p>
+              </div>
+
+              <div className="space-y-2 p-3 rounded-xl bg-gray-50 border border-line text-xs">
+                <p className="font-semibold text-ink">Tài khoản nhận tiền hoàn:</p>
+                <p><span className="text-ink-muted">Ngân hàng:</span> <strong>{returnRequest.bankName}</strong></p>
+                <p><span className="text-ink-muted">Số tài khoản:</span> <strong className="font-mono">{returnRequest.bankAccountNumber}</strong></p>
+                <p><span className="text-ink-muted">Chủ tài khoản:</span> <strong>{returnRequest.bankAccountName}</strong></p>
+              </div>
+            </div>
+          )}
+
+          {/* Hướng dẫn từ Shop (khi APPROVED / COMPLETED) */}
+          {returnRequest.adminNote && returnRequest.status !== 'REJECTED' && (
+            <div className="p-3.5 rounded-xl border text-xs sm:text-sm bg-purple-50 border-purple-200 text-purple-900">
+              <p className="font-bold mb-1">
+                {returnRequest.status === 'COMPLETED' ? 'Ghi chú hoàn tất:' : 'Hướng dẫn gửi hàng từ Shop:'}
+              </p>
+              <p className="leading-relaxed">{returnRequest.adminNote}</p>
+            </div>
+          )}
+
+          {/* Ảnh bằng chứng */}
+          {returnRequest.evidenceImages?.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-ink-muted mb-2">Ảnh bằng chứng sản phẩm:</p>
+              <div className="flex flex-wrap gap-2">
+                {returnRequest.evidenceImages.map((img, idx) => (
+                  <a key={idx} href={img} target="_blank" rel="noreferrer" className="block size-16 rounded-lg border border-line overflow-hidden hover:opacity-90">
+                    <img src={img} alt="Bằng chứng" className="size-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Two side-by-side cards from md: Delivery Info & Price Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
@@ -561,6 +726,17 @@ export default function OrderDetail() {
         orderId={order?.id}
         loading={isCancelling}
       />
+
+      {/* Modal gửi yêu cầu trả hàng & hoàn tiền */}
+      {showReturnModal && (
+        <ReturnRequestModal
+          isOpen={showReturnModal}
+          onClose={() => !isSubmittingReturn && setShowReturnModal(false)}
+          onSubmit={handleSubmitReturn}
+          order={order}
+          loading={isSubmittingReturn}
+        />
+      )}
     </div>
   );
 }
