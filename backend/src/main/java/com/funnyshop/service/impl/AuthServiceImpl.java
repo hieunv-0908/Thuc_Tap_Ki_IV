@@ -9,6 +9,8 @@ import com.funnyshop.entity.User;
 import com.funnyshop.exception.AppException;
 import com.funnyshop.exception.ResourceAlreadyExistsException;
 import com.funnyshop.exception.ResourceNotFoundException;
+import com.funnyshop.repository.EmailVerificationTokenRepository;
+import com.funnyshop.repository.EmailVerificationTokenRepository;
 import com.funnyshop.repository.UserRepository;
 import com.funnyshop.security.JwtTokenProvider;
 import com.funnyshop.security.blacklist.TokenBlacklistService;
@@ -22,6 +24,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -29,12 +32,14 @@ import org.springframework.stereotype.Service;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
 
     @Override
+    @Transactional
     public UserResponse register(RegisterRequest registerRequest) {
         log.info("Registering new user with username: {}", registerRequest.getUsername());
 
@@ -44,17 +49,25 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // Kiểm tra trùng lặp email
-        if (userRepository.existsByEmail(registerRequest.getEmail())) {
+        String normalizedEmail = registerRequest.getEmail() != null ? registerRequest.getEmail().trim().toLowerCase() : "";
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new ResourceAlreadyExistsException("Email đã tồn tại!");
+        }
+
+        // Kiểm tra email đã được xác thực OTP chưa
+        var verifiedToken = emailVerificationTokenRepository
+                .findTopByEmailAndVerifiedTrueOrderByCreatedAtDesc(normalizedEmail);
+        if (verifiedToken.isEmpty()) {
+            throw new AppException("Vui lòng xác thực email bằng mã OTP trước khi đăng ký!", HttpStatus.BAD_REQUEST);
         }
 
         // Tạo user mới
         User user = User.builder()
-                .username(registerRequest.getUsername())
-                .email(registerRequest.getEmail())
+                .username(registerRequest.getUsername().trim())
+                .email(normalizedEmail)
                 .password(passwordEncoder.encode(registerRequest.getPassword()))
-                .fullName(registerRequest.getFullName())
-                .phone(registerRequest.getPhone())
+                .fullName(registerRequest.getFullName() != null ? registerRequest.getFullName().trim() : "")
+                .phone(registerRequest.getPhone() != null ? registerRequest.getPhone().trim() : "")
                 .role(User.Role.CUSTOMER)
                 .status(User.Status.ACTIVE)
                 .build();
@@ -62,6 +75,13 @@ public class AuthServiceImpl implements AuthService {
         // Lưu vào database
         User savedUser = userRepository.save(user);
         log.info("User registered successfully with ID: {}", savedUser.getId());
+
+        // Dọn dẹp token xác thực email sau khi đăng ký thành công
+        try {
+            emailVerificationTokenRepository.deleteAllByEmail(normalizedEmail);
+        } catch (Exception e) {
+            log.warn("Lỗi khi dọn dẹp token xác thực email cho {}: {}", normalizedEmail, e.getMessage());
+        }
 
         // Chuyển đổi sang UserResponse (không bao gồm password)
         return mapToUserResponse(savedUser);

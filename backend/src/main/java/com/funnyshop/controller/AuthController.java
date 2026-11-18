@@ -17,8 +17,11 @@ import org.springframework.web.bind.annotation.*;
 import com.funnyshop.dto.request.ForgotPasswordRequest;
 import com.funnyshop.dto.request.VerifyOtpRequest;
 import com.funnyshop.dto.request.ResetPasswordRequest;
+import com.funnyshop.dto.request.SendRegisterOtpRequest;
+import com.funnyshop.dto.request.VerifyRegisterOtpRequest;
 import com.funnyshop.dto.response.VerifyOtpResponse;
 import com.funnyshop.service.PasswordResetService;
+import com.funnyshop.service.EmailVerificationService;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -27,6 +30,7 @@ public class AuthController {
 
         private final AuthService authService;
         private final PasswordResetService passwordResetService;
+        private final EmailVerificationService emailVerificationService;
 
         @PostMapping("/register")
         public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterRequest registerRequest) {
@@ -99,6 +103,45 @@ public class AuthController {
                                                 .data(null)
                                                 .build());
         }
+
+        // ========== Registration OTP Endpoints ==========
+
+        @GetMapping("/check-email")
+        public ResponseEntity<ApiResponse<Boolean>> checkEmail(@RequestParam("email") String email) {
+                boolean exists = emailVerificationService.checkEmailExists(email);
+                return ResponseEntity.ok(
+                                ApiResponse.<Boolean>builder()
+                                                .code(HttpStatus.OK.value())
+                                                .message(exists ? "Email này đã được sử dụng bởi tài khoản khác!" : "Email có thể sử dụng.")
+                                                .data(exists)
+                                                .build());
+        }
+
+        @PostMapping("/register/send-otp")
+        public ResponseEntity<ApiResponse<Void>> sendRegisterOtp(
+                        @Valid @RequestBody SendRegisterOtpRequest request) {
+                emailVerificationService.sendRegistrationOtp(request.getEmail(), request.getFullName());
+                return ResponseEntity.ok(
+                                ApiResponse.<Void>builder()
+                                                .code(HttpStatus.OK.value())
+                                                .message("Mã OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư!")
+                                                .data(null)
+                                                .build());
+        }
+
+        @PostMapping("/register/verify-otp")
+        public ResponseEntity<ApiResponse<Void>> verifyRegisterOtp(
+                        @Valid @RequestBody VerifyRegisterOtpRequest request) {
+                emailVerificationService.verifyRegistrationOtp(request.getEmail(), request.getOtp());
+                return ResponseEntity.ok(
+                                ApiResponse.<Void>builder()
+                                                .code(HttpStatus.OK.value())
+                                                .message("Xác thực email thành công! Bạn có thể hoàn tất đăng ký.")
+                                                .data(null)
+                                                .build());
+        }
+
+        // ========== Token Refresh ==========
 
         @PostMapping("/refresh")
         public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
