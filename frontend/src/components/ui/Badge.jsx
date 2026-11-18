@@ -36,6 +36,10 @@ export function OrderBadge({ status, className = '' }) {
     SHIPPING: { label: 'Đang giao', className: 'bg-violet-100 text-violet-800' },
     COMPLETED: { label: 'Hoàn thành', className: 'bg-green-100 text-green-800' },
     CANCELLED: { label: 'Đã hủy', className: 'bg-red-100 text-red-800' },
+    RETURN_REQUESTED: { label: 'Yêu cầu trả hàng', className: 'bg-orange-100 text-orange-800' },
+    RETURNING: { label: 'Đang trả hàng', className: 'bg-purple-100 text-purple-800' },
+    RETURNED: { label: 'Đã trả hàng', className: 'bg-gray-100 text-gray-800' },
+    RETURN_REJECTED: { label: 'Trả hàng bị từ chối', className: 'bg-red-100 text-red-800' },
   };
 
   const config = statusConfig[status] || {

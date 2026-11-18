@@ -9,6 +9,10 @@ export const ORDER_STATUS = {
   SHIPPING: 'SHIPPING',
   COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED',
+  RETURN_REQUESTED: 'RETURN_REQUESTED',
+  RETURNING: 'RETURNING',
+  RETURNED: 'RETURNED',
+  RETURN_REJECTED: 'RETURN_REJECTED',
 };
 
 export const ORDER_STATUS_LABELS = {
@@ -17,6 +21,10 @@ export const ORDER_STATUS_LABELS = {
   [ORDER_STATUS.SHIPPING]: 'Đang giao',
   [ORDER_STATUS.COMPLETED]: 'Hoàn thành',
   [ORDER_STATUS.CANCELLED]: 'Đã hủy',
+  [ORDER_STATUS.RETURN_REQUESTED]: 'Yêu cầu trả hàng',
+  [ORDER_STATUS.RETURNING]: 'Đang trả hàng',
+  [ORDER_STATUS.RETURNED]: 'Đã trả hàng',
+  [ORDER_STATUS.RETURN_REJECTED]: 'Trả hàng bị từ chối',
 };
 
 export const ORDER_STATUS_CLASSES = {
@@ -25,20 +33,32 @@ export const ORDER_STATUS_CLASSES = {
   [ORDER_STATUS.SHIPPING]: 'bg-violet-100 text-violet-800',
   [ORDER_STATUS.COMPLETED]: 'bg-green-100 text-green-800',
   [ORDER_STATUS.CANCELLED]: 'bg-red-100 text-red-800',
+  [ORDER_STATUS.RETURN_REQUESTED]: 'bg-orange-100 text-orange-800',
+  [ORDER_STATUS.RETURNING]: 'bg-purple-100 text-purple-800',
+  [ORDER_STATUS.RETURNED]: 'bg-gray-100 text-gray-800',
+  [ORDER_STATUS.RETURN_REJECTED]: 'bg-red-100 text-red-700',
 };
 
 /**
- * Valid order state machine transitions according to SRS FR-06:
+ * Valid order state machine transitions according to SRS FR-06 & Return Flow:
  * PENDING -> PROCESSING -> SHIPPING -> COMPLETED
  * PENDING / PROCESSING can transition to CANCELLED
  * SHIPPING can only transition to COMPLETED (cannot be cancelled once shipped)
- * COMPLETED / CANCELLED are terminal states
+ * COMPLETED can transition to RETURN_REQUESTED
+ * RETURN_REQUESTED can transition to RETURNING (approved) or RETURN_REJECTED (rejected)
+ * RETURN_REJECTED: khách có thể gửi yêu cầu mới -> RETURN_REQUESTED
+ * RETURNING can only transition to RETURNED
+ * RETURNED / CANCELLED / RETURN_REJECTED (terminal, trừ khi gửi lại) are terminal states
  */
 export const VALID_ORDER_TRANSITIONS = {
   [ORDER_STATUS.PENDING]: [ORDER_STATUS.PROCESSING, ORDER_STATUS.CANCELLED],
   [ORDER_STATUS.PROCESSING]: [ORDER_STATUS.SHIPPING, ORDER_STATUS.CANCELLED],
   [ORDER_STATUS.SHIPPING]: [ORDER_STATUS.COMPLETED],
-  [ORDER_STATUS.COMPLETED]: [],
+  [ORDER_STATUS.COMPLETED]: [ORDER_STATUS.RETURN_REQUESTED],
+  [ORDER_STATUS.RETURN_REQUESTED]: [ORDER_STATUS.RETURNING, ORDER_STATUS.RETURN_REJECTED, ORDER_STATUS.RETURNED],
+  [ORDER_STATUS.RETURN_REJECTED]: [ORDER_STATUS.RETURN_REQUESTED], // Cho phép gửi lại
+  [ORDER_STATUS.RETURNING]: [ORDER_STATUS.RETURNED],
+  [ORDER_STATUS.RETURNED]: [],
   [ORDER_STATUS.CANCELLED]: [],
 };
 

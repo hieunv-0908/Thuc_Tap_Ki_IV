@@ -239,6 +239,26 @@ export default function AdminOrders() {
       label: ORDER_STATUS_LABELS.CANCELLED,
       count: orders.filter((o) => o.status === ORDER_STATUS.CANCELLED).length,
     },
+    {
+      key: ORDER_STATUS.RETURN_REQUESTED,
+      label: ORDER_STATUS_LABELS.RETURN_REQUESTED,
+      count: orders.filter((o) => o.status === ORDER_STATUS.RETURN_REQUESTED).length,
+    },
+    {
+      key: ORDER_STATUS.RETURNING,
+      label: ORDER_STATUS_LABELS.RETURNING,
+      count: orders.filter((o) => o.status === ORDER_STATUS.RETURNING).length,
+    },
+    {
+      key: ORDER_STATUS.RETURNED,
+      label: ORDER_STATUS_LABELS.RETURNED,
+      count: orders.filter((o) => o.status === ORDER_STATUS.RETURNED).length,
+    },
+    {
+      key: ORDER_STATUS.RETURN_REJECTED,
+      label: ORDER_STATUS_LABELS.RETURN_REJECTED,
+      count: orders.filter((o) => o.status === ORDER_STATUS.RETURN_REJECTED).length,
+    },
   ];
 
   // Table columns definition per Design.md 7.10
@@ -504,6 +524,7 @@ export default function AdminOrders() {
         isOpen={Boolean(selectedOrder)}
         onClose={() => setSelectedOrder(null)}
         order={selectedOrder}
+        onOrderUpdated={fetchOrders}
       />
 
       {/* Cancel Order Modal with Reason selection */}
