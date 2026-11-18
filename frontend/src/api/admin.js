@@ -290,4 +290,16 @@ export const adminApi = {
     const res = await apiClient.delete(`/api/v1/admin/users/${id}`);
     return res?.data !== undefined ? res.data : res;
   },
+
+  // ── Analytics & Dashboard Daily Stats ──────────────────────────────────
+  getDailyStats: async ({ days, startDate, endDate, singleDate } = {}) => {
+    const params = {};
+    if (days !== undefined && days !== null && days !== '') params.days = days;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    if (singleDate) params.singleDate = singleDate;
+
+    const res = await apiClient.get('/api/v1/admin/dashboard/daily-stats', { params });
+    return res?.data !== undefined ? res.data : res;
+  },
 };

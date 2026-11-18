@@ -19,6 +19,7 @@ import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import ThemeToggle from '../ui/ThemeToggle';
 import BrandLogo from '../ui/BrandLogo';
+import NotificationDropdown from '../notification/NotificationDropdown';
 
 const QUICK_SEARCH_CHIPS = [
   { label: 'Áo thun Boxy', emoji: '👕' },
@@ -235,6 +236,9 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
             >
               <Search className="size-5" />
             </button>
+
+            {/* Notification Bell */}
+            <NotificationDropdown />
 
             {/* Cart Icon with Pop-animated Badge */}
             <Link
