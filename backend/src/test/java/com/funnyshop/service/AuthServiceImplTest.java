@@ -5,9 +5,11 @@ import com.funnyshop.dto.request.RefreshTokenRequest;
 import com.funnyshop.dto.request.RegisterRequest;
 import com.funnyshop.dto.response.AuthResponse;
 import com.funnyshop.dto.response.UserResponse;
+import com.funnyshop.entity.EmailVerificationToken;
 import com.funnyshop.entity.User;
 import com.funnyshop.exception.AppException;
 import com.funnyshop.exception.ResourceAlreadyExistsException;
+import com.funnyshop.repository.EmailVerificationTokenRepository;
 import com.funnyshop.repository.UserRepository;
 import com.funnyshop.security.JwtTokenProvider;
 import com.funnyshop.security.blacklist.TokenBlacklistService;
@@ -34,6 +36,9 @@ class AuthServiceImplTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private EmailVerificationTokenRepository emailVerificationTokenRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -77,7 +82,9 @@ class AuthServiceImplTest {
                 .build();
 
         when(userRepository.existsByUsername("newuser")).thenReturn(false);
-        when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
+        when(emailVerificationTokenRepository.findTopByEmailAndVerifiedTrueOrderByCreatedAtDesc("new@example.com"))
+                .thenReturn(Optional.of(EmailVerificationToken.builder().email("new@example.com").verified(true).build()));
         when(passwordEncoder.encode("123456")).thenReturn("hashed_password");
         when(userRepository.save(any(User.class))).thenAnswer(i -> {
             User u = i.getArgument(0);
@@ -104,6 +111,23 @@ class AuthServiceImplTest {
         when(userRepository.existsByUsername("testuser")).thenReturn(true);
 
         assertThrows(ResourceAlreadyExistsException.class, () -> authService.register(request));
+    }
+
+    @Test
+    @DisplayName("register - Email chưa xác thực OTP ném AppException")
+    void register_EmailNotVerified_ThrowsException() {
+        RegisterRequest request = RegisterRequest.builder()
+                .username("newuser")
+                .email("new@example.com")
+                .password("123456")
+                .build();
+
+        when(userRepository.existsByUsername("newuser")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
+        when(emailVerificationTokenRepository.findTopByEmailAndVerifiedTrueOrderByCreatedAtDesc("new@example.com"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(AppException.class, () -> authService.register(request));
     }
 
     @Test

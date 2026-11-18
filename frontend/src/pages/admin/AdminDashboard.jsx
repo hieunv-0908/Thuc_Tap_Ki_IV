@@ -33,6 +33,18 @@ const TIME_RANGES = [
   { id: 'this_year', label: 'Năm nay' },
 ];
 
+/**
+ * Safely parse date from string or Jackson array representation
+ */
+function parseOrderDate(dateVal) {
+  if (!dateVal) return null;
+  if (Array.isArray(dateVal)) {
+    return new Date(dateVal[0], (dateVal[1] || 1) - 1, dateVal[2] || 1, dateVal[3] || 0, dateVal[4] || 0);
+  }
+  const d = new Date(dateVal);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export default function AdminDashboard() {
   const [timeRange, setTimeRange] = useState('7_days');
   const [metricMode, setMetricMode] = useState('revenue'); // 'revenue' | 'orders'
@@ -100,7 +112,7 @@ export default function AdminDashboard() {
     toast.success('Đã cập nhật số liệu mới nhất!');
   };
 
-  // ── Metrics Calculation ───────────────────────────────────────────────────
+  // ── Metrics Calculation (100% Real Data) ──────────────────────────────────
   const metrics = useMemo(() => {
     // 1. Total revenue (completed/shipping/processing orders, excludes cancelled)
     const validOrders = orders.filter((o) => o.status !== ORDER_STATUS.CANCELLED);
@@ -113,7 +125,7 @@ export default function AdminDashboard() {
     const completedOrders = orders.filter((o) => o.status === ORDER_STATUS.COMPLETED);
     const completionRate = orders.length > 0
       ? Math.round((completedOrders.length / orders.length) * 100)
-      : 92;
+      : 0;
 
     // 3. Low stock and out of stock products
     const lowStockCount = products.filter(
@@ -123,101 +135,255 @@ export default function AdminDashboard() {
       (p) => (Number(p.stockQuantity ?? p.stock) || 0) <= 0
     ).length;
 
-    // 4. Users stats
-    const totalUsers = users.length > 0 ? users.length : 24;
-
     return {
-      totalRevenue: totalRevenue > 0 ? totalRevenue : 48500000,
-      totalOrders: orders.length > 0 ? orders.length : 68,
-      completedOrdersCount: completedOrders.length > 0 ? completedOrders.length : 61,
+      totalRevenue,
+      totalOrders: orders.length,
+      completedOrdersCount: completedOrders.length,
       completionRate,
-      totalUsers,
-      totalProducts: products.length > 0 ? products.length : 32,
+      totalUsers: users.length,
+      totalProducts: products.length,
       lowStockCount,
       outOfStockCount,
     };
   }, [orders, products, users]);
 
-  // ── Time-Series Slanted Area Trend Data ────────────────────────────────────
+  // ── 1. Time-Series Slanted Area Trend Data (Real Data from Orders) ──────────
   const trendData = useMemo(() => {
+    const validOrders = orders.filter((o) => o.status !== ORDER_STATUS.CANCELLED);
+    const now = new Date();
+
     if (timeRange === '7_days') {
-      return [
-        { label: 'T2 (10/11)', value: 4200000, secondaryValue: 7 },
-        { label: 'T3 (11/11)', value: 5800000, secondaryValue: 10 },
-        { label: 'T4 (12/11)', value: 5100000, secondaryValue: 9 },
-        { label: 'T5 (13/11)', value: 7600000, secondaryValue: 13 },
-        { label: 'T6 (14/11)', value: 9800000, secondaryValue: 16 },
-        { label: 'T7 (15/11)', value: 14200000, secondaryValue: 24 },
-        { label: 'CN (16/11)', value: 16500000, secondaryValue: 28 },
-      ].map((d) => (metricMode === 'orders' ? { ...d, value: d.secondaryValue } : d));
+      const dayLabels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+      const points = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        d.setHours(0, 0, 0, 0);
+
+        const nextD = new Date(d);
+        nextD.setDate(d.getDate() + 1);
+
+        const dayOrders = validOrders.filter((o) => {
+          const dt = parseOrderDate(o.createdAt);
+          return dt && dt >= d && dt < nextD;
+        });
+
+        const rev = dayOrders.reduce(
+          (sum, o) => sum + (Number(o.totalPrice || o.totalAmount) || 0),
+          0
+        );
+        const count = dayOrders.length;
+        const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const label = `${dayLabels[d.getDay()]} (${dateStr})`;
+
+        points.push({
+          label,
+          value: metricMode === 'revenue' ? rev : count,
+          secondaryValue: metricMode === 'revenue' ? count : rev,
+        });
+      }
+      return points;
     }
 
     if (timeRange === '30_days') {
-      return [
-        { label: 'Tuần 1', value: 28500000, secondaryValue: 48 },
-        { label: 'Tuần 2', value: 34200000, secondaryValue: 56 },
-        { label: 'Tuần 3', value: 41800000, secondaryValue: 68 },
-        { label: 'Tuần 4', value: 52400000, secondaryValue: 84 },
-      ].map((d) => (metricMode === 'orders' ? { ...d, value: d.secondaryValue } : d));
+      const points = [];
+      const blocks = [
+        { label: 'Tuần 1', daysAgoStart: 30, daysAgoEnd: 22 },
+        { label: 'Tuần 2', daysAgoStart: 22, daysAgoEnd: 15 },
+        { label: 'Tuần 3', daysAgoStart: 15, daysAgoEnd: 8 },
+        { label: 'Tuần 4', daysAgoStart: 8, daysAgoEnd: 0 },
+      ];
+
+      blocks.forEach(({ label, daysAgoStart, daysAgoEnd }) => {
+        const startD = new Date(now);
+        startD.setDate(now.getDate() - daysAgoStart);
+        startD.setHours(0, 0, 0, 0);
+
+        const endD = new Date(now);
+        endD.setDate(now.getDate() - daysAgoEnd);
+        endD.setHours(23, 59, 59, 999);
+
+        const blockOrders = validOrders.filter((o) => {
+          const dt = parseOrderDate(o.createdAt);
+          return dt && dt >= startD && dt <= endD;
+        });
+
+        const rev = blockOrders.reduce(
+          (sum, o) => sum + (Number(o.totalPrice || o.totalAmount) || 0),
+          0
+        );
+        const count = blockOrders.length;
+
+        points.push({
+          label,
+          value: metricMode === 'revenue' ? rev : count,
+          secondaryValue: metricMode === 'revenue' ? count : rev,
+        });
+      });
+
+      return points;
     }
 
     if (timeRange === 'this_month') {
-      return [
-        { label: '01–05', value: 8500000, secondaryValue: 14 },
-        { label: '06–10', value: 12200000, secondaryValue: 19 },
-        { label: '11–15', value: 16800000, secondaryValue: 26 },
-        { label: '16–20', value: 21500000, secondaryValue: 34 },
-        { label: '21–25', value: 24800000, secondaryValue: 39 },
-        { label: '26–30', value: 29500000, secondaryValue: 45 },
-      ].map((d) => (metricMode === 'orders' ? { ...d, value: d.secondaryValue } : d));
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+      const intervals = [
+        { start: 1, end: 5, label: '01–05' },
+        { start: 6, end: 10, label: '06–10' },
+        { start: 11, end: 15, label: '11–15' },
+        { start: 16, end: 20, label: '16–20' },
+        { start: 21, end: 25, label: '21–25' },
+        { start: 26, end: lastDayOfMonth, label: `26–${lastDayOfMonth}` },
+      ];
+
+      return intervals.map(({ start, end, label }) => {
+        const startD = new Date(currentYear, currentMonth, start, 0, 0, 0, 0);
+        const endD = new Date(currentYear, currentMonth, end, 23, 59, 59, 999);
+
+        const intOrders = validOrders.filter((o) => {
+          const dt = parseOrderDate(o.createdAt);
+          return dt && dt >= startD && dt <= endD;
+        });
+
+        const rev = intOrders.reduce(
+          (sum, o) => sum + (Number(o.totalPrice || o.totalAmount) || 0),
+          0
+        );
+        const count = intOrders.length;
+
+        return {
+          label,
+          value: metricMode === 'revenue' ? rev : count,
+          secondaryValue: metricMode === 'revenue' ? count : rev,
+        };
+      });
     }
 
-    // this_year (12 months)
-    return [
-      { label: 'T1', value: 35000000, secondaryValue: 62 },
-      { label: 'T2', value: 42000000, secondaryValue: 74 },
-      { label: 'T3', value: 48000000, secondaryValue: 81 },
-      { label: 'T4', value: 56000000, secondaryValue: 95 },
-      { label: 'T5', value: 64000000, secondaryValue: 108 },
-      { label: 'T6', value: 72000000, secondaryValue: 119 },
-      { label: 'T7', value: 81000000, secondaryValue: 132 },
-      { label: 'T8', value: 89000000, secondaryValue: 145 },
-      { label: 'T9', value: 96000000, secondaryValue: 158 },
-      { label: 'T10', value: 108000000, secondaryValue: 172 },
-      { label: 'T11', value: 125000000, secondaryValue: 198 },
-      { label: 'T12 (dự kiến)', value: 145000000, secondaryValue: 230 },
-    ].map((d) => (metricMode === 'orders' ? { ...d, value: d.secondaryValue } : d));
-  }, [timeRange, metricMode]);
+    // this_year (12 months of current year)
+    const currentYear = now.getFullYear();
+    const points = [];
+    for (let m = 0; m < 12; m++) {
+      const startD = new Date(currentYear, m, 1, 0, 0, 0, 0);
+      const endD = new Date(currentYear, m + 1, 0, 23, 59, 59, 999);
 
-  // ── Category Revenue Breakdown (Donut Chart 1) ───────────────────────────
+      const monthOrders = validOrders.filter((o) => {
+        const dt = parseOrderDate(o.createdAt);
+        return dt && dt >= startD && dt <= endD;
+      });
+
+      const rev = monthOrders.reduce(
+        (sum, o) => sum + (Number(o.totalPrice || o.totalAmount) || 0),
+        0
+      );
+      const count = monthOrders.length;
+
+      points.push({
+        label: `T${m + 1}`,
+        value: metricMode === 'revenue' ? rev : count,
+        secondaryValue: metricMode === 'revenue' ? count : rev,
+      });
+    }
+    return points;
+  }, [orders, timeRange, metricMode]);
+
+  // ── 2. Category Revenue Breakdown (Real Data from Order Items & Catalog) ────
   const categoryChartData = useMemo(() => {
-    const defaultDistribution = [
-      { label: 'Áo thun & Polo', value: 18500000, count: 14, color: '#FF6B4A', subtext: 'Chiếm tỷ trọng lớn nhất' },
-      { label: 'Áo sơ mi & Áo kiểu', value: 12800000, count: 9, color: '#6C5CE7', subtext: 'Xu hướng văn phòng' },
-      { label: 'Váy & Đầm', value: 10400000, count: 7, color: '#FF8567', subtext: 'Bán chạy mùa cưới & tiệc' },
-      { label: 'Quần & Chân váy', value: 8200000, count: 8, color: '#8F80EE', subtext: 'Trang phục thường ngày' },
-      { label: 'Áo khoác & Hoodie', value: 6500000, count: 6, color: '#FFA68F', subtext: 'Bộ sưu tập mùa thu đông' },
-    ];
+    const validOrders = orders.filter((o) => o.status !== ORDER_STATUS.CANCELLED);
+    const colors = ['#FF6B4A', '#6C5CE7', '#10B981', '#3B82F6', '#F59E0B', '#8F80EE', '#EC4899', '#14B8A6'];
 
-    if (categories.length === 0) return defaultDistribution;
+    // Map each product to its category
+    const productCatMap = new Map();
+    products.forEach((p) => {
+      const catId = p.category?.id || p.categoryId;
+      const catName = p.category?.name || p.categoryName || '';
+      if (p.id) {
+        productCatMap.set(String(p.id), { catId: catId ? String(catId) : null, catName });
+      }
+    });
 
-    const colors = ['#FF6B4A', '#6C5CE7', '#FF8567', '#8F80EE', '#FFA68F', '#B0A5F4', '#FFC9BB'];
-    return categories.slice(0, 6).map((cat, idx) => {
-      // Find matching products in this category
-      const prodsInCat = products.filter((p) => String(p.categoryId) === String(cat.id));
-      const estRevenue = prodsInCat.reduce((sum, p) => sum + (Number(p.price) || 250000) * 8, 0);
+    // Accumulate real revenue and sold quantity per category
+    const catRevenueMap = new Map();
+    const catQuantityMap = new Map();
+
+    categories.forEach((cat) => {
+      catRevenueMap.set(String(cat.id), 0);
+      catQuantityMap.set(String(cat.id), 0);
+    });
+
+    let uncategorizedRevenue = 0;
+    let uncategorizedQuantity = 0;
+
+    validOrders.forEach((order) => {
+      const items = order.items || [];
+      items.forEach((item) => {
+        const pId = item.productId ? String(item.productId) : null;
+        const itemPrice = Number(item.price || item.priceAtOrder) || 0;
+        const itemQty = Number(item.quantity) || 1;
+        const itemTotal = itemPrice * itemQty;
+
+        let matchedCatId = null;
+
+        if (pId && productCatMap.has(pId)) {
+          matchedCatId = productCatMap.get(pId).catId;
+        }
+
+        // Fallback: match by category name in item text
+        if (!matchedCatId) {
+          const itemText = (item.productName || item.name || '').toLowerCase();
+          const found = categories.find((c) =>
+            itemText.includes((c.name || '').toLowerCase())
+          );
+          if (found) matchedCatId = String(found.id);
+        }
+
+        if (matchedCatId && catRevenueMap.has(matchedCatId)) {
+          catRevenueMap.set(matchedCatId, catRevenueMap.get(matchedCatId) + itemTotal);
+          catQuantityMap.set(matchedCatId, catQuantityMap.get(matchedCatId) + itemQty);
+        } else {
+          uncategorizedRevenue += itemTotal;
+          uncategorizedQuantity += itemQty;
+        }
+      });
+    });
+
+    const result = categories.map((cat, idx) => {
+      const catIdStr = String(cat.id);
+      const rev = catRevenueMap.get(catIdStr) || 0;
+      const soldQty = catQuantityMap.get(catIdStr) || 0;
+      const prodsInCat = products.filter(
+        (p) => String(p.category?.id || p.categoryId) === catIdStr
+      );
 
       return {
         label: cat.name,
-        value: estRevenue > 0 ? estRevenue : (defaultDistribution[idx]?.value || 5000000),
-        count: prodsInCat.length,
+        value: rev,
+        count: soldQty,
         color: colors[idx % colors.length],
-        subtext: `${prodsInCat.length} mẫu mã`,
+        subtext: soldQty > 0
+          ? `Đã bán ${soldQty} sp (${prodsInCat.length} mẫu mã)`
+          : `${prodsInCat.length} mẫu mã trong kho`,
       };
     });
-  }, [categories, products]);
 
-  // ── Order Status Breakdown (Donut Chart 2) ───────────────────────────────
+    if (uncategorizedRevenue > 0) {
+      result.push({
+        label: 'Khác',
+        value: uncategorizedRevenue,
+        count: uncategorizedQuantity,
+        color: '#9CA3AF',
+        subtext: `Đã bán ${uncategorizedQuantity} sp`,
+      });
+    }
+
+    // Sort by revenue descending
+    result.sort((a, b) => b.value - a.value);
+
+    return result;
+  }, [orders, categories, products]);
+
+  // ── Order Status Breakdown (Real Data from Orders) ─────────────────────────
   const orderStatusChartData = useMemo(() => {
     const counts = {
       [ORDER_STATUS.COMPLETED]: 0,
@@ -227,19 +393,11 @@ export default function AdminDashboard() {
       [ORDER_STATUS.CANCELLED]: 0,
     };
 
-    if (orders.length > 0) {
-      orders.forEach((o) => {
-        const s = o.status || ORDER_STATUS.PENDING;
-        if (counts[s] !== undefined) counts[s] += 1;
-        else counts[ORDER_STATUS.PENDING] += 1;
-      });
-    } else {
-      counts[ORDER_STATUS.COMPLETED] = 42;
-      counts[ORDER_STATUS.SHIPPING] = 14;
-      counts[ORDER_STATUS.CONFIRMED] = 8;
-      counts[ORDER_STATUS.PENDING] = 4;
-      counts[ORDER_STATUS.CANCELLED] = 2;
-    }
+    orders.forEach((o) => {
+      const s = o.status || ORDER_STATUS.PENDING;
+      if (counts[s] !== undefined) counts[s] += 1;
+      else counts[ORDER_STATUS.PENDING] += 1;
+    });
 
     return [
       { label: 'Hoàn thành', value: counts[ORDER_STATUS.COMPLETED], color: '#10B981', subtext: 'Đã giao & thu tiền' },
@@ -250,68 +408,74 @@ export default function AdminDashboard() {
     ];
   }, [orders]);
 
-  // ── Day-of-Week Slanted Bar Chart Data ────────────────────────────────────
+  // ── 3. Day-of-Week Slanted Bar Chart Data (Real Sales by Day of Week) ───────
   const weekdayData = useMemo(() => {
-    return [
-      { label: 'T2', value: 4800000, target: 5000000 },
-      { label: 'T3', value: 6200000, target: 5500000 },
-      { label: 'T4', value: 5900000, target: 6000000 },
-      { label: 'T5', value: 8100000, target: 7000000 },
-      { label: 'T6', value: 11200000, target: 9000000 },
-      { label: 'T7', value: 15400000, target: 12000000 },
-      { label: 'CN', value: 17800000, target: 14000000 },
-    ];
-  }, []);
+    const validOrders = orders.filter((o) => o.status !== ORDER_STATUS.CANCELLED);
 
-  // ── Top 5 Best Selling Products ───────────────────────────────────────────
+    const weekdays = [
+      { day: 1, label: 'T2' },
+      { day: 2, label: 'T3' },
+      { day: 3, label: 'T4' },
+      { day: 4, label: 'T5' },
+      { day: 5, label: 'T6' },
+      { day: 6, label: 'T7' },
+      { day: 0, label: 'CN' },
+    ];
+
+    // Compute revenue for each day of the week from actual valid orders
+    const dayRevenues = weekdays.map(({ day, label }) => {
+      const dayOrders = validOrders.filter((o) => {
+        const dt = parseOrderDate(o.createdAt);
+        return dt && dt.getDay() === day;
+      });
+
+      const value = dayOrders.reduce(
+        (sum, o) => sum + (Number(o.totalPrice || o.totalAmount) || 0),
+        0
+      );
+
+      return {
+        label,
+        value,
+        ordersCount: dayOrders.length,
+      };
+    });
+
+    const totalRev = dayRevenues.reduce((sum, d) => sum + d.value, 0);
+    // Target is benchmarked to daily average sales
+    const target = totalRev > 0 ? Math.round(totalRev / 7) : 0;
+
+    return dayRevenues.map((d) => ({
+      label: d.label,
+      value: d.value,
+      target,
+    }));
+  }, [orders]);
+
+  // ── Top 5 Best Selling Products (Real Data from Orders & Catalog) ───────────
   const topProducts = useMemo(() => {
-    const list = [...products].sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0));
-    if (list.length > 0) return list.slice(0, 5);
+    const validOrders = orders.filter((o) => o.status !== ORDER_STATUS.CANCELLED);
+    const soldMap = {};
 
-    // Fallback lookbook sample items
-    return [
-      {
-        id: 1,
-        name: 'Áo Thun Boxy Cotton 100% 250GSM Form Rộng',
-        price: 249000,
-        soldCount: 148,
-        categoryName: 'Áo thun & Polo',
-        imageUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=400&auto=format&fit=crop',
-      },
-      {
-        id: 2,
-        name: 'Áo Sơ Mi Oxford Dài Tay Dáng Rộng Thoáng Mát',
-        price: 349000,
-        soldCount: 112,
-        categoryName: 'Áo sơ mi & Áo kiểu',
-        imageUrl: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=400&auto=format&fit=crop',
-      },
-      {
-        id: 3,
-        name: 'Đầm Xòe Nữ Tính Họa Tiết Floral Pastel Nổi Bật',
-        price: 429000,
-        soldCount: 96,
-        categoryName: 'Váy & Đầm',
-        imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=400&auto=format&fit=crop',
-      },
-      {
-        id: 4,
-        name: 'Quần Jean Ống Suông Baggy Denim Cạp Cao Phong Cách',
-        price: 389000,
-        soldCount: 84,
-        categoryName: 'Quần & Chân váy',
-        imageUrl: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?q=80&w=400&auto=format&fit=crop',
-      },
-      {
-        id: 5,
-        name: 'Áo Khoác Bomber Varsity Phối Màu Streetwear',
-        price: 489000,
-        soldCount: 73,
-        categoryName: 'Áo khoác & Hoodie',
-        imageUrl: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?q=80&w=400&auto=format&fit=crop',
-      },
-    ];
-  }, [products]);
+    validOrders.forEach((o) => {
+      (o.items || []).forEach((item) => {
+        const pId = item.productId;
+        if (pId) {
+          soldMap[pId] = (soldMap[pId] || 0) + (Number(item.quantity) || 1);
+        }
+      });
+    });
+
+    const list = products
+      .map((p) => ({
+        ...p,
+        soldCount: soldMap[p.id] !== undefined ? soldMap[p.id] : (Number(p.soldCount) || 0),
+        categoryName: p.category?.name || p.categoryName || 'Thời trang',
+      }))
+      .sort((a, b) => b.soldCount - a.soldCount);
+
+    return list.slice(0, 5);
+  }, [products, orders]);
 
   // ── Recent Orders ─────────────────────────────────────────────────────────
   const recentOrders = useMemo(() => {
@@ -379,7 +543,7 @@ export default function AdminDashboard() {
           icon={TrendingUp}
           label="Tổng doanh thu"
           value={formatCurrency(metrics.totalRevenue)}
-          subtext="+18.4% so với kỳ trước"
+          subtext={metrics.totalOrders > 0 ? `${metrics.totalOrders} đơn hàng ghi nhận` : 'Chưa có đơn hàng'}
           variant="primary"
         />
 
@@ -387,7 +551,7 @@ export default function AdminDashboard() {
           icon={ShoppingBag}
           label="Đơn hàng thành công"
           value={`${metrics.completedOrdersCount} / ${metrics.totalOrders} đơn`}
-          subtext={`Tỷ lệ hoàn thành: ${metrics.completionRate}%`}
+          subtext={metrics.totalOrders > 0 ? `Tỷ lệ hoàn thành: ${metrics.completionRate}%` : 'Chưa có đơn hàng'}
           variant="success"
         />
 
@@ -395,7 +559,7 @@ export default function AdminDashboard() {
           icon={Users}
           label="Khách hàng thành viên"
           value={metrics.totalUsers}
-          subtext="+12 tài khoản mới tuần này"
+          subtext="Tài khoản khách hàng đăng ký"
           variant="secondary"
         />
 
@@ -496,7 +660,7 @@ export default function AdminDashboard() {
           <SlantedBarChart
             data={weekdayData}
             title="Doanh số các ngày trong tuần"
-            subtitle="So sánh doanh thu thực tế và chỉ tiêu ngày với cột đỉnh vát xiên"
+            subtitle="Doanh thu thực tế theo các ngày trong tuần so với mức bình quân ngày"
             formatValue={formatCurrency}
           />
         </div>
@@ -614,49 +778,55 @@ export default function AdminDashboard() {
           </div>
 
           <div className="space-y-3.5 flex-1">
-            {topProducts.map((p, idx) => {
-              const maxSold = topProducts[0]?.soldCount || 150;
-              const percent = Math.min(100, Math.round(((p.soldCount || 80) / maxSold) * 100));
+            {topProducts.length === 0 ? (
+              <div className="py-12 text-center text-ink-muted text-sm border border-dashed border-line rounded-xl">
+                Chưa có dữ liệu sản phẩm.
+              </div>
+            ) : (
+              topProducts.map((p, idx) => {
+                const maxSold = topProducts[0]?.soldCount || 1;
+                const percent = maxSold > 0 ? Math.min(100, Math.round(((p.soldCount || 0) / maxSold) * 100)) : 0;
 
-              return (
-                <div
-                  key={p.id || idx}
-                  className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors"
-                >
-                  <span className="size-6 rounded-full bg-primary-100 text-primary-800 text-xs font-extrabold flex items-center justify-center shrink-0">
-                    {idx + 1}
-                  </span>
+                return (
+                  <div
+                    key={p.id || idx}
+                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="size-6 rounded-full bg-primary-100 text-primary-800 text-xs font-extrabold flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
 
-                  <img
-                    src={p.imageUrl || p.images?.[0]?.imageUrl || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=200&auto=format&fit=crop'}
-                    alt={p.name}
-                    className="size-11 rounded-lg object-cover object-top border border-line shrink-0"
-                  />
+                    <img
+                      src={p.imageUrl || p.images?.[0]?.imageUrl || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=200&auto=format&fit=crop'}
+                      alt={p.name}
+                      className="size-11 rounded-lg object-cover object-top border border-line shrink-0"
+                    />
 
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-xs sm:text-sm font-semibold text-ink truncate leading-tight">
-                      {p.name}
-                    </h4>
-                    <div className="flex items-center justify-between text-xs text-ink-muted mt-1">
-                      <span className="font-bold text-primary-700 tabular-nums">
-                        {formatCurrency(p.price)}
-                      </span>
-                      <span className="font-medium tabular-nums">
-                        Đã bán: <strong className="text-ink">{p.soldCount || 70 + idx * 15}</strong>
-                      </span>
-                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs sm:text-sm font-semibold text-ink truncate leading-tight">
+                        {p.name}
+                      </h4>
+                      <div className="flex items-center justify-between text-xs text-ink-muted mt-1">
+                        <span className="font-bold text-primary-700 tabular-nums">
+                          {formatCurrency(p.price)}
+                        </span>
+                        <span className="font-medium tabular-nums">
+                          Đã bán: <strong className="text-ink">{p.soldCount || 0}</strong>
+                        </span>
+                      </div>
 
-                    {/* Progress Bar */}
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 transition-all duration-500"
-                        style={{ width: `${percent}%` }}
-                      />
+                      {/* Progress Bar */}
+                      <div className="w-full h-1.5 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 transition-all duration-500"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>
