@@ -3,6 +3,9 @@ import apiClient from './axios';
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-3.5-flash';
 
+export const OFF_TOPIC_REFUSAL_MESSAGE =
+  'Dạ, em là trợ lý ảo của FunnyShop nên chỉ có thể hỗ trợ các thông tin liên quan đến sản phẩm, dịch vụ và chính sách của shop thôi ạ. Bạn có cần em hỗ trợ tìm kiếm sản phẩm hoặc đặt hàng không ạ? 😊';
+
 // Danh sách sản phẩm dự phòng nếu không kết nối được API backend
 const FALLBACK_PRODUCTS = [
   {
@@ -89,6 +92,93 @@ export async function getLiveCatalog() {
   return cachedLiveProducts || FALLBACK_PRODUCTS;
 }
 
+export function hasFashionOrShopKeyword(text) {
+  if (!text || typeof text !== 'string') return false;
+  const lower = text.trim().toLowerCase();
+  const keywords = [
+    'áo', 'quần', 'váy', 'đầm', 'polo', 'sơ mi', 'so mi', 'jean', 'jeans', 'blazer', 'hoodie',
+    'thun', 'khoác', 'chân váy', 'set đồ', 'bộ đồ', 'outfit', 'phối đồ', 'mặc', 'thời trang',
+    'size', 'cỡ', 'màu', 'giá', 'tiền', 'mua', 'đặt', 'order', 'lên đơn', 'chốt đơn',
+    'ship', 'giao hàng', 'vận chuyển', 'đổi trả', 'thanh toán', 'cod', 'payos', 'vietqr',
+    'shop', 'funnyshop', 'cửa hàng', 'voucher', 'giảm giá', 'khuyến mãi', 'sale',
+    'sản phẩm', 'chất liệu', 'vải', 'cotton', 'form', 'phom', 'hàng', 'nam', 'nữ', 'unisex',
+    'tư vấn', 'gợi ý', 'quần áo', 'đồ mặc', 'mẫu', 'bộ sưu tập'
+  ];
+  return keywords.some((kw) => lower.includes(kw));
+}
+
+export function isOffTopicQuestion(text) {
+  if (!text || typeof text !== 'string') return false;
+  const lower = text.trim().toLowerCase();
+
+  // 1. Lời chào không phải câu hỏi ngoài lề
+  if (isSimpleGreeting(lower)) {
+    return false;
+  }
+
+  // 2. Hỏi danh tính của trợ lý AI / FunnyShop
+  if (
+    lower.includes('bạn là ai') || lower.includes('em là ai') || lower.includes('ai đấy') ||
+    lower.includes('bạn tên gì') || lower.includes('em tên gì') || lower.includes('trợ lý') ||
+    lower.includes('stylist') || lower.includes('shop bán gì') || lower.includes('shop có gì')
+  ) {
+    return false;
+  }
+
+  // Từ khóa thời trang cụ thể
+  const specificFashionKeywords = [
+    'áo', 'quần', 'váy', 'đầm', 'polo', 'sơ mi', 'so mi', 'jean', 'jeans', 'blazer', 'hoodie',
+    'thun', 'khoác', 'chân váy', 'set đồ', 'bộ đồ', 'outfit', 'phối đồ', 'mặc', 'thời trang',
+    'cotton', 'denim', 'vải', 'chất liệu', 'tôn dáng', 'che khuyết điểm', 'size', 'cỡ', 'màu sắc',
+    'quần áo', 'đồ mặc', 'đồ nam', 'đồ nữ', 'đồ công sở', 'đồ đi chơi', 'đồ đi tiệc'
+  ];
+  const hasFashion = specificFashionKeywords.some((kw) => lower.includes(kw));
+
+  // Danh sách từ khóa ngoài lề rõ ràng (ẩm thực, ăn uống, thời tiết, khoa học, tin tức...)
+  const explicitOffTopicKeywords = [
+    // Ẩm thực, ăn uống
+    'ăn', 'uống', 'bánh mì', 'bánh', 'cơm', 'phở', 'bún', 'mì', 'miến', 'cháo', 'lẩu', 'nướng',
+    'trà sữa', 'cà phê', 'cafe', 'nước ngọt', 'sinh tố', 'quán ăn', 'nhà hàng', 'quán nước',
+    'món ăn', 'nấu ăn', 'đồ ăn', 'thức ăn', 'thực phẩm', 'đói', 'ẩm thực',
+    // Thời tiết, thiên văn
+    'thời tiết', 'dự báo thời tiết', 'trời mưa', 'trời nắng', 'nhiệt độ', 'bão', 'mưa', 'nắng', 'gió',
+    // Khoa học, toán học, học tập
+    'toán', 'giải toán', 'phương trình', 'đạo hàm', 'tích phân', 'hóa học', 'vật lý', 'sinh học',
+    'bài tập', 'lịch sử', 'địa lý', 'triều đại', 'chiến dịch',
+    // Công nghệ, lập trình
+    'lập trình', 'viết code', 'code', 'python', 'javascript', 'java', 'c++', 'c#', 'html', 'css', 'sql', 'thuật toán', 'debug',
+    // Chính trị, xã hội, tin tức
+    'chính trị', 'tổng thống', 'thủ tướng', 'chiến tranh', 'quân đội', 'bầu cử', 'thủ đô', 'dân số',
+    // Giải trí, bói toán, cờ bạc
+    'kể chuyện', 'chuyện cười', 'hát', 'bài hát', 'làm thơ', 'đọc thơ', 'tâm sự', 'người yêu', 'tỏ tình',
+    'tử vi', 'bói', 'cung hoàng đạo', 'xổ số', 'lô đề', 'vietlott', 'bóng đá', 'ronaldo', 'messi', 'ngoại hạng', 'world cup',
+    // Tài chính, crypto
+    'bitcoin', 'crypto', 'tiền ảo', 'chứng khoán', 'cổ phiếu', 'giá vàng',
+    // Y tế, dịch thuật
+    'dịch tiếng', 'dịch sang', 'tiếng anh', 'tiếng trung', 'tiếng nhật', 'y tế', 'thuốc', 'bệnh', 'bác sĩ',
+    // Câu hỏi chung
+    'ai là', 'tại sao', 'giải thích', 'cho tôi biết về', 'thủ đô của'
+  ];
+
+  for (const kw of explicitOffTopicKeywords) {
+    if (lower.includes(kw) && !hasFashion) {
+      return true;
+    }
+  }
+
+  // Biểu thức toán học hoặc câu hỏi giờ giấc / ngày tháng
+  if (/(\d+\s*[+\-*/=]\s*\d+|bằng mấy|mấy giờ|thứ mấy|ngày mấy)/i.test(lower)) {
+    return true;
+  }
+
+  // Nếu không có bất kỳ từ khóa thời trang hay mua bán/shop nào -> Ngoài lề
+  if (!hasFashionOrShopKeyword(lower)) {
+    return true;
+  }
+
+  return false;
+}
+
 // Bóc tách toàn bộ thông tin đơn hàng nếu khách hàng gửi tin nhắn xác nhận đầy đủ
 export function parseFullOrderMessage(text, liveProducts) {
   if (!text || typeof text !== 'string') return null;
@@ -146,7 +236,17 @@ export function parseFullOrderMessage(text, liveProducts) {
     }
 
     if (target) {
-      const resolvedVariantId = target.variantId || (target.variants && target.variants[0]?.id) || null;
+      let resolvedVariantId = target.variantId || null;
+      if (!resolvedVariantId && target.variants && target.variants.length > 0) {
+        const matchedVar = target.variants.find((v) => {
+          const colorMatch = v.color && lowerText.includes(v.color.toLowerCase());
+          const sizeMatch = v.size && lowerText.includes(v.size.toLowerCase());
+          return colorMatch || sizeMatch;
+        });
+        const inStockVar = target.variants.find((v) => (v.stockQuantity ?? 1) > 0);
+        resolvedVariantId = (matchedVar || inStockVar || target.variants[0])?.id || null;
+      }
+
       items.push({
         productId: target.id,
         variantId: resolvedVariantId,
@@ -164,9 +264,20 @@ export function parseFullOrderMessage(text, liveProducts) {
     for (const p of liveProducts) {
       const pNameLower = p.name.toLowerCase();
       if (lowerText.includes(pNameLower) || (pNameLower.includes('polo') && lowerText.includes('polo')) || (pNameLower.includes('jean') && lowerText.includes('jean'))) {
+        let resolvedVariantId = p.variantId || null;
+        if (!resolvedVariantId && p.variants && p.variants.length > 0) {
+          const matchedVar = p.variants.find((v) => {
+            const colorMatch = v.color && lowerText.includes(v.color.toLowerCase());
+            const sizeMatch = v.size && lowerText.includes(v.size.toLowerCase());
+            return colorMatch || sizeMatch;
+          });
+          const inStockVar = p.variants.find((v) => (v.stockQuantity ?? 1) > 0);
+          resolvedVariantId = (matchedVar || inStockVar || p.variants[0])?.id || null;
+        }
+
         items.push({
           productId: p.id,
-          variantId: p.variantId || (p.variants && p.variants[0]?.id) || null,
+          variantId: resolvedVariantId,
           quantity: 1,
         });
         foundProducts.push({ ...p, orderQuantity: 1 });
@@ -194,10 +305,12 @@ function isSimpleGreeting(text) {
   const clean = (text || '').trim().toLowerCase();
   const greetings = [
     'alo', 'alô', 'chào', 'chào bạn', 'chào shop', 'hi', 'hello', 'hey',
+    'xin chào', 'xin chào shop', 'xin chào bạn',
     'ê', 'shop ơi', 'bạn ơi', 'ad ơi', 'có ai không', 'cho mình hỏi',
-    'alo shop', 'chào bạn nha'
+    'alo shop', 'chào bạn nha', 'cảm ơn', 'cảm ơn shop', 'thanks', 'thank you',
+    'tạm biệt', 'bye'
   ];
-  return greetings.includes(clean);
+  return greetings.includes(clean) || clean.startsWith('xin chào') || clean.startsWith('chào shop') || clean.startsWith('chào bạn');
 }
 
 // Nhận diện ý định muốn đặt hàng / mua hàng của khách (CHỈ khớp khi có tên hoặc đặc điểm sản phẩm cụ thể)
@@ -248,6 +361,15 @@ function detectOrderIntent(text, products) {
 
 async function getLocalFashionFallback(message) {
   const clean = (message || '').trim().toLowerCase();
+
+  // 1. Nếu là câu hỏi ngoài lề, từ chối khéo léo cố định và không trả về sản phẩm
+  if (isOffTopicQuestion(clean)) {
+    return {
+      reply: OFF_TOPIC_REFUSAL_MESSAGE,
+      products: [],
+    };
+  }
+
   const liveProducts = await getLiveCatalog();
 
   if (isSimpleGreeting(clean)) {
@@ -344,12 +466,17 @@ async function getLocalFashionFallback(message) {
   } else if (clean.includes('hoodie') || clean.includes('unisex')) {
     customReply = 'Dạ các mẫu Áo Hoodie và đồ Unisex nhà em phom rộng giấu dáng cực chất, chất nỉ bông dày dặn ấm áp mặc đi chơi chụp hình bao đẹp luôn:';
     matched = liveProducts.filter((p) => p.name.toLowerCase().includes('hoodie') || (p.categoryName || '').toLowerCase().includes('unisex'));
-  } else if (clean.includes('tôi muốn') || clean.includes('tôi đang cần') || clean.includes('mình đang cần') || clean.includes('đang cần') || clean.includes('cần tìm')) {
+  } else if (clean.includes('tôi muốn mua') || clean.includes('tôi đang cần') || clean.includes('mình đang cần') || clean.includes('đang cần') || clean.includes('cần tìm đồ')) {
     customReply = 'Dạ em đây ạ! Bạn đang cần tìm đồ để đi làm, đi chơi hay đi tiệc thế ạ? Cứ chia sẻ với em phong cách bạn thích hoặc dáng người để em lựa set đồ chuẩn nhất cho mình nhé! 👕👗';
     matched = liveProducts.slice(0, 3);
-  } else {
+  } else if (hasFashionOrShopKeyword(clean)) {
     customReply = 'Dạ em hiểu nhu cầu của mình rồi nè! Để em gửi bạn tham khảo trước mấy mẫu thời trang đang được yêu thích nhất bên em nha. Bạn thích phong cách nào cứ bảo em nhé: ❤️';
     matched = liveProducts.slice(0, 3);
+  } else {
+    return {
+      reply: OFF_TOPIC_REFUSAL_MESSAGE,
+      products: [],
+    };
   }
 
   const finalProducts = matched && matched.length > 0 ? matched.slice(0, 3) : liveProducts.slice(0, 3);
@@ -396,6 +523,11 @@ DANH MỤC SẢN PHẨM HIỆN CÓ TẠI SHOP (Dữ liệu thực tế từ hệ
 ${catalogStr}
 
 QUY TẮC BẮT BUỘC:
+0. TỪ CHỐI CÂU HỎI NGOÀI LỀ (QUAN TRỌNG NHẤT):
+   - Nếu khách hàng hỏi về bất kỳ chủ đề nào NGOÀI LỀ, KHÔNG LIÊN QUAN đến thời trang, sản phẩm, dịch vụ, giao hàng, đổi trả của FunnyShop (ví dụ: thời tiết, toán học, lập trình, khoa học, lịch sử, chính trị, triết học, đố vui, dịch thuật, thơ văn, chuyện phiếm...):
+   - BẠN BẮT BUỘC CHỈ ĐƯỢC PHÉP TRẢ LỜI DUY NHẤT BẰNG CÂU SAU ĐÂY:
+     "${OFF_TOPIC_REFUSAL_MESSAGE}"
+   - TUYỆT ĐỐI KHÔNG giải đáp câu hỏi ngoài lề đó và TUYỆT ĐỐI KHÔNG ghi kèm RECOMMENDED_PRODUCT_IDS.
 1. ĐÚNG DANH MỤC & ĐỐI TƯỢNG:
    - Khi khách hỏi/cần đồ nam ('thời trang nam', 'đồ nam', 'áo nam', 'quần nam', 'đang cần đồ nam'): CHỈ tư vấn và gợi ý sản phẩm thời trang Nam. Tuyệt đối không gợi ý đầm, váy hay đồ nữ.
    - Khi khách hỏi/cần đồ nữ ('thời trang nữ', 'đồ nữ', 'váy', 'đầm', 'đang cần đồ nữ'): CHỈ tư vấn sản phẩm thời trang Nữ.
@@ -507,7 +639,15 @@ export const aiApi = {
   },
 
   chat: async (message) => {
-    // 0. Kiểm tra nếu tin nhắn là xác nhận đặt hàng với đầy đủ Họ tên, SĐT, Địa chỉ, Sản phẩm
+    // 0. Kiểm tra câu hỏi ngoài lề (thời tiết, toán học, code, tin tức...) -> Phản hồi từ chối khéo léo cố định
+    if (isOffTopicQuestion(message)) {
+      return {
+        reply: OFF_TOPIC_REFUSAL_MESSAGE,
+        products: [],
+      };
+    }
+
+    // 1. Kiểm tra nếu tin nhắn là xác nhận đặt hàng với đầy đủ Họ tên, SĐT, Địa chỉ, Sản phẩm
     const liveProducts = await getLiveCatalog();
     const parsedOrder = parseFullOrderMessage(message, liveProducts);
     if (parsedOrder) {
