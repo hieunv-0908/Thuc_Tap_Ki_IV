@@ -57,6 +57,41 @@ export const authApi = {
   },
 
   /**
+   * Kiểm tra email đã được đăng ký hay chưa
+   * BE GET: /api/v1/auth/check-email?email=...
+   */
+  checkEmailExists: async (email) => {
+    const res = await apiClient.get('/api/v1/auth/check-email', {
+      params: { email: (email || '').trim() },
+    });
+    return res?.data !== undefined ? Boolean(res.data) : Boolean(res);
+  },
+
+  /**
+   * Gửi mã OTP xác nhận email khi đăng ký
+   * BE nhận: { email, fullName }
+   */
+  sendRegisterOtp: async ({ email, fullName }) => {
+    const res = await apiClient.post('/api/v1/auth/register/send-otp', {
+      email: (email || '').trim(),
+      fullName: (fullName || '').trim(),
+    });
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  /**
+   * Xác thực mã OTP đăng ký tài khoản
+   * BE nhận: { email, otp }
+   */
+  verifyRegisterOtp: async ({ email, otp }) => {
+    const res = await apiClient.post('/api/v1/auth/register/verify-otp', {
+      email: (email || '').trim(),
+      otp: (otp || '').trim(),
+    });
+    return res?.data !== undefined ? res.data : res;
+  },
+
+  /**
    * Quên mật khẩu - gửi mã xác thực OTP
    * BE ForgotPasswordRequest: { email }
    */
