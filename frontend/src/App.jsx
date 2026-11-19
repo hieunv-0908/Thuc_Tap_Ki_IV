@@ -15,6 +15,7 @@ import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
+import Feedback from './pages/Feedback';
 import NotFound from './pages/NotFound';
 import Forbidden from './pages/Forbidden';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -25,6 +26,7 @@ import AdminCategories from './pages/admin/AdminCategories';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminVouchers from './pages/admin/AdminVouchers';
 import AdminNotifications from './pages/admin/AdminNotifications';
+import AdminFeedbacks from './pages/admin/AdminFeedbacks';
 import AdminNotFound from './pages/admin/AdminNotFound';
 
 export default function App() {
@@ -53,6 +55,8 @@ export default function App() {
             <Route path="/orders/:id" element={<OrderDetail />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/feedback" element={<Feedback />} />
+            <Route path="/feedbacks" element={<Feedback />} />
           </Route>
 
           {/* Fallback 404 for Storefront */}
@@ -72,6 +76,7 @@ export default function App() {
             <Route path="categories" element={<AdminCategories />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="notifications" element={<AdminNotifications />} />
+            <Route path="feedbacks" element={<AdminFeedbacks />} />
             {/* Catch-all 404 inside Admin Layout */}
             <Route path="*" element={<AdminNotFound />} />
           </Route>
