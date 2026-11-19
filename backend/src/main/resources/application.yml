@@ -5,6 +5,10 @@ spring:
     active: dev
   jpa:
     open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 15MB
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -47,3 +51,8 @@ logging:
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dtdpmvyzq}
+  api-key: ${CLOUDINARY_API_KEY:832254241169418}
+  api-secret: ${CLOUDINARY_API_SECRET:hLQ4s1U8qINkSogzFLmxn2UGdMs}

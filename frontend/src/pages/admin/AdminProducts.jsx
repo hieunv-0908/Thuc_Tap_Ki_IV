@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Package,
   Plus,
-  Sparkles,
   Search,
   Pencil,
   Trash2,
@@ -19,7 +18,6 @@ import Table from '../../components/ui/Table';
 import Pagination from '../../components/ui/Pagination';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import StatCard from '../../components/admin/StatCard';
-import AiMockModal from '../../components/admin/AiMockModal';
 import { productApi } from '../../api/product';
 import { categoryApi } from '../../api/category';
 import { adminApi } from '../../api/admin';
@@ -46,7 +44,6 @@ export default function AdminProducts() {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Modals
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [hardDeleteTarget, setHardDeleteTarget] = useState(null); // { id, name }
   const [isHardDeleting, setIsHardDeleting] = useState(false);
   const [restoreTarget, setRestoreTarget] = useState(null); // { id, name }
@@ -503,16 +500,6 @@ export default function AdminProducts() {
           </Button>
 
           <Button
-            variant="secondary"
-            leftIcon={Sparkles}
-            onClick={() => setIsAiModalOpen(true)}
-            title="Sử dụng AI sinh dữ liệu mẫu"
-          >
-            <span className="hidden sm:inline">✨ Tạo dữ liệu mẫu bằng AI</span>
-            <span className="sm:hidden">AI tạo mẫu</span>
-          </Button>
-
-          <Button
             variant="primary"
             leftIcon={Plus}
             onClick={() => navigate('/admin/products/new')}
@@ -655,13 +642,6 @@ export default function AdminProducts() {
           </div>
         )}
       </div>
-
-      {/* AI Mock Modal */}
-      <AiMockModal
-        isOpen={isAiModalOpen}
-        onClose={() => setIsAiModalOpen(false)}
-        onSuccess={fetchData}
-      />
 
       {/* Confirm permanent delete dialog */}
       <ConfirmDialog

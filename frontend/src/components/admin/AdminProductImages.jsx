@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Image as ImageIcon,
   Plus,
@@ -6,6 +6,8 @@ import {
   Trash2,
   Tag,
   Check,
+  Upload,
+  X,
 } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -13,6 +15,7 @@ import Select from '../ui/Select';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import { adminApi } from '../../api/admin';
 import { toast } from '../../store/toastStore';
+import { uploadImageToCloudinary } from '../../utils/cloudinary';
 
 export default function AdminProductImages({ productId, images = [], variants = [], onRefresh }) {
   // Form thêm ảnh mới
@@ -22,6 +25,27 @@ export default function AdminProductImages({ productId, images = [], variants = 
   const [imageError, setImageError] = useState(null);
   const [addingImage, setAddingImage] = useState(false);
   const [previewLoadError, setPreviewLoadError] = useState(false);
+
+  // Cloudinary Upload State
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageUploadMode, setImageUploadMode] = useState('upload'); // 'upload' | 'url'
+  const fileInputRef = useRef(null);
+
+  const handleFileSelect = async (file) => {
+    if (!file) return;
+    try {
+      setUploadingImage(true);
+      setPreviewLoadError(false);
+      setImageError(null);
+      const result = await uploadImageToCloudinary(file, 'funnyshop/products');
+      setImageUrl(result.url);
+      toast.success('Đã tải ảnh lên Cloudinary thành công!');
+    } catch (err) {
+      toast.error(err.message || 'Lỗi tải ảnh lên Cloudinary.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   // Xóa ảnh
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -121,48 +145,147 @@ export default function AdminProductImages({ productId, images = [], variants = 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Form Thêm Ảnh Mới (4 cols on lg) */}
         <div className="lg:col-span-5 rounded-xl border border-line bg-white p-5 shadow-soft space-y-4">
-          <h3 className="text-base font-semibold text-ink border-b border-line pb-3 flex items-center gap-2">
-            <Plus className="size-4 text-primary-700" />
-            Thêm ảnh mới vào thư viện
-          </h3>
+          <div className="flex items-center justify-between border-b border-line pb-3">
+            <h3 className="text-base font-semibold text-ink flex items-center gap-2">
+              <Plus className="size-4 text-primary-700" />
+              Thêm ảnh mới vào thư viện
+            </h3>
+            <div className="inline-flex p-0.5 bg-gray-100 rounded-lg text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setImageUploadMode('upload')}
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                  imageUploadMode === 'upload' ? 'bg-white text-ink shadow-2xs font-bold' : 'text-ink-muted'
+                }`}
+              >
+                Tải từ máy
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageUploadMode('url')}
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                  imageUploadMode === 'url' ? 'bg-white text-ink shadow-2xs font-bold' : 'text-ink-muted'
+                }`}
+              >
+                Dán URL
+              </button>
+            </div>
+          </div>
 
           <form onSubmit={handleAddImage} className="space-y-4">
-            <Input
-              label="Đường dẫn ảnh (URL)"
-              name="imageUrl"
-              value={imageUrl}
-              onChange={(e) => {
-                setImageUrl(e.target.value);
-                setPreviewLoadError(false);
-                if (imageError) setImageError(null);
-              }}
-              placeholder="https://images.unsplash.com/..."
-              required
-              error={imageError}
-              helperText="Dán link ảnh từ CDN, Unsplash hoặc cloud storage"
-            />
+            {imageUploadMode === 'upload' ? (
+              <div className="space-y-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => handleFileSelect(e.target.files?.[0])}
+                />
 
-            {/* Preview Box */}
-            <div className="space-y-1.5">
-              <span className="text-xs font-medium text-ink-muted">Xem trước ảnh:</span>
-              <div className="aspect-video w-full rounded-lg border-2 border-dashed border-line bg-gray-50 overflow-hidden flex items-center justify-center p-2 relative">
                 {imageUrl && !previewLoadError ? (
-                  <img
-                    src={imageUrl}
-                    alt="Xem trước ảnh thêm mới"
-                    className="w-full h-full object-contain rounded"
-                    onError={() => setPreviewLoadError(true)}
-                  />
+                  <div className="space-y-2">
+                    <div className="relative aspect-video w-full rounded-lg border border-line bg-gray-50 overflow-hidden group shadow-2xs">
+                      <img
+                        src={imageUrl}
+                        alt="Xem trước ảnh thêm mới"
+                        className="w-full h-full object-contain"
+                        onError={() => setPreviewLoadError(true)}
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingImage}
+                          className="px-3 py-1.5 rounded-lg bg-white/90 text-ink text-xs font-bold hover:bg-white transition-all cursor-pointer shadow-sm"
+                        >
+                          Đổi ảnh khác
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageUrl('')}
+                          className="p-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-all cursor-pointer shadow-sm"
+                          title="Xóa ảnh"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 py-1 px-2.5 rounded-md border border-emerald-200">
+                      <Check className="size-3" />
+                      <span>Đã tải lên Cloudinary</span>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="text-center p-3 text-ink-subtle">
-                    <ImageIcon className="size-8 mx-auto mb-1 opacity-50" />
-                    <p className="text-xs">
-                      {previewLoadError ? 'Không thể nạp ảnh từ URL này' : 'Dán đường dẫn ảnh để xem trước'}
-                    </p>
+                  <div
+                    onClick={() => !uploadingImage && fileInputRef.current?.click()}
+                    className={`aspect-video w-full rounded-lg border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center p-4 text-center ${
+                      uploadingImage
+                        ? 'border-primary-400 bg-primary-50/50 cursor-wait'
+                        : imageError
+                        ? 'border-red-400 bg-red-50'
+                        : 'border-line bg-gray-50 hover:border-primary-400 hover:bg-primary-50/30'
+                    }`}
+                  >
+                    {uploadingImage ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="size-7 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+                        <p className="text-xs font-semibold text-primary-700">Đang tải lên Cloudinary...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="size-10 rounded-full bg-primary-100 flex items-center justify-center mb-1.5">
+                          <Upload className="size-5 text-primary-600" />
+                        </div>
+                        <p className="text-xs font-bold text-ink">Bấm để tải ảnh từ máy</p>
+                        <p className="text-[11px] text-ink-muted mt-0.5">JPG, PNG, WEBP (tối đa 10MB)</p>
+                      </>
+                    )}
                   </div>
                 )}
+                {imageError && <p className="text-xs text-red-500 text-center">{imageError}</p>}
               </div>
-            </div>
+            ) : (
+              <>
+                <Input
+                  label="Đường dẫn ảnh (URL)"
+                  name="imageUrl"
+                  value={imageUrl}
+                  onChange={(e) => {
+                    setImageUrl(e.target.value);
+                    setPreviewLoadError(false);
+                    if (imageError) setImageError(null);
+                  }}
+                  placeholder="https://images.unsplash.com/..."
+                  required
+                  error={imageError}
+                  helperText="Dán link ảnh từ CDN, Unsplash hoặc cloud storage"
+                />
+
+                {/* Preview Box */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-ink-muted">Xem trước ảnh:</span>
+                  <div className="aspect-video w-full rounded-lg border-2 border-dashed border-line bg-gray-50 overflow-hidden flex items-center justify-center p-2 relative">
+                    {imageUrl && !previewLoadError ? (
+                      <img
+                        src={imageUrl}
+                        alt="Xem trước ảnh thêm mới"
+                        className="w-full h-full object-contain rounded"
+                        onError={() => setPreviewLoadError(true)}
+                      />
+                    ) : (
+                      <div className="text-center p-3 text-ink-subtle">
+                        <ImageIcon className="size-8 mx-auto mb-1 opacity-50" />
+                        <p className="text-xs">
+                          {previewLoadError ? 'Không thể nạp ảnh từ URL này' : 'Dán đường dẫn ảnh để xem trước'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Gắn với biến thể */}
             <Select

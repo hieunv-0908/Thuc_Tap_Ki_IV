@@ -1,16 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
-  Sparkles,
   Image as ImageIcon,
   Check,
   AlertCircle,
-  RotateCcw,
   Package,
   Layers,
   Lock,
   ArrowRight,
+  Upload,
+  X,
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -20,9 +20,9 @@ import AdminProductImages from '../../components/admin/AdminProductImages';
 import { productApi } from '../../api/product';
 import { categoryApi } from '../../api/category';
 import { adminApi } from '../../api/admin';
-import { aiApi } from '../../api/ai';
 import { toast } from '../../store/toastStore';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { uploadImageToCloudinary } from '../../utils/cloudinary';
 
 export default function AdminProductForm() {
   const { id } = useParams();
@@ -59,14 +59,15 @@ export default function AdminProductForm() {
   const [imageUrl, setImageUrl] = useState('');
   const [description, setDescription] = useState('');
 
+  // Image Upload Mode & State
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageUploadMode, setImageUploadMode] = useState('upload'); // 'upload' | 'url'
+  const fileInputRef = useRef(null);
+
   // Validation Errors & States
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [savingAndNext, setSavingAndNext] = useState(false);
-
-  // AI Description Generator States
-  const [aiState, setAiState] = useState('idle');
-  const [aiError, setAiError] = useState(null);
   const [imageLoadError, setImageLoadError] = useState(false);
 
   // Reload product data (for variants/images updates)
@@ -146,6 +147,23 @@ export default function AdminProductForm() {
     setImageLoadError(false);
   };
 
+  // Handle Cloudinary File Upload
+  const handleFileSelect = async (file) => {
+    if (!file) return;
+    try {
+      setUploadingImage(true);
+      setImageLoadError(false);
+      setErrors((prev) => ({ ...prev, imageUrl: '' }));
+      const result = await uploadImageToCloudinary(file, 'funnyshop/products');
+      setImageUrl(result.url);
+      toast.success('Đã tải ảnh lên Cloudinary thành công!');
+    } catch (err) {
+      toast.error(err.message || 'Lỗi tải ảnh lên Cloudinary.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   // Validate Form Tab 1
   const validate = () => {
     const newErrors = {};
@@ -178,27 +196,6 @@ export default function AdminProductForm() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  // Handle AI Description Generation
-  const handleGenerateAiDescription = async () => {
-    if (!name.trim()) {
-      toast.warning('Vui lòng nhập tên sản phẩm trước khi tạo mô tả bằng AI.');
-      return;
-    }
-
-    try {
-      setAiState('generating');
-      setAiError(null);
-      const res = await aiApi.generateDescription(name.trim());
-      setDescription(res.description || '');
-      setAiState('success');
-      toast.success('✨ Đã tạo mô tả bằng AI! Bạn có thể xem và chỉnh sửa.');
-    } catch (err) {
-      console.error('Lỗi tạo mô tả AI:', err);
-      setAiState('error');
-      setAiError(err.message || 'Không thể tạo mô tả tự động lúc này.');
-    }
   };
 
   // Build payload
@@ -496,130 +493,174 @@ export default function AdminProductForm() {
               </div>
             </div>
 
-            {/* Right Column: Image URL & Preview (5 cols on lg) */}
+            {/* Right Column: Image Upload & Preview (5 cols on lg) */}
             <div className="lg:col-span-5 rounded-xl border border-line bg-white p-5 md:p-6 shadow-soft space-y-4 flex flex-col">
-              <h3 className="text-base font-semibold text-ink border-b border-line pb-3 flex items-center gap-2">
-                <ImageIcon className="size-4 text-secondary-600" />
-                Ảnh đại diện chính
-              </h3>
-
-              <Input
-                label="Đường dẫn ảnh đại diện (URL)"
-                name="imageUrl"
-                value={imageUrl}
-                onChange={handleImageUrlChange}
-                placeholder="https://images.unsplash.com/..."
-                error={errors.imageUrl}
-                helperText="Dán link ảnh đại diện từ CDN hoặc Unsplash"
-              />
-
-              {/* Image Preview Box */}
-              <div className="flex-1 flex flex-col items-center justify-center">
-                <p className="text-xs font-medium text-ink-muted self-start mb-1.5">
-                  Xem trước ảnh hiển thị:
-                </p>
-                <div className="aspect-square w-full max-w-[240px] rounded-xl border-2 border-dashed border-line bg-gray-50 overflow-hidden flex flex-col items-center justify-center p-2 relative group shadow-2xs">
-                  {imageUrl && !imageLoadError ? (
-                    <img
-                      src={imageUrl}
-                      alt="Xem trước sản phẩm"
-                      className="w-full h-full object-cover rounded-lg"
-                      onError={() => setImageLoadError(true)}
-                    />
-                  ) : (
-                    <div className="text-center p-4">
-                      <div className="size-12 rounded-full bg-gray-200/70 text-ink-subtle flex items-center justify-center mx-auto mb-2">
-                        <ImageIcon className="size-6" />
-                      </div>
-                      <p className="text-xs text-ink-muted">
-                        {imageLoadError
-                          ? 'Không thể tải ảnh từ URL đã nhập'
-                          : 'Dán URL ảnh để xem trước'}
-                      </p>
-                    </div>
-                  )}
+              <div className="flex items-center justify-between border-b border-line pb-3">
+                <h3 className="text-base font-semibold text-ink flex items-center gap-2">
+                  <ImageIcon className="size-4 text-secondary-600" />
+                  Ảnh đại diện chính
+                </h3>
+                <div className="inline-flex p-0.5 bg-gray-100 rounded-lg text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setImageUploadMode('upload')}
+                    className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                      imageUploadMode === 'upload' ? 'bg-white text-ink shadow-2xs font-bold' : 'text-ink-muted'
+                    }`}
+                  >
+                    Tải từ máy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImageUploadMode('url')}
+                    className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                      imageUploadMode === 'url' ? 'bg-white text-ink shadow-2xs font-bold' : 'text-ink-muted'
+                    }`}
+                  >
+                    Dán URL
+                  </button>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Full Width: Product Description with AI Integration */}
-          <div className="rounded-xl border border-line bg-white p-5 md:p-6 shadow-soft space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
-              <div>
-                <h3 className="text-base font-semibold text-ink">Mô tả sản phẩm</h3>
-                <p className="text-xs text-ink-muted">
-                  Giới thiệu tính năng, chất liệu và điểm nổi bật của sản phẩm
-                </p>
-              </div>
+              {imageUploadMode === 'upload' ? (
+                <div className="space-y-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => handleFileSelect(e.target.files?.[0])}
+                  />
 
-              <div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  leftIcon={Sparkles}
-                  disabled={!name.trim() || aiState === 'generating'}
-                  loading={aiState === 'generating'}
-                  onClick={handleGenerateAiDescription}
-                  title={!name.trim() ? 'Nhập tên sản phẩm trước' : 'Tạo tự động bằng AI'}
-                  className="shadow-2xs"
-                >
-                  {aiState === 'generating' ? 'Đang tạo mô tả…' : '✨ Tạo mô tả bằng AI'}
-                </Button>
-              </div>
-            </div>
+                  {imageUrl && !imageLoadError ? (
+                    <div className="space-y-3">
+                      <div className="relative aspect-square w-full max-w-[240px] mx-auto rounded-xl border border-line bg-gray-50 overflow-hidden shadow-2xs group">
+                        <img
+                          src={imageUrl}
+                          alt="Ảnh đại diện sản phẩm"
+                          className="w-full h-full object-cover"
+                          onError={() => setImageLoadError(true)}
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploadingImage}
+                            className="px-3 py-1.5 rounded-lg bg-white/90 text-ink text-xs font-bold hover:bg-white transition-all cursor-pointer shadow-sm"
+                          >
+                            Đổi ảnh khác
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setImageUrl('')}
+                            className="p-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-all cursor-pointer shadow-sm"
+                            title="Xóa ảnh"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        </div>
+                      </div>
 
-            {!name.trim() && (
-              <p className="text-xs text-ink-subtle italic">
-                💡 Mẹo: Nhập tên sản phẩm ở trên để kích hoạt tính năng viết mô tả tự động bằng AI.
-              </p>
-            )}
+                      <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 py-1.5 px-3 rounded-lg border border-emerald-200">
+                        <Check className="size-3.5" />
+                        <span>Ảnh đã sẵn sàng trên Cloudinary</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => !uploadingImage && fileInputRef.current?.click()}
+                      className={`aspect-square w-full max-w-[240px] mx-auto rounded-xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center p-4 text-center ${
+                        uploadingImage
+                          ? 'border-primary-400 bg-primary-50/50 cursor-wait'
+                          : errors.imageUrl
+                          ? 'border-red-400 bg-red-50'
+                          : 'border-line bg-gray-50 hover:border-primary-400 hover:bg-primary-50/30'
+                      }`}
+                    >
+                      {uploadingImage ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="size-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+                          <p className="text-xs font-semibold text-primary-700">Đang tải lên Cloudinary...</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="size-12 rounded-full bg-primary-100 flex items-center justify-center mb-2">
+                            <Upload className="size-6 text-primary-600" />
+                          </div>
+                          <p className="text-xs font-bold text-ink">Bấm để chọn ảnh từ máy</p>
+                          <p className="text-[11px] text-ink-muted mt-1">JPG, PNG, WEBP (tối đa 10MB)</p>
+                          <span className="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-200/80 text-ink-muted">
+                            ☁️ Tự động tối ưu Cloudinary
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  )}
 
-            <div className="relative">
-              <textarea
-                rows={5}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                disabled={aiState === 'generating'}
-                placeholder="Nhập mô tả chi tiết sản phẩm hoặc nhấn nút Tạo mô tả bằng AI để sinh tự động..."
-                className={`w-full rounded-lg border bg-white p-3 text-base text-ink placeholder:text-ink-subtle transition-colors focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 ${
-                  aiState === 'generating' ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'border-line'
-                }`}
-              />
+                  {errors.imageUrl && (
+                    <p className="text-xs text-red-500 mt-2 text-center">{errors.imageUrl}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Input
+                    label="Đường dẫn ảnh đại diện (URL)"
+                    name="imageUrl"
+                    value={imageUrl}
+                    onChange={handleImageUrlChange}
+                    placeholder="https://images.unsplash.com/..."
+                    error={errors.imageUrl}
+                    helperText="Dán link ảnh đại diện từ CDN hoặc Unsplash"
+                  />
 
-              {aiState === 'generating' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-2xs rounded-lg">
-                  <div className="flex items-center gap-2 text-sm font-medium text-secondary-800">
-                    <Sparkles className="size-4 animate-spin text-secondary-600" />
-                    <span>Funny AI đang sáng tạo nội dung mô tả…</span>
+                  {/* Image Preview Box */}
+                  <div className="flex-1 flex flex-col items-center justify-center">
+                    <p className="text-xs font-medium text-ink-muted self-start mb-1.5">
+                      Xem trước ảnh hiển thị:
+                    </p>
+                    <div className="aspect-square w-full max-w-[240px] rounded-xl border-2 border-dashed border-line bg-gray-50 overflow-hidden flex flex-col items-center justify-center p-2 relative group shadow-2xs">
+                      {imageUrl && !imageLoadError ? (
+                        <img
+                          src={imageUrl}
+                          alt="Xem trước sản phẩm"
+                          className="w-full h-full object-cover rounded-lg"
+                          onError={() => setImageLoadError(true)}
+                        />
+                      ) : (
+                        <div className="text-center p-4">
+                          <div className="size-12 rounded-full bg-gray-200/70 text-ink-subtle flex items-center justify-center mx-auto mb-2">
+                            <ImageIcon className="size-6" />
+                          </div>
+                          <p className="text-xs text-ink-muted">
+                            {imageLoadError
+                              ? 'Không thể tải ảnh từ URL đã nhập'
+                              : 'Dán URL ảnh để xem trước'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
             </div>
+          </div>
 
-            {aiState === 'error' && (
-              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="size-4 shrink-0" />
-                  <span>Không tạo được mô tả bằng AI: {aiError}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleGenerateAiDescription}
-                  className="inline-flex items-center gap-1 font-semibold text-xs text-red-800 hover:underline cursor-pointer"
-                >
-                  <RotateCcw className="size-3.5" />
-                  <span>Thử lại</span>
-                </button>
-              </div>
-            )}
+          {/* Full Width: Product Description */}
+          <div className="rounded-xl border border-line bg-white p-5 md:p-6 shadow-soft space-y-3">
+            <div className="border-b border-line pb-3">
+              <h3 className="text-base font-semibold text-ink">Mô tả sản phẩm</h3>
+              <p className="text-xs text-ink-muted">
+                Giới thiệu tính năng, chất liệu và điểm nổi bật của sản phẩm
+              </p>
+            </div>
 
-            {aiState === 'success' && (
-              <div className="p-2.5 rounded-lg bg-green-50 border border-green-200 text-xs text-green-800 flex items-center gap-2">
-                <Check className="size-4 shrink-0 text-green-600" />
-                <span>Đã tạo mô tả thành công! Bạn có thể tự do chỉnh sửa nội dung trong ô văn bản phía trên.</span>
-              </div>
-            )}
+            <textarea
+              rows={5}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Nhập mô tả chi tiết sản phẩm..."
+              className="w-full rounded-lg border border-line bg-white p-3 text-base text-ink placeholder:text-ink-subtle transition-colors focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200"
+            />
           </div>
 
           {/* Action Buttons */}

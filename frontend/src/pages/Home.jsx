@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { productApi } from '../api/product';
 import { categoryApi } from '../api/category';
+import { bannerApi } from '../api/banner';
 import ProductCard from '../components/product/ProductCard';
 import { ProductCardSkeleton } from '../components/ui/Skeleton';
 import { toast } from '../store/toastStore';
@@ -45,6 +46,10 @@ export default function Home() {
   // Newsletter state
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterError, setNewsletterError] = useState('');
+
+  // Hero Banners (Cloudinary)
+  const [activeBanners, setActiveBanners] = useState([]);
+  const [bannerIndex, setBannerIndex] = useState(0);
 
   // Synchronize external search updates
   if (previousQueryQ !== queryQ) {
@@ -97,6 +102,34 @@ export default function Home() {
       isCancelled = true;
     };
   }, []);
+
+  // Load active hero banners once
+  useEffect(() => {
+    let isCancelled = false;
+    bannerApi
+      .getActiveBanners()
+      .then((banners) => {
+        if (!isCancelled && Array.isArray(banners) && banners.length > 0) {
+          setActiveBanners(banners);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load active banners from Cloudinary:', err);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  // Auto-rotate hero banners if multiple
+  useEffect(() => {
+    if (activeBanners.length <= 1) return;
+    const timer = setInterval(() => {
+      setBannerIndex((prev) => (prev + 1) % activeBanners.length);
+    }, 7000);
+    return () => clearInterval(timer);
+  }, [activeBanners.length]);
 
   // Fetch products whenever search params change
   useEffect(() => {
@@ -211,69 +244,110 @@ export default function Home() {
         {/* =========================================================================
             1. HERO SECTION (Chỉ ở chế độ mặc định)
             Ref: funnyshop-homepage-design.md Section 3.3
+            Hỗ trợ hiển thị Banner động quản lý từ Cloudinary (với fallback thiết kế mặc định)
             ========================================================================= */}
-        {!isFilteringOrSearching && (
-          <section className="pt-4 md:pt-8">
-            <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] items-center gap-12 lg:gap-16">
-              {/* Left Column */}
-              <div>
-                <span className="text-xs uppercase tracking-[0.25em] font-medium text-vermilion block mb-4">
-                  BỘ SƯU TẬP 2026
-                </span>
+        {!isFilteringOrSearching && (() => {
+          const currentBanner = activeBanners.length > 0 ? activeBanners[bannerIndex % activeBanners.length] : null;
+          const heroTitle = currentBanner?.title || 'Giản dị, mà có chiều sâu.';
+          const heroSubtitle = currentBanner?.subtitle || 'BỘ SƯU TẬP 2026';
+          const heroDescription = currentBanner?.description || 'Thời trang tối giản lấy cảm hứng từ tinh thần Nhật Bản. Chất liệu cotton tự nhiên thoáng mát, đường may chuẩn xác, tôn lên form dáng thanh thoát của người Việt.';
+          const heroImageUrl = currentBanner?.imageUrl || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1200&auto=format&fit=crop';
+          const heroCtaText = currentBanner?.ctaText || 'Khám phá ngay';
+          const heroCtaLink = currentBanner?.ctaLink || '#products-catalog';
 
-                <h1 className="font-serif font-light text-4xl sm:text-5xl lg:text-[56px] text-ink leading-[1.18] tracking-[0.04em] mb-6">
-                  Giản dị, mà có chiều sâu.
-                </h1>
+          return (
+            <section className="pt-4 md:pt-8">
+              <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] items-center gap-12 lg:gap-16">
+                {/* Left Column */}
+                <div>
+                  <span className="text-xs uppercase tracking-[0.25em] font-medium text-vermilion block mb-4">
+                    {heroSubtitle}
+                  </span>
 
-                <p className="text-base sm:text-lg font-light text-mute leading-relaxed max-w-xl mb-10">
-                  Thời trang tối giản lấy cảm hứng từ tinh thần Nhật Bản. Chất liệu cotton tự nhiên thoáng mát, đường may chuẩn xác, tôn lên form dáng thanh thoát của người Việt.
-                </p>
+                  <h1 className="font-serif font-light text-4xl sm:text-5xl lg:text-[56px] text-ink leading-[1.18] tracking-[0.04em] mb-6">
+                    {heroTitle}
+                  </h1>
 
-                <div className="flex items-center gap-6 mb-12">
-                  <a href="#products-catalog">
+                  <p className="text-base sm:text-lg font-light text-mute leading-relaxed max-w-xl mb-10">
+                    {heroDescription}
+                  </p>
+
+                  <div className="flex items-center gap-6 mb-12">
+                    {heroCtaLink.startsWith('http') || heroCtaLink.startsWith('#') ? (
+                      <a href={heroCtaLink}>
+                        <button
+                          type="button"
+                          className="border border-ink bg-transparent text-ink hover:bg-ink hover:text-paper px-8 py-3.5 text-xs sm:text-sm uppercase tracking-[0.16em] font-light transition-colors duration-200 cursor-pointer"
+                        >
+                          {heroCtaText}
+                        </button>
+                      </a>
+                    ) : (
+                      <Link to={heroCtaLink}>
+                        <button
+                          type="button"
+                          className="border border-ink bg-transparent text-ink hover:bg-ink hover:text-paper px-8 py-3.5 text-xs sm:text-sm uppercase tracking-[0.16em] font-light transition-colors duration-200 cursor-pointer"
+                        >
+                          {heroCtaText}
+                        </button>
+                      </Link>
+                    )}
+
                     <button
                       type="button"
-                      className="border border-ink bg-transparent text-ink hover:bg-ink hover:text-paper px-8 py-3.5 text-xs sm:text-sm uppercase tracking-[0.16em] font-light transition-colors duration-200 cursor-pointer"
+                      onClick={() => updateFilter({ sort: 'rating_desc', page: 1 })}
+                      className="text-xs sm:text-sm uppercase tracking-[0.16em] font-light text-ink hover:text-vermilion underline underline-offset-8 transition-colors cursor-pointer"
                     >
-                      Khám phá ngay
+                      Mẫu bán chạy
                     </button>
-                  </a>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => updateFilter({ sort: 'rating_desc', page: 1 })}
-                    className="text-xs sm:text-sm uppercase tracking-[0.16em] font-light text-ink hover:text-vermilion underline underline-offset-8 transition-colors cursor-pointer"
-                  >
-                    Mẫu bán chạy
-                  </button>
+                  {/* Real stats row under 1px line */}
+                  <div className="pt-6 border-t border-line flex flex-wrap items-center gap-6 text-xs font-light text-mute uppercase tracking-[0.12em]">
+                    <span>{totalElements}+ mẫu thiết kế</span>
+                    <span className="text-line">·</span>
+                    <span>{categories.length} danh mục</span>
+                    <span className="text-line">·</span>
+                    <span>7 ngày đổi size miễn phí</span>
+                  </div>
+
+                  {/* Slide Indicators if multiple banners */}
+                  {activeBanners.length > 1 && (
+                    <div className="flex items-center gap-2 mt-6">
+                      {activeBanners.map((b, idx) => (
+                        <button
+                          key={b.id || idx}
+                          type="button"
+                          onClick={() => setBannerIndex(idx)}
+                          aria-label={`Slide ${idx + 1}`}
+                          className={`transition-all rounded-full cursor-pointer ${
+                            idx === (bannerIndex % activeBanners.length)
+                              ? 'w-6 h-1.5 bg-ink'
+                              : 'w-1.5 h-1.5 bg-line hover:bg-mute'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {/* Real stats row under 1px line */}
-                <div className="pt-6 border-t border-line flex flex-wrap items-center gap-6 text-xs font-light text-mute uppercase tracking-[0.12em]">
-                  <span>{totalElements}+ mẫu thiết kế</span>
-                  <span className="text-line">·</span>
-                  <span>{categories.length} danh mục</span>
-                  <span className="text-line">·</span>
-                  <span>7 ngày đổi size miễn phí</span>
+                {/* Right Column: Lookbook image 4:5 with vertical kanji text */}
+                <div className="relative aspect-[4/5] w-full max-w-md mx-auto lg:max-w-none bg-sand border border-line overflow-hidden group">
+                  <img
+                    src={heroImageUrl}
+                    alt={heroTitle}
+                    fetchPriority="high"
+                    className="w-full h-full object-cover object-top filter grayscale-[15%] transition-all duration-700"
+                  />
+                  {/* Chữ dọc 新作 2026 (Bộ sưu tập mới 2026) */}
+                  <div className="absolute top-6 right-6 writing-vertical-rl text-xs font-serif font-light tracking-[0.3em] text-paper bg-ink/75 py-3 px-1.5 select-none pointer-events-none">
+                    新作 2026
+                  </div>
                 </div>
               </div>
-
-              {/* Right Column: Lookbook image 4:5 with vertical kanji text */}
-              <div className="relative aspect-[4/5] w-full max-w-md mx-auto lg:max-w-none bg-sand border border-line overflow-hidden">
-                <img
-                  src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1200&auto=format&fit=crop"
-                  alt="FunnyShop Lookbook 2026"
-                  fetchPriority="high"
-                  className="w-full h-full object-cover object-top filter grayscale-[15%]"
-                />
-                {/* Chữ dọc 新作 2026 (Bộ sưu tập mới 2026) */}
-                <div className="absolute top-6 right-6 writing-vertical-rl text-xs font-serif font-light tracking-[0.3em] text-paper bg-ink/75 py-3 px-1.5 select-none pointer-events-none">
-                  新作 2026
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
+            </section>
+          );
+        })()}
 
         {/* =========================================================================
             2. TRUSTBAR (4 cột chữ thanh lịch giữa 2 đường kẻ 1px)
