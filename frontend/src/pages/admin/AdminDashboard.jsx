@@ -45,18 +45,6 @@ const QUICK_TIME_PRESETS = [
   { id: 'this_year', label: 'Năm nay', type: 'this_year', desc: 'Số liệu toàn bộ năm nay' },
 ];
 
-/**
- * Safely parse date from string or Jackson array representation
- */
-function parseOrderDate(dateVal) {
-  if (!dateVal) return null;
-  if (Array.isArray(dateVal)) {
-    return new Date(dateVal[0], (dateVal[1] || 1) - 1, dateVal[2] || 1, dateVal[3] || 0, dateVal[4] || 0);
-  }
-  const d = new Date(dateVal);
-  return isNaN(d.getTime()) ? null : d;
-}
-
 export default function AdminDashboard() {
   // Bộ lọc thời gian
   const [selectedPreset, setSelectedPreset] = useState('7_days');
@@ -569,10 +557,54 @@ export default function AdminDashboard() {
     const catRevenueMap = new Map();
     const catQuantityMap = new Map();
 
-    const colors = ['#FF6B4A', '#6C5CE7', '#FF8567', '#8F80EE', '#FFA68F', '#B0A5F4', '#FFC9BB'];
-    return categories.slice(0, 6).map((cat, idx) => {
-      const prodsInCat = products.filter((p) => String(p.categoryId) === String(cat.id));
-      const estRevenue = prodsInCat.reduce((sum, p) => sum + (Number(p.price) || 250000) * 8, 0);
+    categories.forEach((cat) => {
+      catRevenueMap.set(String(cat.id), 0);
+      catQuantityMap.set(String(cat.id), 0);
+    });
+
+    let uncategorizedRevenue = 0;
+    let uncategorizedQuantity = 0;
+
+    validOrders.forEach((order) => {
+      const items = order.items || [];
+      items.forEach((item) => {
+        const pId = item.productId ? String(item.productId) : null;
+        const itemPrice = Number(item.price || item.priceAtOrder) || 0;
+        const itemQty = Number(item.quantity) || 1;
+        const itemTotal = itemPrice * itemQty;
+
+        let matchedCatId = null;
+
+        if (pId && productCatMap.has(pId)) {
+          matchedCatId = productCatMap.get(pId).catId;
+        }
+
+        // Fallback: match by category name in item text
+        if (!matchedCatId) {
+          const itemText = (item.productName || item.name || '').toLowerCase();
+          const found = categories.find((c) =>
+            itemText.includes((c.name || '').toLowerCase())
+          );
+          if (found) matchedCatId = String(found.id);
+        }
+
+        if (matchedCatId && catRevenueMap.has(matchedCatId)) {
+          catRevenueMap.set(matchedCatId, catRevenueMap.get(matchedCatId) + itemTotal);
+          catQuantityMap.set(matchedCatId, catQuantityMap.get(matchedCatId) + itemQty);
+        } else {
+          uncategorizedRevenue += itemTotal;
+          uncategorizedQuantity += itemQty;
+        }
+      });
+    });
+
+    const result = categories.map((cat, idx) => {
+      const catIdStr = String(cat.id);
+      const rev = catRevenueMap.get(catIdStr) || 0;
+      const soldQty = catQuantityMap.get(catIdStr) || 0;
+      const prodsInCat = products.filter(
+        (p) => String(p.category?.id || p.categoryId) === catIdStr
+      );
 
       return {
         label: cat.name,
@@ -682,7 +714,7 @@ export default function AdminDashboard() {
         imageUrl: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?q=80&w=400&auto=format&fit=crop',
       },
     ];
-  }, [products]);
+  }, [orders]);
 
   // ── Recent Orders ─────────────────────────────────────────────────────────
   const recentOrders = useMemo(() => {
