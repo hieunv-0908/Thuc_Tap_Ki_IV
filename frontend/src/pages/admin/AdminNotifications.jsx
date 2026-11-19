@@ -152,9 +152,8 @@ function NotificationModal({ isOpen, onClose, editData, onSaved }) {
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               placeholder="VD: Khuyến mãi mùa hè 50%"
-              className={`w-full px-3 py-2 border text-sm bg-paper text-ink outline-none focus:border-ink transition-colors ${
-                errors.title ? 'border-red-400' : 'border-line'
-              }`}
+              className={`w-full px-3 py-2 border text-sm bg-paper text-ink outline-none focus:border-ink transition-colors ${errors.title ? 'border-red-400' : 'border-line'
+                }`}
             />
             {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
           </div>
@@ -169,9 +168,8 @@ function NotificationModal({ isOpen, onClose, editData, onSaved }) {
               value={form.content}
               onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
               placeholder="Mô tả chi tiết thông báo..."
-              className={`w-full px-3 py-2 border text-sm bg-paper text-ink outline-none focus:border-ink transition-colors resize-none ${
-                errors.content ? 'border-red-400' : 'border-line'
-              }`}
+              className={`w-full px-3 py-2 border text-sm bg-paper text-ink outline-none focus:border-ink transition-colors resize-none ${errors.content ? 'border-red-400' : 'border-line'
+                }`}
             />
             {errors.content && <p className="text-xs text-red-500 mt-1">{errors.content}</p>}
           </div>
@@ -219,9 +217,8 @@ function NotificationModal({ isOpen, onClose, editData, onSaved }) {
                 value={form.userId}
                 onChange={(e) => setForm((f) => ({ ...f, userId: e.target.value }))}
                 placeholder="Nhập ID người dùng"
-                className={`w-full px-3 py-2 border text-sm bg-paper text-ink outline-none focus:border-ink transition-colors ${
-                  errors.userId ? 'border-red-400' : 'border-line'
-                }`}
+                className={`w-full px-3 py-2 border text-sm bg-paper text-ink outline-none focus:border-ink transition-colors ${errors.userId ? 'border-red-400' : 'border-line'
+                  }`}
               />
               {errors.userId && <p className="text-xs text-red-500 mt-1">{errors.userId}</p>}
             </div>
@@ -246,14 +243,12 @@ function NotificationModal({ isOpen, onClose, editData, onSaved }) {
             <button
               type="button"
               onClick={() => setForm((f) => ({ ...f, isActive: !f.isActive }))}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
-                form.isActive ? 'bg-primary-600' : 'bg-gray-300'
-              }`}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${form.isActive ? 'bg-primary-600' : 'bg-gray-300'
+                }`}
             >
               <span
-                className={`inline-block size-4 transform rounded-full bg-white shadow transition-transform ${
-                  form.isActive ? 'translate-x-4' : 'translate-x-0.5'
-                }`}
+                className={`inline-block size-4 transform rounded-full bg-white shadow transition-transform ${form.isActive ? 'translate-x-4' : 'translate-x-0.5'
+                  }`}
               />
             </button>
             <span className="text-sm text-ink-muted">
@@ -551,11 +546,10 @@ export default function AdminNotifications() {
                     {/* Trạng thái */}
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${
-                          n.isActive
+                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${n.isActive
                             ? 'bg-green-50 text-green-700 border border-green-200'
                             : 'bg-gray-100 text-gray-500 border border-gray-200'
-                        }`}
+                          }`}
                       >
                         <span className={`size-1.5 rounded-full ${n.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
                         {n.isActive ? 'Đang phát' : 'Tạm dừng'}
@@ -575,11 +569,10 @@ export default function AdminNotifications() {
                           type="button"
                           title={n.isActive ? 'Tạm dừng' : 'Bật phát'}
                           onClick={() => handleToggle(n)}
-                          className={`p-1.5 rounded transition-colors cursor-pointer ${
-                            n.isActive
+                          className={`p-1.5 rounded transition-colors cursor-pointer ${n.isActive
                               ? 'text-green-600 hover:bg-green-50'
                               : 'text-gray-400 hover:bg-gray-100'
-                          }`}
+                            }`}
                         >
                           <Power className="size-4" />
                         </button>
