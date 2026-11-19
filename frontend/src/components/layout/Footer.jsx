@@ -78,6 +78,11 @@ export default function Footer() {
                   Theo dõi đơn hàng
                 </Link>
               </li>
+              <li>
+                <Link to="/feedback" className="hover:text-white hover:underline underline-offset-4 transition-colors">
+                  Góp ý &amp; Phản hồi hệ thống
+                </Link>
+              </li>
             </ul>
           </div>
 

@@ -9,6 +9,7 @@ import {
   PackageCheck,
   ExternalLink,
   Sparkles,
+  MessageSquare,
 } from 'lucide-react';
 import { notificationApi } from '../../api/notification';
 import { useAuthStore } from '../../store/authStore';
@@ -136,6 +137,12 @@ export default function NotificationDropdown() {
           label: 'Đơn hàng',
           icon: PackageCheck,
           className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        };
+      case 'FEEDBACK':
+        return {
+          label: 'Góp ý',
+          icon: MessageSquare,
+          className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
         };
       case 'SYSTEM':
       default:

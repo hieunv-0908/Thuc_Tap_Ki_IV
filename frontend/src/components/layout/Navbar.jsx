@@ -11,6 +11,7 @@ import {
   ClipboardList,
   Shield,
   ChevronDown,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
@@ -305,6 +306,15 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                         <span>Đơn hàng của tôi</span>
                       </Link>
 
+                      <Link
+                        to="/feedback"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-ink hover:bg-sand/40 transition-colors"
+                      >
+                        <MessageSquare className="size-3.5 text-mute" />
+                        <span>Góp ý & Phản hồi</span>
+                      </Link>
+
                       {isAdmin() && (
                         <Link
                           to="/admin/products"
@@ -450,6 +460,15 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                   >
                     <User className="size-5 text-ink-subtle" />
                     <span>Hồ sơ cá nhân</span>
+                  </Link>
+
+                  <Link
+                    to="/feedback"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-ink hover:bg-gray-100 transition-colors"
+                  >
+                    <MessageSquare className="size-5 text-ink-subtle" />
+                    <span>Góp ý & Phản hồi</span>
                   </Link>
 
                   {isAdmin() && (

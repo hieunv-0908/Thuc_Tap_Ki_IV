@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCheck, Package, Tag, Megaphone, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Bell, CheckCheck, Package, Tag, Megaphone, Settings, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 import {
   getMyNotifications,
   markAsRead,
@@ -13,6 +13,7 @@ const TYPE_LABELS = {
   VOUCHER: { label: 'Voucher', color: 'text-green-600 bg-green-50 border-green-200' },
   SYSTEM: { label: 'Hệ thống', color: 'text-blue-600 bg-blue-50 border-blue-200' },
   ORDER: { label: 'Đơn hàng', color: 'text-purple-600 bg-purple-50 border-purple-200' },
+  FEEDBACK: { label: 'Góp ý', color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
 };
 
 const TYPE_ICONS = {
@@ -20,6 +21,7 @@ const TYPE_ICONS = {
   VOUCHER: Tag,
   SYSTEM: Settings,
   ORDER: Package,
+  FEEDBACK: MessageSquare,
 };
 
 const TABS = [
@@ -29,6 +31,7 @@ const TABS = [
   { key: 'VOUCHER', label: 'Voucher' },
   { key: 'SYSTEM', label: 'Hệ thống' },
   { key: 'ORDER', label: 'Đơn hàng' },
+  { key: 'FEEDBACK', label: 'Góp ý' },
 ];
 
 function timeAgo(dateStr) {
