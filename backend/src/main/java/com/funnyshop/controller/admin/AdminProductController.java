@@ -25,6 +25,12 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.time.LocalDateTime;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.Map;
+
 @RestController
 @RequestMapping({ "/api/v1/admin", "/api/admin" })
 @RequiredArgsConstructor
@@ -33,6 +39,7 @@ public class AdminProductController {
 
     private final ProductService productService;
     private final CsvExportService csvExportService;
+    private final Cloudinary cloudinary;
 
     // ==========================================
     // PHẦN A: QUẢN LÝ SẢN PHẨM GỐC (Base Product)
@@ -237,5 +244,29 @@ public class AdminProductController {
                         .code(HttpStatus.OK.value())
                         .message("Xóa hình ảnh thành công!")
                         .build());
+    }
+
+    @PostMapping(value = "/products/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadProductImage(
+            @RequestParam("file") MultipartFile file) {
+        try {
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "funnyshop/products",
+                            "resource_type", "image",
+                            "quality", "auto:good",
+                            "fetch_format", "auto"
+                    ));
+            String url = (String) uploadResult.get("secure_url");
+            String publicId = (String) uploadResult.get("public_id");
+
+            return ResponseEntity.ok(ApiResponse.<Map<String, String>>builder()
+                    .code(200)
+                    .message("Tải ảnh sản phẩm lên Cloudinary thành công!")
+                    .data(Map.of("url", url, "publicId", publicId != null ? publicId : ""))
+                    .build());
+        } catch (IOException e) {
+            throw new RuntimeException("Lỗi upload ảnh sản phẩm: " + e.getMessage());
+        }
     }
 }

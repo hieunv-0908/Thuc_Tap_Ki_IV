@@ -22,6 +22,9 @@ repositories {
 }
 
 dependencies {
+    // Cloudinary
+    implementation 'com.cloudinary:cloudinary-http5:2.0.0'
+
     // Spring Boot Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -48,6 +51,9 @@ dependencies {
     
     // Development tools
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    
+    // Cloudinary
+    implementation 'com.cloudinary:cloudinary-http5:2.0.0'
     
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

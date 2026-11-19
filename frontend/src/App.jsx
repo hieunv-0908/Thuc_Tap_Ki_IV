@@ -27,6 +27,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminVouchers from './pages/admin/AdminVouchers';
 import AdminNotifications from './pages/admin/AdminNotifications';
 import AdminFeedbacks from './pages/admin/AdminFeedbacks';
+import AdminBanners from './pages/admin/AdminBanners';
 import AdminNotFound from './pages/admin/AdminNotFound';
 
 export default function App() {
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="users" element={<AdminUsers />} />
             <Route path="notifications" element={<AdminNotifications />} />
             <Route path="feedbacks" element={<AdminFeedbacks />} />
+            <Route path="banners" element={<AdminBanners />} />
             {/* Catch-all 404 inside Admin Layout */}
             <Route path="*" element={<AdminNotFound />} />
           </Route>
