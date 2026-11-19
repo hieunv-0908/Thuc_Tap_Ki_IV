@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   TrendingUp,
   ShoppingBag,
-  Users,
   Shirt,
   RefreshCw,
   Calendar,
@@ -15,7 +14,6 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  Truck,
   Eye,
   X,
   SlidersHorizontal,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, Package, Tag, Megaphone, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
@@ -55,30 +55,34 @@ export default function Notifications() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalUnread, setTotalUnread] = useState(0);
 
-  const fetchNotifications = useCallback(async (tab, pg) => {
-    setLoading(true);
-    try {
-      const params = { page: pg, size: 15 };
-      if (tab !== 'ALL' && tab !== 'UNREAD') params.type = tab;
-      if (tab === 'UNREAD') params.unreadOnly = true;
-      const data = await getMyNotifications(params);
-      setNotifications(data.content || []);
-      setTotalPages(data.totalPages || 0);
-      setTotalUnread(data.content?.filter((n) => !n.isRead).length || 0);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    let ignore = false;
+
+    async function load() {
+      try {
+        const params = { page, size: 15 };
+        if (activeTab !== 'ALL' && activeTab !== 'UNREAD') params.type = activeTab;
+        if (activeTab === 'UNREAD') params.unreadOnly = true;
+        const data = await getMyNotifications(params);
+        if (!ignore) {
+          setNotifications(data.content || []);
+          setTotalPages(data.totalPages || 0);
+          setTotalUnread(data.content?.filter((n) => !n.isRead).length || 0);
+          setLoading(false);
+        }
+      } catch (e) {
+        if (!ignore) {
+          console.error(e);
+          setLoading(false);
+        }
+      }
     }
-  }, []);
 
-  useEffect(() => {
-    setPage(0);
-  }, [activeTab]);
-
-  useEffect(() => {
-    fetchNotifications(activeTab, page);
-  }, [activeTab, page, fetchNotifications]);
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, [activeTab, page]);
 
   const handleClickNotification = async (n) => {
     if (!n.isRead) {
@@ -102,7 +106,7 @@ export default function Notifications() {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setTotalUnread(0);
       toast.success('Đã đánh dấu tất cả là đã đọc');
-    } catch (err) {
+    } catch {
       toast.error('Có lỗi xảy ra, vui lòng thử lại');
     } finally {
       setMarkingAll(false);
@@ -141,7 +145,11 @@ export default function Notifications() {
           <button
             key={tab.key}
             type="button"
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => {
+              setActiveTab(tab.key);
+              setPage(0);
+              setLoading(true);
+            }}
             className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 cursor-pointer ${
               activeTab === tab.key
                 ? 'border-ink text-ink'

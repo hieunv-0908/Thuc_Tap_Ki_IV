@@ -23,24 +23,30 @@ export default function NotificationDropdown() {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Lấy số lượng thông báo chưa đọc định kỳ hoặc khi đăng nhập
-  const fetchUnreadCount = async () => {
-    if (!isAuthenticated) {
-      setUnreadCount(0);
-      return;
-    }
-    try {
-      const count = await notificationApi.getUnreadCount();
-      setUnreadCount(count);
-    } catch {
-      // Ignored
-    }
-  };
+  const effectiveUnreadCount = isAuthenticated ? unreadCount : 0;
 
+  // Lấy số lượng thông báo chưa đọc định kỳ hoặc khi đăng nhập
   useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000); // 30s polling
-    return () => clearInterval(interval);
+    if (!isAuthenticated) return;
+
+    let ignore = false;
+    const loadUnreadCount = async () => {
+      try {
+        const count = await notificationApi.getUnreadCount();
+        if (!ignore) {
+          setUnreadCount(count);
+        }
+      } catch {
+        // Ignored
+      }
+    };
+
+    loadUnreadCount();
+    const interval = setInterval(loadUnreadCount, 30000); // 30s polling
+    return () => {
+      ignore = true;
+      clearInterval(interval);
+    };
   }, [isAuthenticated]);
 
   // Click outside to close
@@ -167,9 +173,9 @@ export default function NotificationDropdown() {
         title="Thông báo"
       >
         <Bell className="size-5" />
-        {unreadCount > 0 && (
+        {effectiveUnreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-vermilion text-paper text-[10px] font-bold flex items-center justify-center animate-pulse">
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {effectiveUnreadCount > 99 ? '99+' : effectiveUnreadCount}
           </span>
         )}
       </button>
@@ -182,14 +188,14 @@ export default function NotificationDropdown() {
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-vermilion" />
               <h3 className="font-serif text-sm font-medium text-ink">Thông báo</h3>
-              {unreadCount > 0 && (
+              {effectiveUnreadCount > 0 && (
                 <span className="px-1.5 py-0.5 text-[10px] bg-vermilion/10 text-vermilion font-medium rounded-full">
-                  {unreadCount} mới
+                  {effectiveUnreadCount} mới
                 </span>
               )}
             </div>
 
-            {isAuthenticated && unreadCount > 0 && (
+            {isAuthenticated && effectiveUnreadCount > 0 && (
               <button
                 type="button"
                 onClick={handleMarkAllAsRead}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Bell,
   Plus,
@@ -60,29 +60,23 @@ const EMPTY_FORM = {
 
 /* ─────────── Modal ─────────── */
 function NotificationModal({ isOpen, onClose, editData, onSaved }) {
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(() => {
+    if (editData) {
+      return {
+        title: editData.title || '',
+        content: editData.content || '',
+        type: editData.type || 'SYSTEM',
+        target: editData.target || 'ALL',
+        userId: editData.userId || '',
+        targetUrl: editData.targetUrl || '',
+        imageUrl: editData.imageUrl || '',
+        isActive: editData.isActive ?? true,
+      };
+    }
+    return EMPTY_FORM;
+  });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    if (isOpen) {
-      if (editData) {
-        setForm({
-          title: editData.title || '',
-          content: editData.content || '',
-          type: editData.type || 'SYSTEM',
-          target: editData.target || 'ALL',
-          userId: editData.userId || '',
-          targetUrl: editData.targetUrl || '',
-          imageUrl: editData.imageUrl || '',
-          isActive: editData.isActive ?? true,
-        });
-      } else {
-        setForm(EMPTY_FORM);
-      }
-      setErrors({});
-    }
-  }, [isOpen, editData]);
 
   const validate = () => {
     const errs = {};
@@ -313,8 +307,7 @@ export default function AdminNotifications() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = async () => {
     try {
       const params = { page, size: 10 };
       if (filterType) params.type = filterType;
@@ -325,24 +318,51 @@ export default function AdminNotifications() {
       setNotifications(data.content || []);
       setTotalPages(data.totalPages || 0);
       setTotalElements(data.totalElements || 0);
-    } catch (err) {
+    } catch {
       toast.error('Không thể tải danh sách thông báo');
     } finally {
       setLoading(false);
     }
-  }, [page, filterType, filterTarget, filterActive, keyword]);
+  };
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    let ignore = false;
+    async function load() {
+      try {
+        const params = { page, size: 10 };
+        if (filterType) params.type = filterType;
+        if (filterTarget) params.target = filterTarget;
+        if (filterActive !== '') params.isActive = filterActive === 'true';
+        if (keyword) params.keyword = keyword;
+        const data = await adminGetNotifications(params);
+        if (!ignore) {
+          setNotifications(data.content || []);
+          setTotalPages(data.totalPages || 0);
+          setTotalElements(data.totalElements || 0);
+          setLoading(false);
+        }
+      } catch {
+        if (!ignore) {
+          toast.error('Không thể tải danh sách thông báo');
+          setLoading(false);
+        }
+      }
+    }
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, [page, filterType, filterTarget, filterActive, keyword]);
 
   const handleSearch = (e) => {
     e.preventDefault();
+    setLoading(true);
     setKeyword(keywordInput);
     setPage(0);
   };
 
   const handleFilterChange = (setter) => (e) => {
+    setLoading(true);
     setter(e.target.value);
     setPage(0);
   };
@@ -621,12 +641,15 @@ export default function AdminNotifications() {
       )}
 
       {/* Create / Edit Modal */}
-      <NotificationModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        editData={editData}
-        onSaved={fetchData}
-      />
+      {modalOpen && (
+        <NotificationModal
+          key={editData ? editData.id : 'create'}
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          editData={editData}
+          onSaved={fetchData}
+        />
+      )}
 
       {/* Delete Confirm */}
       <ConfirmDialog
