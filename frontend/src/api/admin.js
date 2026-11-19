@@ -302,4 +302,12 @@ export const adminApi = {
     const res = await apiClient.get('/api/v1/admin/dashboard/daily-stats', { params });
     return res?.data !== undefined ? res.data : res;
   },
+
+  /**
+   * So sánh & đánh giá kinh doanh bằng AI giữa 2 kỳ hoặc 2 ngày
+   */
+  comparePeriodsWithAi: async (payload) => {
+    const res = await apiClient.post('/api/v1/admin/dashboard/ai-comparison', payload);
+    return res?.data !== undefined ? res.data : res;
+  },
 };
