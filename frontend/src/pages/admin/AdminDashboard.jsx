@@ -19,6 +19,13 @@ import {
   SlidersHorizontal,
   ChevronRight,
   BarChart3,
+  Bot,
+  Lightbulb,
+  Zap,
+  AlertTriangle,
+  Scale,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 import StatCard from '../../components/admin/StatCard';
 import DonutChart from '../../components/admin/charts/DonutChart';
@@ -45,6 +52,16 @@ const QUICK_TIME_PRESETS = [
   { id: 'this_year', label: 'Năm nay', type: 'this_year', desc: 'Số liệu toàn bộ năm nay' },
 ];
 
+// Cấu hình các preset so sánh dành riêng cho AI
+const AI_PRESETS = [
+  { id: 'TODAY_VS_YESTERDAY', label: 'Hôm qua vs Hôm nay', desc: 'So sánh ngày hôm nay với ngày hôm qua' },
+  { id: 'THIS_WEEK_VS_LAST_WEEK', label: '2 tuần gần nhất', desc: 'So sánh 7 ngày qua với 7 ngày trước đó' },
+  { id: 'THIS_MONTH_VS_LAST_MONTH', label: '2 tháng gần nhất', desc: 'So sánh 30 ngày qua với 30 ngày trước đó' },
+  { id: 'THIS_YEAR_VS_LAST_YEAR', label: '2 năm', desc: 'So sánh từ đầu năm nay với cùng kỳ năm trước' },
+  { id: 'CUSTOM_DATES', label: 'So sánh 2 ngày cụ thể', desc: 'Chọn 2 ngày bất kỳ để AI đối soát' },
+  { id: 'CUSTOM_RANGES', label: 'So sánh 2 khoảng ngày', desc: 'Tùy chọn 2 khoảng thời gian từ ngày - đến ngày' },
+];
+
 export default function AdminDashboard() {
   // Bộ lọc thời gian
   const [selectedPreset, setSelectedPreset] = useState('7_days');
@@ -52,6 +69,33 @@ export default function AdminDashboard() {
   const [customDaysInput, setCustomDaysInput] = useState('3');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+
+  // ── AI Comparison States ──────────────────────────────────────────────────
+  const [aiPreset, setAiPreset] = useState('TODAY_VS_YESTERDAY');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiComparisonData, setAiComparisonData] = useState(null);
+  const [customAiDateA, setCustomAiDateA] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  });
+  const [customAiDateB, setCustomAiDateB] = useState(() => new Date().toISOString().split('T')[0]);
+  const [customAiRangeStartA, setCustomAiRangeStartA] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 13);
+    return d.toISOString().split('T')[0];
+  });
+  const [customAiRangeEndA, setCustomAiRangeEndA] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().split('T')[0];
+  });
+  const [customAiRangeStartB, setCustomAiRangeStartB] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().split('T')[0];
+  });
+  const [customAiRangeEndB, setCustomAiRangeEndB] = useState(() => new Date().toISOString().split('T')[0]);
 
   // Mode hiển thị biểu đồ
   const [metricMode, setMetricMode] = useState('revenue'); // 'revenue' | 'orders'
@@ -223,10 +267,90 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  // ── AI Comparison Fetcher ────────────────────────────────────────────────
+  const fetchAiComparison = useCallback(async (presetOverride = null, customParams = null) => {
+    const activePreset = presetOverride || aiPreset;
+    setAiLoading(true);
+    try {
+      let payload = { preset: activePreset };
+
+      if (activePreset === 'CUSTOM_DATES') {
+        const dateA = customParams?.dateA || customAiDateA;
+        const dateB = customParams?.dateB || customAiDateB;
+        payload = {
+          preset: 'CUSTOM',
+          startDateA: dateA,
+          endDateA: dateA,
+          labelA: `Ngày ${dateA}`,
+          startDateB: dateB,
+          endDateB: dateB,
+          labelB: `Ngày ${dateB}`,
+        };
+      } else if (activePreset === 'CUSTOM_RANGES') {
+        const startA = customParams?.startA || customAiRangeStartA;
+        const endA = customParams?.endA || customAiRangeEndA;
+        const startB = customParams?.startB || customAiRangeStartB;
+        const endB = customParams?.endB || customAiRangeEndB;
+        payload = {
+          preset: 'CUSTOM',
+          startDateA: startA,
+          endDateA: endA,
+          labelA: `${startA} → ${endA}`,
+          startDateB: startB,
+          endDateB: endB,
+          labelB: `${startB} → ${endB}`,
+        };
+      }
+
+      const res = await adminApi.comparePeriodsWithAi(payload);
+      setAiComparisonData(res);
+    } catch {
+      toast.error('Không thể tải đánh giá so sánh từ AI');
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiPreset, customAiDateA, customAiDateB, customAiRangeStartA, customAiRangeEndA, customAiRangeStartB, customAiRangeEndB]);
+
+  const handleSelectAiPreset = (presetId) => {
+    setAiPreset(presetId);
+    if (presetId !== 'CUSTOM_DATES' && presetId !== 'CUSTOM_RANGES') {
+      fetchAiComparison(presetId);
+    }
+  };
+
+  const handleApplyCustomAiDates = (e) => {
+    e.preventDefault();
+    if (!customAiDateA || !customAiDateB) {
+      toast.error('Vui lòng chọn đủ 2 ngày để so sánh!');
+      return;
+    }
+    fetchAiComparison('CUSTOM_DATES', { dateA: customAiDateA, dateB: customAiDateB });
+  };
+
+  const handleApplyCustomAiRanges = (e) => {
+    e.preventDefault();
+    if (!customAiRangeStartA || !customAiRangeEndA || !customAiRangeStartB || !customAiRangeEndB) {
+      toast.error('Vui lòng chọn đủ 2 khoảng ngày để so sánh!');
+      return;
+    }
+    fetchAiComparison('CUSTOM_RANGES', {
+      startA: customAiRangeStartA,
+      endA: customAiRangeEndA,
+      startB: customAiRangeStartB,
+      endB: customAiRangeEndB,
+    });
+  };
+
   useEffect(() => {
     let ignore = false;
     async function init() {
-      await Promise.all([loadData(), loadDailyStats()]);
+      await Promise.all([
+        loadData(),
+        loadDailyStats(),
+        adminApi.comparePeriodsWithAi({ preset: 'TODAY_VS_YESTERDAY' }).then((res) => {
+          if (!ignore && res) setAiComparisonData(res);
+        }).catch(() => {})
+      ]);
       if (!ignore) {
         setLoading(false);
       }
@@ -239,7 +363,7 @@ export default function AdminDashboard() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadData(), loadDailyStats()]);
+    await Promise.all([loadData(), loadDailyStats(), fetchAiComparison()]);
     setRefreshing(false);
     toast.success('Đã cập nhật số liệu mới nhất!');
   };
@@ -924,6 +1048,438 @@ export default function AdminDashboard() {
           }
           variant={metrics.lowStockCount > 0 ? 'warning' : 'primary'}
         />
+      </div>
+
+      {/* ── 🤖 TÍCH HỢP AI: ĐÁNH GIÁ & SO SÁNH KINH DOANH GIỮA CÁC MỐC THỜI GIAN ── */}
+      <div className="bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/70 rounded-2xl p-5 sm:p-6 border border-indigo-200/90 shadow-soft space-y-5">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-xs">
+                <Bot className="size-4" />
+              </span>
+              <h2 className="text-base sm:text-lg font-bold text-ink flex items-center gap-2">
+                Trợ lý AI Đánh giá &amp; So sánh Kinh doanh
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">
+                  <Sparkles className="size-3" />
+                  {aiComparisonData?.provider || 'Gemini AI'}
+                </span>
+              </h2>
+            </div>
+            <p className="text-xs text-ink-muted mt-1">
+              So sánh nhanh hôm qua với hôm nay, 2 tuần, 2 tháng, 2 năm hoặc chọn 2 ngày cụ thể để nhận phân tích chuyên sâu và khuyến nghị từ AI.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => fetchAiComparison()}
+              disabled={aiLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`size-3.5 ${aiLoading ? 'animate-spin' : ''}`} />
+              <span>{aiLoading ? 'Đang phân tích...' : 'Phân tích lại'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Nút so sánh nhanh (Quick Comparison Presets) */}
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-subtle">
+            <Zap className="size-3.5 text-amber-500" />
+            <span>Mốc so sánh nhanh:</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {AI_PRESETS.map((p) => {
+              const active = aiPreset === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleSelectAiPreset(p.id)}
+                  title={p.desc}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+                    active
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs scale-[1.02]'
+                      : 'bg-white text-ink-muted border-line hover:border-indigo-300 hover:text-ink'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Panel Tùy chọn 2 ngày cụ thể */}
+        {aiPreset === 'CUSTOM_DATES' && (
+          <form
+            onSubmit={handleApplyCustomAiDates}
+            className="p-4 bg-white border border-indigo-200 rounded-xl space-y-3 animate-in fade-in duration-150"
+          >
+            <span className="text-xs font-bold text-ink flex items-center gap-1.5">
+              <Calendar className="size-3.5 text-indigo-600" />
+              Chọn 2 ngày riêng biệt bất kỳ để AI đối soát:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+              <div className="sm:col-span-5">
+                <label className="block text-[11px] font-semibold text-ink-muted mb-1">Ngày A (Mốc gốc):</label>
+                <input
+                  type="date"
+                  value={customAiDateA}
+                  onChange={(e) => setCustomAiDateA(e.target.value)}
+                  className="w-full px-3 py-1.5 text-xs bg-white border border-line rounded-lg text-ink focus:outline-none focus:border-indigo-600"
+                />
+              </div>
+              <div className="sm:col-span-2 text-center font-bold text-xs text-ink-subtle hidden sm:block">
+                SO VỚI
+              </div>
+              <div className="sm:col-span-5">
+                <label className="block text-[11px] font-semibold text-ink-muted mb-1">Ngày B (Mốc so sánh):</label>
+                <input
+                  type="date"
+                  value={customAiDateB}
+                  onChange={(e) => setCustomAiDateB(e.target.value)}
+                  className="w-full px-3 py-1.5 text-xs bg-white border border-line rounded-lg text-ink focus:outline-none focus:border-indigo-600"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                type="submit"
+                disabled={aiLoading}
+                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Tiến hành so sánh 2 ngày bằng AI
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Panel Tùy chọn 2 khoảng ngày */}
+        {aiPreset === 'CUSTOM_RANGES' && (
+          <form
+            onSubmit={handleApplyCustomAiRanges}
+            className="p-4 bg-white border border-indigo-200 rounded-xl space-y-3 animate-in fade-in duration-150"
+          >
+            <span className="text-xs font-bold text-ink flex items-center gap-1.5">
+              <Scale className="size-3.5 text-indigo-600" />
+              Chọn 2 khoảng thời gian tùy chọn:
+            </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3 bg-gray-50 rounded-lg border border-line space-y-2">
+                <span className="text-xs font-bold text-ink">Khoảng thời gian A (Gốc):</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={customAiRangeStartA}
+                    onChange={(e) => setCustomAiRangeStartA(e.target.value)}
+                    className="w-full px-2 py-1 text-xs bg-white border border-line rounded text-ink"
+                  />
+                  <span className="text-xs text-ink-subtle">đến</span>
+                  <input
+                    type="date"
+                    value={customAiRangeEndA}
+                    onChange={(e) => setCustomAiRangeEndA(e.target.value)}
+                    className="w-full px-2 py-1 text-xs bg-white border border-line rounded text-ink"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-gray-50 rounded-lg border border-line space-y-2">
+                <span className="text-xs font-bold text-ink">Khoảng thời gian B (So sánh):</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={customAiRangeStartB}
+                    onChange={(e) => setCustomAiRangeStartB(e.target.value)}
+                    className="w-full px-2 py-1 text-xs bg-white border border-line rounded text-ink"
+                  />
+                  <span className="text-xs text-ink-subtle">đến</span>
+                  <input
+                    type="date"
+                    value={customAiRangeEndB}
+                    onChange={(e) => setCustomAiRangeEndB(e.target.value)}
+                    className="w-full px-2 py-1 text-xs bg-white border border-line rounded text-ink"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                type="submit"
+                disabled={aiLoading}
+                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Tiến hành so sánh 2 khoảng ngày bằng AI
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Loading or Results */}
+        {aiLoading ? (
+          <div className="p-10 text-center bg-white/70 rounded-xl border border-indigo-100 space-y-3">
+            <div className="inline-block size-7 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+            <p className="text-sm font-semibold text-ink">AI đang phân tích &amp; đối soát số liệu...</p>
+            <p className="text-xs text-ink-muted">Trợ lý đang so sánh doanh thu, lượng đơn, giỏ hàng và tổng hợp khuyến nghị chiến lược.</p>
+          </div>
+        ) : !aiComparisonData ? (
+          <div className="p-8 text-center bg-white/70 rounded-xl border border-indigo-100 text-xs text-ink-muted">
+            Chọn một mốc so sánh ở trên để xem đánh giá chuyên sâu từ AI.
+          </div>
+        ) : (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            {/* KPI Comparative Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Doanh thu */}
+              <div className="bg-white p-3.5 rounded-xl border border-line shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-ink-muted">Doanh thu so sánh</span>
+                  <span
+                    className={`inline-flex items-center gap-0.5 text-xs font-extrabold px-2 py-0.5 rounded-full ${
+                      (aiComparisonData.revenueGrowthRate || 0) >= 0
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-rose-100 text-rose-800'
+                    }`}
+                  >
+                    {(aiComparisonData.revenueGrowthRate || 0) >= 0 ? (
+                      <ArrowUpRight className="size-3.5" />
+                    ) : (
+                      <ArrowDownRight className="size-3.5" />
+                    )}
+                    {(aiComparisonData.revenueGrowthRate || 0) >= 0 ? '+' : ''}
+                    {aiComparisonData.revenueGrowthRate}%
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-baseline text-xs">
+                    <span className="text-ink-subtle truncate max-w-[120px]">{aiComparisonData.periodB?.label}:</span>
+                    <span className="font-extrabold text-primary-700">
+                      {formatCurrency(aiComparisonData.periodB?.totalRevenue || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-baseline text-xs">
+                    <span className="text-ink-subtle truncate max-w-[120px]">{aiComparisonData.periodA?.label}:</span>
+                    <span className="text-ink-muted">
+                      {formatCurrency(aiComparisonData.periodA?.totalRevenue || 0)}
+                    </span>
+                  </div>
+                </div>
+                <div className="pt-1.5 border-t border-line/60 text-[11px] text-ink-subtle flex justify-between">
+                  <span>Chênh lệch:</span>
+                  <span
+                    className={`font-semibold ${
+                      (aiComparisonData.revenueDiff || 0) >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                    }`}
+                  >
+                    {(aiComparisonData.revenueDiff || 0) >= 0 ? '+' : ''}
+                    {formatCurrency(aiComparisonData.revenueDiff || 0)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Số đơn hàng */}
+              <div className="bg-white p-3.5 rounded-xl border border-line shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-ink-muted">Lượng đơn hàng</span>
+                  <span
+                    className={`inline-flex items-center gap-0.5 text-xs font-extrabold px-2 py-0.5 rounded-full ${
+                      (aiComparisonData.ordersGrowthRate || 0) >= 0
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-rose-100 text-rose-800'
+                    }`}
+                  >
+                    {(aiComparisonData.ordersGrowthRate || 0) >= 0 ? (
+                      <ArrowUpRight className="size-3.5" />
+                    ) : (
+                      <ArrowDownRight className="size-3.5" />
+                    )}
+                    {(aiComparisonData.ordersGrowthRate || 0) >= 0 ? '+' : ''}
+                    {aiComparisonData.ordersGrowthRate}%
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-baseline text-xs">
+                    <span className="text-ink-subtle truncate max-w-[120px]">{aiComparisonData.periodB?.label}:</span>
+                    <span className="font-extrabold text-ink">{aiComparisonData.periodB?.totalOrders || 0} đơn</span>
+                  </div>
+                  <div className="flex justify-between items-baseline text-xs">
+                    <span className="text-ink-subtle truncate max-w-[120px]">{aiComparisonData.periodA?.label}:</span>
+                    <span className="text-ink-muted">{aiComparisonData.periodA?.totalOrders || 0} đơn</span>
+                  </div>
+                </div>
+                <div className="pt-1.5 border-t border-line/60 text-[11px] text-ink-subtle flex justify-between">
+                  <span>Biến động:</span>
+                  <span
+                    className={`font-semibold ${
+                      (aiComparisonData.ordersDiff || 0) >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                    }`}
+                  >
+                    {(aiComparisonData.ordersDiff || 0) >= 0 ? '+' : ''}
+                    {aiComparisonData.ordersDiff || 0} đơn
+                  </span>
+                </div>
+              </div>
+
+              {/* Tỷ lệ hoàn thành */}
+              <div className="bg-white p-3.5 rounded-xl border border-line shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-ink-muted">Tỷ lệ hoàn thành</span>
+                  <span
+                    className={`inline-flex items-center gap-0.5 text-xs font-extrabold px-2 py-0.5 rounded-full ${
+                      (aiComparisonData.completionRateDiff || 0) >= 0
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-rose-100 text-rose-800'
+                    }`}
+                  >
+                    {(aiComparisonData.completionRateDiff || 0) >= 0 ? '+' : ''}
+                    {aiComparisonData.completionRateDiff}%
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-baseline text-xs">
+                    <span className="text-ink-subtle truncate max-w-[120px]">{aiComparisonData.periodB?.label}:</span>
+                    <span className="font-extrabold text-emerald-700">
+                      {aiComparisonData.periodB?.completionRate || 0}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-baseline text-xs">
+                    <span className="text-ink-subtle truncate max-w-[120px]">{aiComparisonData.periodA?.label}:</span>
+                    <span className="text-ink-muted">{aiComparisonData.periodA?.completionRate || 0}%</span>
+                  </div>
+                </div>
+                <div className="pt-1.5 border-t border-line/60 text-[11px] text-ink-subtle flex justify-between">
+                  <span>Đã hủy kỳ B:</span>
+                  <span className="font-semibold text-ink">
+                    {aiComparisonData.periodB?.cancelledOrders || 0} đơn
+                  </span>
+                </div>
+              </div>
+
+              {/* Giá trị đơn TB (AOV) */}
+              <div className="bg-white p-3.5 rounded-xl border border-line shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-ink-muted">Giá trị đơn TB (AOV)</span>
+                  <Scale className="size-3.5 text-indigo-500" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-baseline text-xs">
+                    <span className="text-ink-subtle truncate max-w-[120px]">{aiComparisonData.periodB?.label}:</span>
+                    <span className="font-extrabold text-ink">
+                      {formatCurrency(aiComparisonData.periodB?.averageOrderValue || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-baseline text-xs">
+                    <span className="text-ink-subtle truncate max-w-[120px]">{aiComparisonData.periodA?.label}:</span>
+                    <span className="text-ink-muted">
+                      {formatCurrency(aiComparisonData.periodA?.averageOrderValue || 0)}
+                    </span>
+                  </div>
+                </div>
+                <div className="pt-1.5 border-t border-line/60 text-[11px] text-ink-subtle flex justify-between">
+                  <span>Độ lệch:</span>
+                  <span className="font-semibold text-ink">
+                    {formatCurrency(
+                      (aiComparisonData.periodB?.averageOrderValue || 0) -
+                        (aiComparisonData.periodA?.averageOrderValue || 0)
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Insights & Detailed Assessment */}
+            <div className="bg-white rounded-xl p-5 border border-indigo-200/90 shadow-2xs space-y-4">
+              {/* Executive Summary */}
+              {aiComparisonData.aiSummary && (
+                <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-4">
+                  <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
+                    <Sparkles className="size-3.5 text-indigo-600" />
+                    Đánh giá tổng quan từ AI:
+                  </h3>
+                  <p className="text-sm text-indigo-950 font-medium leading-relaxed">
+                    {aiComparisonData.aiSummary}
+                  </p>
+                </div>
+              )}
+
+              {/* Detailed Analysis */}
+              {aiComparisonData.aiDetailedAnalysis && (
+                <div className="text-xs text-ink-muted leading-relaxed space-y-1">
+                  <span className="font-bold text-ink text-xs block">Phân tích chi tiết:</span>
+                  <p className="whitespace-pre-line text-sm text-ink leading-relaxed">
+                    {aiComparisonData.aiDetailedAnalysis}
+                  </p>
+                </div>
+              )}
+
+              {/* Highlights & Warnings 2-Cols */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                {/* Highlights */}
+                {aiComparisonData.aiHighlights && aiComparisonData.aiHighlights.length > 0 && (
+                  <div className="p-3.5 bg-emerald-50/60 rounded-xl border border-emerald-200/70 space-y-2">
+                    <h4 className="text-xs font-bold text-emerald-900 flex items-center gap-1.5 uppercase tracking-wider">
+                      <CheckCircle2 className="size-3.5 text-emerald-600" />
+                      Điểm sáng &amp; Tín hiệu tích cực
+                    </h4>
+                    <ul className="space-y-1.5 text-xs text-emerald-950">
+                      {aiComparisonData.aiHighlights.map((h, i) => (
+                        <li key={i} className="flex items-start gap-1.5 leading-relaxed">
+                          <span className="text-emerald-500 font-bold shrink-0">•</span>
+                          <span>{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Warnings */}
+                {aiComparisonData.aiWarnings && aiComparisonData.aiWarnings.length > 0 && (
+                  <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-200/70 space-y-2">
+                    <h4 className="text-xs font-bold text-amber-900 flex items-center gap-1.5 uppercase tracking-wider">
+                      <AlertTriangle className="size-3.5 text-amber-600" />
+                      Điểm cần lưu ý &amp; Rủi ro
+                    </h4>
+                    <ul className="space-y-1.5 text-xs text-amber-950">
+                      {aiComparisonData.aiWarnings.map((w, i) => (
+                        <li key={i} className="flex items-start gap-1.5 leading-relaxed">
+                          <span className="text-amber-500 font-bold shrink-0">•</span>
+                          <span>{w}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Strategic Recommendations */}
+              {aiComparisonData.aiRecommendations && aiComparisonData.aiRecommendations.length > 0 && (
+                <div className="p-4 bg-purple-50/60 rounded-xl border border-purple-200/80 space-y-2.5">
+                  <h4 className="text-xs font-bold text-purple-900 flex items-center gap-1.5 uppercase tracking-wider">
+                    <Lightbulb className="size-4 text-purple-600" />
+                    Khuyến nghị chiến lược cho Admin
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {aiComparisonData.aiRecommendations.map((r, i) => (
+                      <div
+                        key={i}
+                        className="bg-white/80 p-3 rounded-lg border border-purple-100 text-xs text-purple-950 leading-relaxed space-y-1 shadow-2xs"
+                      >
+                        <span className="font-bold text-[10px] text-purple-600 block">
+                          GỢI Ý #{i + 1}
+                        </span>
+                        <span>{r}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── 🌟 MỚI: BẢNG TỔNG HỢP CHI TIẾT TỪNG NGÀY RIÊNG BIỆT ────────────── */}
