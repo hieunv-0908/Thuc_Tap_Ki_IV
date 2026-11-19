@@ -63,6 +63,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "WHERE o.idempotencyKey = :key")
     Optional<Order> findWithItemsByIdempotencyKey(@Param("key") String key);
 
+    @Query("SELECT o FROM Order o " +
+           "LEFT JOIN FETCH o.user " +
+           "WHERE o.createdAt >= :startDate AND o.createdAt <= :endDate " +
+           "ORDER BY o.createdAt ASC")
+    List<Order> findOrdersBetweenDates(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
     Optional<Order> findByIdempotencyKey(String idempotencyKey);
 
     Optional<Order> findByPayosOrderCode(Long payosOrderCode);

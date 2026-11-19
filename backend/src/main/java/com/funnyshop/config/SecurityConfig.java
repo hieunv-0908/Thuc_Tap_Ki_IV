@@ -107,7 +107,9 @@ public class SecurityConfig {
                                 "/api/v1/categories/**",
                                 "/api/categories/**",
                                 "/api/v1/vouchers/**",
-                                "/api/vouchers/**"
+                                "/api/vouchers/**",
+                                "/api/v1/notifications/unread-count",
+                                "/api/notifications/unread-count"
                         ).permitAll()
 
                         // API kiểm tra áp dụng voucher được Public
