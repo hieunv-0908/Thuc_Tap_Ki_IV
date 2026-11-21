@@ -11,6 +11,7 @@ import {
   Calendar,
   RotateCcw,
   ExternalLink,
+  Star,
 } from 'lucide-react';
 import { orderApi } from '../api/order';
 import { returnApi } from '../api/return';
@@ -636,10 +637,21 @@ export default function OrderDetail() {
                 </div>
               </div>
 
-              <div className="text-right shrink-0">
+              <div className="text-right shrink-0 flex flex-col items-end gap-2">
                 <span className="text-sm sm:text-base font-bold text-primary-700">
                   {formatCurrency((item.price || 0) * (item.quantity || 1))}
                 </span>
+                {isCompleted && (item.productId || item.product?.id) && (
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    className="text-amber-800 hover:bg-amber-50 border-amber-300 font-semibold"
+                    onClick={() => navigate(`/products/${item.productId || item.product?.id}?tab=reviews`)}
+                  >
+                    <Star className="size-3.5 fill-amber-400 text-amber-500 mr-1" />
+                    Đánh giá
+                  </Button>
+                )}
               </div>
             </div>
           ))}
