@@ -28,8 +28,13 @@ public class ProductResponse {
     private String material;
     private String genderType;
     private BigDecimal price;
+    private BigDecimal originalPrice;
     private BigDecimal minPrice;
+    private BigDecimal originalMinPrice;
     private BigDecimal maxPrice;
+    private BigDecimal originalMaxPrice;
+    private Integer flashSaleDiscountPercent;
+    private Boolean flashSaleActive;
     private Integer stockQuantity;
     private Integer stock;
     private Double rating;

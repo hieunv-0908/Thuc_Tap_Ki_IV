@@ -12,6 +12,7 @@ import {
   RotateCcw,
   CheckCircle2,
   XCircle,
+  Printer,
 } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
@@ -21,6 +22,7 @@ import { formatDate } from '../../utils/formatDate';
 import { orderApi } from '../../api/order';
 import { returnApi } from '../../api/return';
 import { toast } from '../../store/toastStore';
+import OrderInvoiceModal from '../order/OrderInvoiceModal';
 
 function AdminOrderDetailModalContent({ onClose, order, onOrderUpdated }) {
   const [timeline, setTimeline] = useState([]);
@@ -29,6 +31,7 @@ function AdminOrderDetailModalContent({ onClose, order, onOrderUpdated }) {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewAction, setReviewAction] = useState('APPROVE'); // 'APPROVE' | 'REJECT'
   const [adminNote, setAdminNote] = useState('');
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   const loadData = useCallback(() => {
     orderApi
@@ -472,11 +475,26 @@ function AdminOrderDetailModalContent({ onClose, order, onOrderUpdated }) {
       )}
 
       {/* Footer actions */}
-      <div className="flex justify-end pt-2">
+      <div className="flex justify-between items-center pt-2">
+        <Button
+          variant="outline"
+          size="sm"
+          leftIcon={Printer}
+          onClick={() => setShowInvoiceModal(true)}
+          className="font-semibold text-gray-700 hover:bg-gray-50"
+        >
+          In hóa đơn / Phiếu gửi
+        </Button>
         <Button variant="outline" onClick={onClose}>
           Đóng
         </Button>
       </div>
+
+      <OrderInvoiceModal
+        isOpen={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+        order={order}
+      />
     </div>
   );
 }

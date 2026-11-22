@@ -11,6 +11,7 @@ import {
 import { productApi } from '../api/product';
 import { categoryApi } from '../api/category';
 import { bannerApi } from '../api/banner';
+import FlashSaleBanner from '../components/home/FlashSaleBanner';
 import ProductCard from '../components/product/ProductCard';
 import { ProductCardSkeleton } from '../components/ui/Skeleton';
 import { toast } from '../store/toastStore';
@@ -386,6 +387,9 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* FLASH SALE BANNER ĐẾM NGƯỢC */}
+        <FlashSaleBanner />
 
         {/* =========================================================================
             3. KHÁM PHÁ DANH MỤC (Lưới ô viền mảnh 1px + số thứ tự 01-06)

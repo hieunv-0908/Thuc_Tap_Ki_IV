@@ -33,6 +33,9 @@ public class OrderResponse {
     private BigDecimal totalPrice;
     private BigDecimal subtotalAmount;
     private BigDecimal discountAmount;
+    private Integer pointsUsed;
+    private BigDecimal pointsDiscount;
+    private Integer pointsEarned;
     private Long voucherId;
     private String voucherCode;
     private String paymentMethod;
@@ -80,6 +83,9 @@ public class OrderResponse {
                 .totalPrice(order.getTotalAmount())
                 .subtotalAmount(order.getSubtotalAmount() != null ? order.getSubtotalAmount() : order.getTotalAmount())
                 .discountAmount(order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO)
+                .pointsUsed(order.getPointsUsed())
+                .pointsDiscount(order.getPointsDiscount())
+                .pointsEarned(order.getPointsEarned())
                 .voucherId(order.getVoucher() != null ? order.getVoucher().getId() : null)
                 .voucherCode(order.getVoucherCode())
                 .paymentMethod(order.getPaymentMethod())

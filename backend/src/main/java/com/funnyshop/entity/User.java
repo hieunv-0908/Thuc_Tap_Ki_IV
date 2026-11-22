@@ -61,6 +61,25 @@ public class User implements UserDetails {
     @ToString.Include
     private Status status = Status.ACTIVE;
 
+    @Column(name = "reward_points", nullable = false)
+    @Builder.Default
+    @ToString.Include
+    private Integer rewardPoints = 0;
+
+    @Column(name = "total_spending", precision = 14, scale = 2, nullable = false)
+    @Builder.Default
+    @ToString.Include
+    private java.math.BigDecimal totalSpending = java.math.BigDecimal.ZERO;
+
+    public String getMembershipTier() {
+        if (totalSpending == null) return "BRONZE";
+        long spending = totalSpending.longValue();
+        if (spending >= 10_000_000L) return "DIAMOND";
+        if (spending >= 5_000_000L) return "GOLD";
+        if (spending >= 2_000_000L) return "SILVER";
+        return "BRONZE";
+    }
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

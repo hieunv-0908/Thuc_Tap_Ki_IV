@@ -200,3 +200,37 @@ CREATE TABLE wishlists (
     INDEX idx_wishlists_user_id (user_id),
     INDEX idx_wishlists_product_id (product_id)
 );
+
+-- Flash Sales tables
+CREATE TABLE flash_sales (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    description TEXT,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    discount_percent INT NOT NULL,
+    scope ENUM('ALL', 'CATEGORY', 'PRODUCT') NOT NULL DEFAULT 'ALL',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_flash_sales_time (start_time, end_time, is_active)
+);
+
+CREATE TABLE flash_sale_categories (
+    flash_sale_id BIGINT NOT NULL,
+    category_id BIGINT NOT NULL,
+    PRIMARY KEY (flash_sale_id, category_id),
+    FOREIGN KEY (flash_sale_id) REFERENCES flash_sales(id) ON DELETE CASCADE
+);
+
+CREATE TABLE flash_sale_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    flash_sale_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    discount_percent INT,
+    flash_sale_stock INT NOT NULL DEFAULT 50,
+    sold_count INT NOT NULL DEFAULT 0,
+    FOREIGN KEY (flash_sale_id) REFERENCES flash_sales(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_flash_sale_product (flash_sale_id, product_id)
+);

@@ -40,6 +40,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
@@ -59,6 +60,7 @@ public class OrderServiceImpl implements OrderService {
     private final ApplicationEventPublisher eventPublisher;
     private final VoucherService voucherService;
     private final PayOSService payOSService;
+    private final com.funnyshop.service.FlashSaleService flashSaleService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -198,7 +200,19 @@ public class OrderServiceImpl implements OrderService {
                 throw new InsufficientStockException(displayName, quantity, variant.getStockQuantity());
             }
 
+            // Kiểm tra giảm giá Flash Sale nếu sản phẩm thuộc chiến dịch đang chạy
+            Long prodId = variant.getProduct() != null ? variant.getProduct().getId() : null;
+            Long catId = (variant.getProduct() != null && variant.getProduct().getCategory() != null)
+                    ? variant.getProduct().getCategory().getId()
+                    : null;
+            int flashDiscount = flashSaleService.getActiveDiscountPercentForProduct(prodId, catId);
+
             BigDecimal priceAtOrder = variant.getPrice();
+            if (flashDiscount > 0) {
+                priceAtOrder = priceAtOrder.multiply(BigDecimal.valueOf(100 - flashDiscount))
+                        .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+            }
+
             BigDecimal itemTotal = priceAtOrder.multiply(BigDecimal.valueOf(quantity));
             totalAmount = totalAmount.add(itemTotal);
 
@@ -228,7 +242,31 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
-        BigDecimal finalTotal = subtotalAmount.subtract(discountAmount);
+        // Tích hợp xử lý Điểm thưởng (Loyalty Points)
+        BigDecimal pointsDiscount = BigDecimal.ZERO;
+        int pointsUsed = (request.getPointsUsed() != null && request.getPointsUsed() > 0) ? request.getPointsUsed() : 0;
+        if (pointsUsed > 0) {
+            int userPoints = user.getRewardPoints() != null ? user.getRewardPoints() : 0;
+            if (pointsUsed > userPoints) {
+                throw new AppException("Bạn chỉ có " + userPoints + " điểm thưởng, không đủ " + pointsUsed + " điểm để sử dụng!", HttpStatus.BAD_REQUEST);
+            }
+
+            pointsDiscount = BigDecimal.valueOf(pointsUsed * 1000L);
+            BigDecimal maxAllowedDiscount = subtotalAmount.multiply(BigDecimal.valueOf(0.5));
+            if (pointsDiscount.compareTo(maxAllowedDiscount) > 0) {
+                pointsDiscount = maxAllowedDiscount;
+                pointsUsed = pointsDiscount.divide(BigDecimal.valueOf(1000), 0, RoundingMode.FLOOR).intValue();
+                pointsDiscount = BigDecimal.valueOf(pointsUsed * 1000L);
+            }
+
+            user.setRewardPoints(userPoints - pointsUsed);
+            userRepository.save(user);
+
+            order.setPointsUsed(pointsUsed);
+            order.setPointsDiscount(pointsDiscount);
+        }
+
+        BigDecimal finalTotal = subtotalAmount.subtract(discountAmount).subtract(pointsDiscount);
         if (finalTotal.compareTo(BigDecimal.ZERO) < 0) {
             finalTotal = BigDecimal.ZERO;
         }
@@ -366,10 +404,16 @@ public class OrderServiceImpl implements OrderService {
                     HttpStatus.BAD_REQUEST);
         }
 
-        // Nếu chuyển sang CANCELLED thì tiến hành hoàn kho nguyên tử và hoàn voucher
+        // Nếu chuyển sang CANCELLED thì tiến hành hoàn kho nguyên tử, hoàn voucher và hoàn điểm thưởng đã dùng
         if (newStatus == OrderStatus.CANCELLED) {
             if (order.getVoucher() != null) {
                 voucherService.refundVoucherUsage(order);
+            }
+            if (order.getPointsUsed() != null && order.getPointsUsed() > 0 && order.getUser() != null) {
+                User orderUser = order.getUser();
+                int currentPts = orderUser.getRewardPoints() != null ? orderUser.getRewardPoints() : 0;
+                orderUser.setRewardPoints(currentPts + order.getPointsUsed());
+                userRepository.save(orderUser);
             }
             // Sắp xếp variantId tăng dần để triệt tiêu deadlock
             List<OrderItem> sortedItems = order.getOrderItems()
@@ -390,6 +434,22 @@ public class OrderServiceImpl implements OrderService {
                                 HttpStatus.INTERNAL_SERVER_ERROR);
                     }
                 }
+            }
+        }
+
+        // Tích lũy điểm thưởng và chi tiêu khi đơn hàng chuyển sang COMPLETED
+        if (newStatus == OrderStatus.COMPLETED && (order.getPointsEarned() == null || order.getPointsEarned() == 0)) {
+            if (order.getTotalAmount() != null && order.getUser() != null) {
+                int earned = order.getTotalAmount().divide(BigDecimal.valueOf(10000), 0, RoundingMode.FLOOR).intValue();
+                order.setPointsEarned(earned);
+
+                User orderUser = order.getUser();
+                int currentPts = orderUser.getRewardPoints() != null ? orderUser.getRewardPoints() : 0;
+                orderUser.setRewardPoints(currentPts + earned);
+
+                BigDecimal currentSpending = orderUser.getTotalSpending() != null ? orderUser.getTotalSpending() : BigDecimal.ZERO;
+                orderUser.setTotalSpending(currentSpending.add(order.getTotalAmount()));
+                userRepository.save(orderUser);
             }
         }
 
@@ -487,9 +547,15 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
-        // 5. Cập nhật trạng thái CANCELLED & hoàn lượt voucher nếu có
+        // 5. Cập nhật trạng thái CANCELLED & hoàn lượt voucher nếu có & hoàn điểm thưởng đã dùng
         if (order.getVoucher() != null) {
             voucherService.refundVoucherUsage(order);
+        }
+        if (order.getPointsUsed() != null && order.getPointsUsed() > 0 && order.getUser() != null) {
+            User orderUser = order.getUser();
+            int currentPts = orderUser.getRewardPoints() != null ? orderUser.getRewardPoints() : 0;
+            orderUser.setRewardPoints(currentPts + order.getPointsUsed());
+            userRepository.save(orderUser);
         }
         order.setStatus(OrderStatus.CANCELLED);
         Order savedOrder = orderRepository.save(order);

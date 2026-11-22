@@ -21,6 +21,9 @@ public class ProductVariantResponse {
     private String color;
     private String size;
     private BigDecimal price;
+    private BigDecimal originalPrice;
+    private Integer flashSaleDiscountPercent;
+    private Boolean flashSaleActive;
     private Integer stockQuantity;
     private Boolean isDeleted;
 
