@@ -30,6 +30,10 @@ export const flashSaleApi = {
   toggleActive: (id) => {
     return axiosClient.patch(`/api/v1/admin/flash-sales/${id}/toggle-active`);
   },
+
+  startNow: (id) => {
+    return axiosClient.patch(`/api/v1/admin/flash-sales/${id}/start-now`);
+  },
 };
 
 export default flashSaleApi;

@@ -157,6 +157,22 @@ public class FlashSaleServiceImpl implements FlashSaleService {
     }
 
     @Override
+    @Transactional
+    public FlashSaleResponse startFlashSaleNow(Long id) {
+        FlashSale flashSale = flashSaleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chiến dịch Flash Sale với ID: " + id));
+        LocalDateTime now = LocalDateTime.now();
+        // Lùi 2 phút để đảm bảo sale ONGOING ngay lập tức không bị lệch vài mili-giây
+        flashSale.setStartTime(now.minusMinutes(2));
+        if (flashSale.getEndTime() == null || flashSale.getEndTime().isBefore(now.plusMinutes(10))) {
+            flashSale.setEndTime(now.plusHours(24));
+        }
+        flashSale.setIsActive(true);
+        FlashSale saved = flashSaleRepository.save(flashSale);
+        return mapToResponse(saved, false);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Optional<FlashSaleResponse> getActiveFlashSale() {
         LocalDateTime now = LocalDateTime.now();
@@ -269,14 +285,17 @@ public class FlashSaleServiceImpl implements FlashSaleService {
         String status;
         long remainingSeconds = 0;
 
-        if (now.isBefore(flashSale.getStartTime())) {
+        if (!Boolean.TRUE.equals(flashSale.getIsActive())) {
+            status = "PAUSED";
+            remainingSeconds = 0;
+        } else if (now.isBefore(flashSale.getStartTime())) {
             status = "UPCOMING";
             remainingSeconds = Duration.between(now, flashSale.getStartTime()).getSeconds();
         } else if (now.isAfter(flashSale.getEndTime())) {
             status = "ENDED";
             remainingSeconds = 0;
         } else {
-            status = Boolean.TRUE.equals(flashSale.getIsActive()) ? "ONGOING" : "PAUSED";
+            status = "ONGOING";
             remainingSeconds = Duration.between(now, flashSale.getEndTime()).getSeconds();
         }
 

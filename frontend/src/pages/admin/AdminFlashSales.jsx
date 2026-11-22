@@ -114,8 +114,11 @@ export default function AdminFlashSales() {
 
   const handleOpenAdd = () => {
     const now = new Date();
-    const startStr = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    const endStr = new Date(now.getTime() + 24 * 60 * 60 * 1000 - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    // Lùi 2 phút để khi gửi lên server thì Flash Sale bắt đầu ngay lập tức
+    const start = new Date(now.getTime() - 2 * 60 * 1000 - now.getTimezoneOffset() * 60000);
+    const end = new Date(now.getTime() + 24 * 60 * 60 * 1000 - now.getTimezoneOffset() * 60000);
+    const startStr = start.toISOString().slice(0, 16);
+    const endStr = end.toISOString().slice(0, 16);
 
     setEditingSale(null);
     setFormData({
@@ -162,6 +165,16 @@ export default function AdminFlashSales() {
       fetchSales();
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Lỗi cập nhật trạng thái');
+    }
+  };
+
+  const handleStartNow = async (id) => {
+    try {
+      await flashSaleApi.startNow(id);
+      toast.success('⚡ Đã kích hoạt Flash Sale chạy ngay lập tức!');
+      fetchSales();
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Không thể kích hoạt Flash Sale');
     }
   };
 
@@ -350,12 +363,16 @@ export default function AdminFlashSales() {
                         <span className="size-2 rounded-full bg-green-500" />
                         Đang diễn ra
                       </span>
+                    ) : sale.status === 'PAUSED' || !sale.isActive ? (
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 w-fit">
+                        Tạm dừng
+                      </span>
                     ) : sale.status === 'UPCOMING' ? (
                       <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 w-fit">
                         Sắp diễn ra
                       </span>
                     ) : (
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 w-fit">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-600 w-fit">
                         Đã kết thúc
                       </span>
                     )}
@@ -363,6 +380,17 @@ export default function AdminFlashSales() {
 
                   <Table.Cell className="text-right">
                     <div className="flex items-center justify-end gap-1.5">
+                      {(sale.status === 'UPCOMING' || sale.status === 'PAUSED' || !sale.isActive) && (
+                        <button
+                          type="button"
+                          onClick={() => handleStartNow(sale.id)}
+                          className="p-1.5 rounded-lg border border-amber-300 text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                          title="⚡ Bắt đầu chạy ngay lập tức (Bỏ qua thời gian chờ)"
+                        >
+                          <Zap className="size-4 fill-amber-500" />
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => handleToggleActive(sale.id)}
@@ -371,7 +399,7 @@ export default function AdminFlashSales() {
                             ? 'text-green-600 border-green-200 hover:bg-green-50'
                             : 'text-gray-400 border-gray-200 hover:bg-gray-50'
                         }`}
-                        title={sale.isActive ? 'Tạm dừng' : 'Kích hoạt'}
+                        title={sale.isActive ? 'Tạm dừng chiến dịch' : 'Bật chiến dịch'}
                       >
                         <Power className="size-4" />
                       </button>
