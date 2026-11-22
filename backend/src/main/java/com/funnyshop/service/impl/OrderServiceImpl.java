@@ -205,7 +205,10 @@ public class OrderServiceImpl implements OrderService {
             Long catId = (variant.getProduct() != null && variant.getProduct().getCategory() != null)
                     ? variant.getProduct().getCategory().getId()
                     : null;
-            int flashDiscount = flashSaleService.getActiveDiscountPercentForProduct(prodId, catId);
+            int flashDiscount = 0;
+            if (flashSaleService != null) {
+                flashDiscount = flashSaleService.getActiveDiscountPercentForProduct(prodId, catId);
+            }
 
             BigDecimal priceAtOrder = variant.getPrice();
             if (flashDiscount > 0) {

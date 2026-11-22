@@ -56,6 +56,9 @@ class OrderCheckoutIntegrationTest {
     @Autowired
     private OrderStatusHistoryRepository orderStatusHistoryRepository;
 
+    @Autowired
+    private FlashSaleRepository flashSaleRepository;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -65,6 +68,11 @@ class OrderCheckoutIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        // Tắt toàn bộ Flash Sale để test độc lập về giá
+        if (flashSaleRepository != null) {
+            flashSaleRepository.deleteAll();
+        }
+
         // Tạo User mẫu
         testUser = userRepository.save(User.builder()
                 .username("test_buyer_" + System.currentTimeMillis())
