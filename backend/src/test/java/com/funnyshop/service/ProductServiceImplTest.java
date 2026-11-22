@@ -59,6 +59,9 @@ class ProductServiceImplTest {
     @Mock
     private ReviewRepository reviewRepository;
 
+    @Mock
+    private FlashSaleService flashSaleService;
+
     @InjectMocks
     private ProductServiceImpl productService;
 

@@ -16,6 +16,10 @@ import {
   Send,
   RefreshCw,
   MapPin,
+  Award,
+  Crown,
+  Coins,
+  Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { userApi } from '../api/user';
@@ -24,6 +28,7 @@ import { authApi } from '../api/auth';
 import { toast } from '../store/toastStore';
 import { isValidPassword, isValidPhone } from '../utils/validators';
 import { formatDate } from '../utils/formatDate';
+import { formatCurrency } from '../utils/formatCurrency';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -545,6 +550,135 @@ export default function Profile() {
             </div>
           </div>
         </div>
+
+        {/* --- Card VIP Member & Tích Điểm Đổi Quà --- */}
+        {(() => {
+          const tier = profileData?.membershipTier || 'BRONZE';
+          const points = Number(profileData?.rewardPoints || 0);
+          const spending = Number(profileData?.totalSpending || 0);
+          const nextTierNeeded = Number(profileData?.nextTierSpending || 0);
+
+          const tierConfigs = {
+            BRONZE: {
+              name: 'Thành viên Đồng',
+              badgeBg: 'bg-amber-100 text-amber-800 border-amber-300',
+              gradient: 'from-amber-600 via-orange-600 to-amber-700',
+              nextTierName: 'Bạc',
+              nextThreshold: 2000000,
+              icon: Award,
+            },
+            SILVER: {
+              name: 'Thành viên Bạc',
+              badgeBg: 'bg-slate-100 text-slate-800 border-slate-300',
+              gradient: 'from-slate-600 via-slate-700 to-zinc-800',
+              nextTierName: 'Vàng',
+              nextThreshold: 5000000,
+              icon: Award,
+            },
+            GOLD: {
+              name: 'Thành viên Vàng',
+              badgeBg: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+              gradient: 'from-amber-500 via-yellow-600 to-amber-600',
+              nextTierName: 'Kim Cương',
+              nextThreshold: 10000000,
+              icon: Crown,
+            },
+            DIAMOND: {
+              name: 'Thành viên Kim Cương',
+              badgeBg: 'bg-purple-100 text-purple-800 border-purple-300',
+              gradient: 'from-indigo-600 via-purple-600 to-pink-600',
+              nextTierName: null,
+              nextThreshold: 10000000,
+              icon: Crown,
+            },
+          };
+
+          const config = tierConfigs[tier] || tierConfigs.BRONZE;
+          const TierIcon = config.icon;
+
+          // Tính % tiến độ lên hạng kế tiếp
+          let progressPercent = 100;
+          if (config.nextThreshold && spending < config.nextThreshold) {
+            progressPercent = Math.min(100, Math.max(5, Math.round((spending / config.nextThreshold) * 100)));
+          }
+
+          return (
+            <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-r ${config.gradient} text-white p-5 sm:p-6 mb-6 shadow-lg`}>
+              <div className="absolute -right-8 -bottom-8 opacity-15 pointer-events-none select-none">
+                <TierIcon className="size-48" />
+              </div>
+
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2.5">
+                    <div className="size-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">
+                      <TierIcon className="size-5 text-yellow-300" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs uppercase font-extrabold tracking-wider text-white/80">Hạng Thành Viên</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-gray-900 shadow-2xs">
+                          {config.name}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-black tracking-tight text-white mt-0.5">
+                        FunnyShop VIP Club
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-xs text-white/80 block">Điểm tích lũy Funny</span>
+                    <div className="flex items-center justify-end gap-1.5 text-xl sm:text-2xl font-black text-yellow-300">
+                      <Coins className="size-5 text-yellow-300" />
+                      <span>{points.toLocaleString('vi-VN')}</span>
+                      <span className="text-xs font-semibold text-white/80">điểm</span>
+                    </div>
+                    <span className="text-[10px] text-white/75 block">
+                      ≈ {formatCurrency(points * 1000)} (dùng giảm trực tiếp khi mua hàng)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Thanh tiến độ lên hạng */}
+                <div className="pt-2 border-t border-white/20 space-y-1.5">
+                  <div className="flex justify-between items-center text-xs text-white/90">
+                    <span>
+                      Tổng chi tiêu tích lũy: <strong className="text-white font-bold">{formatCurrency(spending)}</strong>
+                    </span>
+                    {config.nextTierName ? (
+                      <span className="text-white/80">
+                        Hạng tiếp theo: <strong className="text-yellow-300">{config.nextTierName}</strong>
+                      </span>
+                    ) : (
+                      <span className="text-yellow-300 font-bold flex items-center gap-1">
+                        <Sparkles className="size-3.5" /> Hạng tối cao
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="w-full bg-black/25 rounded-full h-2.5 overflow-hidden p-0.5 border border-white/20">
+                    <div
+                      className="bg-gradient-to-r from-yellow-300 to-amber-200 h-full rounded-full transition-all duration-500 shadow-xs"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+
+                  <div className="flex justify-between items-center text-[11px] text-white/75">
+                    {nextTierNeeded > 0 && config.nextTierName ? (
+                      <span>
+                        Chi tiêu thêm <strong>{formatCurrency(nextTierNeeded)}</strong> để thăng hạng <strong>{config.nextTierName}</strong>
+                      </span>
+                    ) : (
+                      <span>Bạn đang tận hưởng trọn vẹn đặc quyền VIP cao nhất tại FunnyShop!</span>
+                    )}
+                    <span>{progressPercent}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* --- Tab Navigation --- */}
         <div className="flex items-center gap-2 mb-6 p-1.5 rounded-2xl bg-white border border-line shadow-xs">

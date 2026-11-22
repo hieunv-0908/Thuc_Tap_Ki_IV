@@ -20,6 +20,7 @@ import com.funnyshop.repository.ProductImageRepository;
 import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.repository.ProductVariantRepository;
 import com.funnyshop.repository.ReviewRepository;
+import com.funnyshop.service.FlashSaleService;
 import com.funnyshop.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -44,6 +45,57 @@ public class ProductServiceImpl implements ProductService {
     private final ProductImageRepository productImageRepository;
     private final OrderItemRepository orderItemRepository;
     private final ReviewRepository reviewRepository;
+    private final FlashSaleService flashSaleService;
+
+    private ProductResponse applyFlashSale(ProductResponse response) {
+        if (response == null || flashSaleService == null) {
+            return response;
+        }
+        Long catId = response.getCategory() != null ? response.getCategory().getId() : null;
+        int discount = flashSaleService.getActiveDiscountPercentForProduct(response.getId(), catId);
+        if (discount <= 0) {
+            return response;
+        }
+
+        response.setFlashSaleActive(true);
+        response.setFlashSaleDiscountPercent(discount);
+
+        if (response.getVariants() != null && !response.getVariants().isEmpty()) {
+            for (ProductVariantResponse v : response.getVariants()) {
+                if (v.getPrice() != null) {
+                    v.setOriginalPrice(v.getPrice());
+                    BigDecimal discounted = v.getPrice().multiply(BigDecimal.valueOf(100 - discount))
+                            .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+                    v.setPrice(discounted);
+                    v.setFlashSaleDiscountPercent(discount);
+                    v.setFlashSaleActive(true);
+                }
+            }
+        }
+
+        if (response.getPrice() != null) {
+            response.setOriginalPrice(response.getPrice());
+            BigDecimal discounted = response.getPrice().multiply(BigDecimal.valueOf(100 - discount))
+                    .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+            response.setPrice(discounted);
+        }
+
+        if (response.getMinPrice() != null) {
+            response.setOriginalMinPrice(response.getMinPrice());
+            BigDecimal discounted = response.getMinPrice().multiply(BigDecimal.valueOf(100 - discount))
+                    .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+            response.setMinPrice(discounted);
+        }
+
+        if (response.getMaxPrice() != null) {
+            response.setOriginalMaxPrice(response.getMaxPrice());
+            BigDecimal discounted = response.getMaxPrice().multiply(BigDecimal.valueOf(100 - discount))
+                    .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+            response.setMaxPrice(discounted);
+        }
+
+        return response;
+    }
 
     @Override
     public Page<ProductResponse> getProducts(
@@ -94,7 +146,8 @@ public class ProductServiceImpl implements ProductService {
                 normalizedKeyword,
                 categoryId,
                 pageable
-        ).map(ProductResponse::fromEntity);
+        ).map(ProductResponse::fromEntity)
+         .map(this::applyFlashSale);
     }
 
     @Override
@@ -146,7 +199,8 @@ public class ProductServiceImpl implements ProductService {
                 normalizedKeyword,
                 categoryId,
                 pageable
-        ).map(ProductResponse::fromEntity);
+        ).map(ProductResponse::fromEntity)
+         .map(this::applyFlashSale);
     }
 
     @Override
@@ -168,7 +222,7 @@ public class ProductServiceImpl implements ProductService {
             }
             response.setReviewCount((int) count);
         }
-        return response;
+        return applyFlashSale(response);
     }
 
     @Override

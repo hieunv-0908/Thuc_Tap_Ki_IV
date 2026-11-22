@@ -12,6 +12,7 @@ import {
   RotateCcw,
   ExternalLink,
   Star,
+  Printer,
 } from 'lucide-react';
 import { orderApi } from '../api/order';
 import { returnApi } from '../api/return';
@@ -26,6 +27,7 @@ import Button from '../components/ui/Button';
 import CancelOrderModal from '../components/order/CancelOrderModal';
 import PayOSQRModal from '../components/payment/PayOSQRModal';
 import ReturnRequestModal from '../components/order/ReturnRequestModal';
+import OrderInvoiceModal from '../components/order/OrderInvoiceModal';
 import { useCartStore } from '../store/cartStore';
 import { toast } from '../store/toastStore';
 
@@ -47,6 +49,7 @@ export default function OrderDetail() {
   const [isPaying, setIsPaying] = useState(false);
   const [showPayOSModal, setShowPayOSModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
   const [returnRequest, setReturnRequest] = useState(null);
 
@@ -296,7 +299,16 @@ export default function OrderDetail() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 self-start sm:self-auto">
+          <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={Printer}
+              onClick={() => setShowInvoiceModal(true)}
+              className="font-semibold text-gray-700 border-gray-300 hover:bg-gray-50"
+            >
+              In / Xuất hóa đơn
+            </Button>
             {order.status === ORDER_STATUS.PENDING && (
               <Button
                 variant="outline"
@@ -582,12 +594,24 @@ export default function OrderDetail() {
                 <span>-{formatCurrency(order.discountAmount)}</span>
               </div>
             )}
+            {order.pointsDiscount > 0 && (
+              <div className="flex justify-between text-amber-600 font-medium">
+                <span>Điểm thưởng FunnyShop ({order.pointsUsed || Math.round(order.pointsDiscount / 1000)} điểm)</span>
+                <span>-{formatCurrency(order.pointsDiscount)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-ink-muted">
               <span>Phí vận chuyển</span>
               <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-xs">
                 Miễn phí
               </span>
             </div>
+            {order.pointsEarned > 0 && (
+              <div className="flex justify-between text-xs text-amber-700 bg-amber-50 p-2 rounded-lg font-medium">
+                <span>🎁 Điểm thưởng tích lũy từ đơn:</span>
+                <span className="font-bold">+{order.pointsEarned} điểm</span>
+              </div>
+            )}
             <div className="flex justify-between items-baseline pt-3 border-t border-dashed border-line">
               <span className="text-base font-bold text-ink">Tổng thanh toán</span>
               <span className="text-2xl font-extrabold text-primary-700">
@@ -753,6 +777,13 @@ export default function OrderDetail() {
           loading={isSubmittingReturn}
         />
       )}
+
+      {/* Modal In / Xuất hóa đơn bán lẻ PDF */}
+      <OrderInvoiceModal
+        isOpen={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+        order={order}
+      />
     </div>
   );
 }

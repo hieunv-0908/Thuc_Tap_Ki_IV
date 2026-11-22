@@ -42,6 +42,9 @@ public class OrderCheckoutRequest {
     @Size(max = 50, message = "Mã voucher không được vượt quá 50 ký tự")
     private String voucherCode;
 
+    @jakarta.validation.constraints.Min(value = 0, message = "Số điểm sử dụng không được âm")
+    private Integer pointsUsed;
+
     @NotEmpty(message = "Danh sách sản phẩm đặt hàng không được để trống")
     private List<@Valid OrderCheckoutItemRequest> items;
 }

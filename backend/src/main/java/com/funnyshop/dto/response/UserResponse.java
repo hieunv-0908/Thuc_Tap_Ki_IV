@@ -19,4 +19,8 @@ public class UserResponse {
     private String phone;
     private String role;
     private String status;
+    private Integer rewardPoints;
+    private java.math.BigDecimal totalSpending;
+    private String membershipTier;
+    private java.math.BigDecimal nextTierSpending;
 }

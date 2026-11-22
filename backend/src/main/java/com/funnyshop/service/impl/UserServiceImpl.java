@@ -184,6 +184,17 @@ public class UserServiceImpl implements UserService {
     }
 
     private UserResponse mapToUserResponse(User user) {
+        String tier = user.getMembershipTier();
+        java.math.BigDecimal spending = user.getTotalSpending() != null ? user.getTotalSpending() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal nextTier = java.math.BigDecimal.ZERO;
+        if ("BRONZE".equals(tier)) {
+            nextTier = java.math.BigDecimal.valueOf(2_000_000L).subtract(spending).max(java.math.BigDecimal.ZERO);
+        } else if ("SILVER".equals(tier)) {
+            nextTier = java.math.BigDecimal.valueOf(5_000_000L).subtract(spending).max(java.math.BigDecimal.ZERO);
+        } else if ("GOLD".equals(tier)) {
+            nextTier = java.math.BigDecimal.valueOf(10_000_000L).subtract(spending).max(java.math.BigDecimal.ZERO);
+        }
+
         return UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -192,6 +203,10 @@ public class UserServiceImpl implements UserService {
                 .phone(user.getPhone())
                 .role(user.getRole().name())
                 .status(user.getStatus().name())
+                .rewardPoints(user.getRewardPoints() != null ? user.getRewardPoints() : 0)
+                .totalSpending(spending)
+                .membershipTier(tier)
+                .nextTierSpending(nextTier)
                 .build();
     }
 

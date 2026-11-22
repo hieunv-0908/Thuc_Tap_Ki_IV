@@ -71,6 +71,12 @@ class OrderServiceImplTest {
     @Mock
     private VoucherService voucherService;
 
+    @Mock
+    private PayOSService payOSService;
+
+    @Mock
+    private FlashSaleService flashSaleService;
+
         @InjectMocks
         private OrderServiceImpl orderService;
 

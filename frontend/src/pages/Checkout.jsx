@@ -17,12 +17,14 @@ import {
   ExternalLink,
   Plus,
   Check,
+  Coins,
 } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { orderApi } from '../api/order';
 import { voucherApi } from '../api/voucher';
 import { addressApi } from '../api/address';
+import { userApi } from '../api/user';
 import VoucherSelectorModal from '../components/voucher/VoucherSelectorModal';
 import AddressModal from '../components/address/AddressModal';
 import { toast } from '../store/toastStore';
@@ -99,7 +101,40 @@ export default function Checkout() {
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
 
   const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
-  const finalTotal = Math.max(0, totalPrice - discountAmount);
+
+  // Reward points states (Tích điểm đổi quà: 1 điểm = 1.000₫, tối đa 50% giá trị đơn hàng)
+  const [userRewardPoints, setUserRewardPoints] = useState(0);
+  const [useRewardPoints, setUseRewardPoints] = useState(false);
+  const [pointsToUse, setPointsToUse] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    let isMounted = true;
+    userApi
+      .getMe()
+      .then((res) => {
+        if (!isMounted) return;
+        const pts = Number(res?.rewardPoints || 0);
+        setUserRewardPoints(pts);
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  const afterVoucher = Math.max(0, totalPrice - discountAmount);
+  const maxPointsAllowed = Math.min(
+    userRewardPoints,
+    Math.floor((afterVoucher * 0.5) / 1000)
+  );
+
+  // Nếu đã tick dùng điểm: nếu pointsToUse chưa set hoặc <= 0 thì tự động áp dụng maxPointsAllowed
+  const effectivePoints = useRewardPoints
+    ? Math.max(0, Math.min(pointsToUse > 0 ? pointsToUse : maxPointsAllowed, maxPointsAllowed))
+    : 0;
+  const pointsDiscount = effectivePoints * 1000;
+  const finalTotal = Math.max(0, totalPrice - discountAmount - pointsDiscount);
 
   const handleApplyVoucher = async (codeOverride) => {
     const code = (codeOverride || voucherInput).trim().toUpperCase();
@@ -269,6 +304,7 @@ export default function Checkout() {
         paymentMethod: paymentMethod,
         idempotencyKey,
         voucherCode: appliedVoucher ? appliedVoucher.voucherCode : undefined,
+        pointsUsed: effectivePoints > 0 ? effectivePoints : undefined,
         items: checkoutItems.map((i) => ({
           variantId: i.variantId || undefined,
           productId: i.productId || i.product?.id,
@@ -293,6 +329,14 @@ export default function Checkout() {
 
         setCreatedOrder(result);
         toast.success('Đặt hàng thành công!');
+
+        // Cập nhật lại số điểm thưởng mới nhất trong Store
+        userApi.getMe().then((u) => {
+          if (u) {
+            useAuthStore.getState().updateUser(u);
+            setUserRewardPoints(Number(u.rewardPoints || 0));
+          }
+        }).catch(() => {});
       } else {
         // Nếu phương thức thanh toán là PayOS Online:
         // CHƯA xóa giỏ hàng, mở Modal QR và giữ người dùng tại trang thanh toán
@@ -330,6 +374,14 @@ export default function Checkout() {
     });
     setPendingPayOSOrder(null);
     toast.success('Thanh toán thành công! Đơn hàng của bạn đã được ghi nhận.');
+
+    // Cập nhật lại số điểm thưởng mới nhất trong Store
+    userApi.getMe().then((u) => {
+      if (u) {
+        useAuthStore.getState().updateUser(u);
+        setUserRewardPoints(Number(u.rewardPoints || 0));
+      }
+    }).catch(() => {});
   };
 
   // Nếu chưa thanh toán mà tắt cửa sổ QR: Ở lại trang đặt hàng, chưa đặt được hàng
@@ -419,6 +471,29 @@ export default function Checkout() {
               <span className="text-ink-muted block text-xs">Thời gian đặt:</span>
               <span className="font-medium text-ink">{formatDate(createdOrder.createdAt || new Date())}</span>
             </div>
+
+            {(createdOrder.discountAmount > 0 || createdOrder.pointsDiscount > 0) && (
+              <div className="space-y-1.5 text-xs border-t border-primary-100 pt-2.5 text-ink-muted">
+                {createdOrder.subtotalAmount && (
+                  <div className="flex justify-between">
+                    <span>Tạm tính tiền hàng:</span>
+                    <span className="font-medium text-ink">{formatCurrency(createdOrder.subtotalAmount)}</span>
+                  </div>
+                )}
+                {createdOrder.discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-600 font-medium">
+                    <span>Giảm giá Voucher ({createdOrder.voucherCode}):</span>
+                    <span>-{formatCurrency(createdOrder.discountAmount)}</span>
+                  </div>
+                )}
+                {createdOrder.pointsDiscount > 0 && (
+                  <div className="flex justify-between text-amber-600 font-semibold">
+                    <span>Đã trừ điểm Funny ({createdOrder.pointsUsed} điểm):</span>
+                    <span>-{formatCurrency(createdOrder.pointsDiscount)}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex justify-between items-center border-t border-primary-100 pt-3">
               <div>
@@ -961,6 +1036,76 @@ export default function Checkout() {
               )}
             </div>
 
+            {/* Loyalty Points Section */}
+            {user && (
+              <div className="pt-3 border-t border-line space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-ink flex items-center gap-1.5">
+                    <Coins className="size-3.5 text-amber-500" />
+                    Điểm thưởng FunnyShop
+                  </span>
+                  <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-full text-[11px] border border-amber-200">
+                    {userRewardPoints.toLocaleString('vi-VN')} điểm (≈ {formatCurrency(userRewardPoints * 1000)})
+                  </span>
+                </div>
+
+                {userRewardPoints > 0 ? (
+                  <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={useRewardPoints}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setUseRewardPoints(checked);
+                          if (checked) {
+                            setPointsToUse(maxPointsAllowed);
+                          }
+                        }}
+                        className="rounded border-amber-400 text-amber-600 focus:ring-amber-500 size-4"
+                      />
+                      <span className="text-xs font-semibold text-amber-900">
+                        Sử dụng điểm để giảm tiền
+                      </span>
+                    </label>
+
+                    {useRewardPoints && (
+                      <div className="pt-1 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={maxPointsAllowed}
+                            value={pointsToUse > 0 ? pointsToUse : (maxPointsAllowed > 0 ? maxPointsAllowed : '')}
+                            onChange={(e) => {
+                              const val = Math.max(0, parseInt(e.target.value) || 0);
+                              setPointsToUse(Math.min(val, maxPointsAllowed));
+                            }}
+                            className="flex-1 px-2.5 py-1 text-xs rounded-lg border border-amber-300 bg-white font-bold text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                            placeholder="Số điểm muốn dùng"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPointsToUse(maxPointsAllowed)}
+                            className="text-[11px] font-bold px-2 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-md transition"
+                          >
+                            Tối đa ({maxPointsAllowed})
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-amber-700">
+                          Quy đổi: 1 điểm = 1.000₫ • Tối đa 50% đơn hàng
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-ink-subtle">
+                    Bạn chưa có điểm thưởng. Mua hàng thành công để tích 10 điểm cho mỗi 100k!
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Dotted border calculation section */}
             <div className="space-y-2.5 pt-3 border-t border-dashed border-line text-sm">
               <div className="flex justify-between text-ink-muted">
@@ -974,6 +1119,15 @@ export default function Checkout() {
                     Giảm giá ({appliedVoucher.voucherCode})
                   </span>
                   <span>-{formatCurrency(discountAmount)}</span>
+                </div>
+              )}
+              {useRewardPoints && pointsDiscount > 0 && (
+                <div className="flex justify-between text-amber-600 dark:text-amber-400 font-medium">
+                  <span className="flex items-center gap-1">
+                    <Coins className="size-3.5" />
+                    Dùng {effectivePoints} điểm Funny
+                  </span>
+                  <span>-{formatCurrency(pointsDiscount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-ink-muted">

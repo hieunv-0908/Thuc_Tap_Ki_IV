@@ -30,6 +30,7 @@ import AdminNotifications from './pages/admin/AdminNotifications';
 import AdminFeedbacks from './pages/admin/AdminFeedbacks';
 import AdminReviews from './pages/admin/AdminReviews';
 import AdminBanners from './pages/admin/AdminBanners';
+import AdminFlashSales from './pages/admin/AdminFlashSales';
 import AdminNotFound from './pages/admin/AdminNotFound';
 
 export default function App() {
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="products/:id" element={<AdminProductForm />} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="vouchers" element={<AdminVouchers />} />
+            <Route path="flash-sales" element={<AdminFlashSales />} />
             <Route path="categories" element={<AdminCategories />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="notifications" element={<AdminNotifications />} />
