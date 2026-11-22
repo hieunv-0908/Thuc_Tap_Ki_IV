@@ -32,6 +32,7 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { getCategoryMeta } from '../utils/constants';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
+import { useWishlistStore } from '../store/wishlistStore';
 import { toast } from '../store/toastStore';
 
 export default function ProductDetail() {
@@ -47,9 +48,12 @@ export default function ProductDetail() {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [currentImage, setCurrentImage] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [isLiked, setIsLiked] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isLiked = useWishlistStore((s) => s.isLiked(product?.id));
+  const toggleWishlist = useWishlistStore((s) => s.toggleWishlist);
 
   const [searchParams] = useSearchParams();
   const isReviewsTab = searchParams.get('tab') === 'reviews';
@@ -349,13 +353,9 @@ export default function ProductDetail() {
 
   // Like handler
   const handleToggleLike = () => {
-    setIsLiked((prev) => {
-      const next = !prev;
-      if (next) {
-        toast.success('Đã lưu sản phẩm vào danh sách yêu thích ❤️');
-      }
-      return next;
-    });
+    if (product) {
+      toggleWishlist(product, isAuthenticated);
+    }
   };
 
   // Loading Skeleton State
@@ -478,14 +478,14 @@ export default function ProductDetail() {
                 type="button"
                 onClick={handleToggleLike}
                 className="size-9 rounded-full bg-white/90 backdrop-blur-xs shadow-soft hover:bg-white flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
-                title={isLiked ? 'Bỏ thích' : 'Yêu thích'}
-                aria-label={isLiked ? 'Bỏ thích' : 'Yêu thích'}
+                title={isLiked ? 'Bỏ yêu thích' : 'Thêm vào danh sách yêu thích'}
+                aria-label={isLiked ? 'Bỏ yêu thích' : 'Thêm vào danh sách yêu thích'}
               >
                 <Heart
                   className={`size-4.5 transition-colors ${
                     isLiked
-                      ? 'fill-primary-500 text-primary-500 animate-[pop_300ms_ease-out]'
-                      : 'text-ink-subtle hover:text-primary-600'
+                      ? 'fill-red-500 text-red-500 animate-[pop_300ms_ease-out]'
+                      : 'text-ink-subtle hover:text-red-500'
                   }`}
                 />
               </button>
@@ -681,30 +681,51 @@ export default function ProductDetail() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <Button
-                variant="primary"
-                size="lg"
-                fullWidth
-                disabled={isOutOfStock || justAdded}
-                leftIcon={justAdded ? Check : ShoppingCart}
-                onClick={handleAddToCart}
-                className="font-bold shadow-brand"
-              >
-                {isOutOfStock ? 'Hết hàng' : justAdded ? '✓ Đã thêm vào giỏ' : 'Thêm vào giỏ hàng'}
-              </Button>
+            <div className="flex items-center gap-3 pt-2">
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  disabled={isOutOfStock || justAdded}
+                  leftIcon={justAdded ? Check : ShoppingCart}
+                  onClick={handleAddToCart}
+                  className="font-bold shadow-brand"
+                >
+                  {isOutOfStock ? 'Hết hàng' : justAdded ? '✓ Đã thêm vào giỏ' : 'Thêm vào giỏ hàng'}
+                </Button>
 
-              <Button
-                variant="secondary"
-                size="lg"
-                fullWidth
-                disabled={isOutOfStock}
-                leftIcon={Zap}
-                onClick={handleBuyNow}
-                className="font-bold"
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  fullWidth
+                  disabled={isOutOfStock}
+                  leftIcon={Zap}
+                  onClick={handleBuyNow}
+                  className="font-bold"
+                >
+                  Mua ngay
+                </Button>
+              </div>
+
+              {/* Nút Thêm vào yêu thích to rõ ràng */}
+              <button
+                type="button"
+                onClick={handleToggleLike}
+                className={`size-12 rounded-xl border flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs ${
+                  isLiked
+                    ? 'border-red-300 bg-red-50 text-red-500'
+                    : 'border-line bg-white text-ink-muted hover:text-red-500 hover:border-red-300 hover:bg-red-50/20'
+                }`}
+                title={isLiked ? 'Đã yêu thích (Bấm để bỏ thích)' : 'Thêm vào danh sách yêu thích'}
+                aria-label="Yêu thích"
               >
-                Mua ngay
-              </Button>
+                <Heart
+                  className={`size-6 transition-transform active:scale-90 ${
+                    isLiked ? 'fill-red-500 text-red-500' : ''
+                  }`}
+                />
+              </button>
             </div>
           </div>
 

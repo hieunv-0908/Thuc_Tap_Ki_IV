@@ -4,6 +4,7 @@ import com.funnyshop.dto.request.ReviewCreateRequest;
 import com.funnyshop.dto.request.ReviewUpdateRequest;
 import com.funnyshop.dto.response.ApiResponse;
 import com.funnyshop.dto.response.ProductReviewSummaryResponse;
+import com.funnyshop.dto.response.ReviewHelpfulResponse;
 import com.funnyshop.dto.response.ReviewResponse;
 import com.funnyshop.entity.User;
 import com.funnyshop.exception.AppException;
@@ -17,10 +18,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -59,12 +64,14 @@ public class ReviewController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir
+            @RequestParam(defaultValue = "desc") String sortDir,
+            HttpServletRequest request
     ) {
+        Long currentUserId = resolveUserId(request);
         Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<ReviewResponse> result = reviewService.getProductReviews(productId, rating, pageable);
+        Page<ReviewResponse> result = reviewService.getProductReviews(productId, rating, currentUserId, pageable);
         return ResponseEntity.ok(
                 ApiResponse.<Page<ReviewResponse>>builder()
                         .code(HttpStatus.OK.value())
@@ -129,6 +136,46 @@ public class ReviewController {
         );
     }
 
+    @PostMapping(value = {"/api/v1/reviews/upload-images", "/api/reviews/upload-images"}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<List<String>>> uploadReviewImages(
+            @RequestParam("files") List<MultipartFile> files,
+            HttpServletRequest request
+    ) {
+        Long userId = resolveUserId(request);
+        if (userId == null) {
+            throw new AppException("Vui lòng đăng nhập để tải ảnh lên!", HttpStatus.UNAUTHORIZED);
+        }
+
+        List<String> imageUrls = reviewService.uploadReviewImages(files);
+        return ResponseEntity.ok(
+                ApiResponse.<List<String>>builder()
+                        .code(HttpStatus.OK.value())
+                        .message("Tải ảnh thực tế thành công!")
+                        .data(imageUrls)
+                        .build()
+        );
+    }
+
+    @PostMapping({"/api/v1/reviews/{id}/helpful", "/api/reviews/{id}/helpful"})
+    public ResponseEntity<ApiResponse<ReviewHelpfulResponse>> toggleHelpful(
+            @PathVariable Long id,
+            HttpServletRequest request
+    ) {
+        Long userId = resolveUserId(request);
+        if (userId == null) {
+            throw new AppException("Vui lòng đăng nhập để đánh giá tính hữu ích!", HttpStatus.UNAUTHORIZED);
+        }
+
+        ReviewHelpfulResponse response = reviewService.toggleHelpfulVote(userId, id);
+        return ResponseEntity.ok(
+                ApiResponse.<ReviewHelpfulResponse>builder()
+                        .code(HttpStatus.OK.value())
+                        .message(Boolean.TRUE.equals(response.getIsHelpful()) ? "Đã ghi nhận phản hồi hữu ích!" : "Đã bỏ ghi nhận hữu ích.")
+                        .data(response)
+                        .build()
+        );
+    }
+
     @PutMapping({"/api/v1/reviews/{id}", "/api/reviews/{id}"})
     public ResponseEntity<ApiResponse<ReviewResponse>> updateReview(
             @PathVariable Long id,
@@ -171,4 +218,3 @@ public class ReviewController {
         );
     }
 }
-

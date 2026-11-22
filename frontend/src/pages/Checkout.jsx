@@ -15,12 +15,16 @@ import {
   Tag,
   CreditCard,
   ExternalLink,
+  Plus,
+  Check,
 } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { orderApi } from '../api/order';
 import { voucherApi } from '../api/voucher';
+import { addressApi } from '../api/address';
 import VoucherSelectorModal from '../components/voucher/VoucherSelectorModal';
+import AddressModal from '../components/address/AddressModal';
 import { toast } from '../store/toastStore';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate } from '../utils/formatDate';
@@ -62,6 +66,13 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [pendingPayOSOrder, setPendingPayOSOrder] = useState(null);
   const [showPayOSModal, setShowPayOSModal] = useState(false);
+
+  // Address states
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [isCreatingAddress, setIsCreatingAddress] = useState(false);
+  const [isCustomAddress, setIsCustomAddress] = useState(false);
 
   // Sinh Idempotency Key theo vòng đời trang Checkout (chống tạo đơn trùng khi click đúp/lag mạng)
   const [idempotencyKey, setIdempotencyKey] = useState(() => {
@@ -115,6 +126,66 @@ export default function Checkout() {
     setAppliedVoucher(null);
     setVoucherInput('');
     toast.info('Đã hủy áp dụng mã giảm giá');
+  };
+
+  // Tải sổ địa chỉ nhận hàng của người dùng nếu đã đăng nhập
+  useEffect(() => {
+    if (!user) return;
+    let isMounted = true;
+    addressApi
+      .getMyAddresses()
+      .then((res) => {
+        if (!isMounted) return;
+        const list = Array.isArray(res) ? res : res?.data || [];
+        setAddresses(list);
+        if (list.length > 0) {
+          const defaultAddr = list.find((a) => a.isDefault) || list[0];
+          setSelectedAddressId(defaultAddr.id);
+          setFormData((prev) => ({
+            ...prev,
+            fullName: defaultAddr.recipientName || prev.fullName,
+            phone: defaultAddr.phone || prev.phone,
+            address: defaultAddr.fullAddress || prev.address,
+          }));
+        }
+      })
+      .catch((err) => {
+        console.warn('Lỗi tải sổ địa chỉ:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  const handleSelectAddress = (addr) => {
+    setSelectedAddressId(addr.id);
+    setIsCustomAddress(false);
+    setFormData((prev) => ({
+      ...prev,
+      fullName: addr.recipientName,
+      phone: addr.phone,
+      address: addr.fullAddress,
+    }));
+    setErrors((prev) => ({ ...prev, fullName: '', phone: '', address: '' }));
+  };
+
+  const handleCreateAddressQuick = async (payload) => {
+    try {
+      setIsCreatingAddress(true);
+      const newAddr = await addressApi.createAddress(payload);
+      toast.success('Thêm địa chỉ mới thành công!');
+      setShowAddressModal(false);
+      const res = await addressApi.getMyAddresses();
+      const list = Array.isArray(res) ? res : res?.data || [];
+      setAddresses(list);
+      const target = list.find((a) => a.id === newAddr.id) || newAddr;
+      handleSelectAddress(target);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Không thể thêm địa chỉ');
+    } finally {
+      setIsCreatingAddress(false);
+    }
   };
 
   // Redirect if checkout list is empty and no order has just been created
@@ -489,90 +560,201 @@ export default function Checkout() {
           <form id="checkout-form" onSubmit={handleSubmit} noValidate className="space-y-6">
             {/* Card 1: MapPin Thông tin nhận hàng (Design.md 7.5) */}
             <div className="bg-white rounded-2xl border border-line p-5 sm:p-7 shadow-soft space-y-5">
-              <div className="flex items-center gap-3 border-b border-line pb-4">
-                <div className="size-9 rounded-xl bg-primary-100 text-primary-700 flex items-center justify-center font-bold shrink-0">
-                  <MapPin className="size-5" />
+              <div className="flex items-center justify-between border-b border-line pb-4 flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="size-9 rounded-xl bg-primary-100 text-primary-700 flex items-center justify-center font-bold shrink-0">
+                    <MapPin className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-ink">
+                      1. Thông tin nhận hàng
+                    </h3>
+                    <p className="text-xs text-ink-muted">
+                      Chọn từ sổ địa chỉ đã lưu hoặc nhập địa chỉ mới
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-ink">
-                    1. Thông tin nhận hàng
-                  </h3>
-                  <p className="text-xs text-ink-muted">
-                    Địa chỉ và thông tin liên hệ của người nhận
-                  </p>
-                </div>
+
+                {user && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    leftIcon={Plus}
+                    onClick={() => setShowAddressModal(true)}
+                    className="font-semibold text-xs py-1.5 px-3"
+                  >
+                    Thêm địa chỉ mới
+                  </Button>
+                )}
               </div>
 
-              <div className="space-y-4">
-                <Input
-                  label="Họ và tên người nhận"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="Ví dụ: Nguyễn Văn An"
-                  error={errors.fullName}
-                  required
-                />
-
-                <Input
-                  label="Số điện thoại"
-                  name="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="Ví dụ: 0912345678"
-                  error={errors.phone}
-                  required
-                />
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-sm font-medium text-ink">
-                    <label htmlFor="address-textarea">
-                      Địa chỉ nhận hàng <span className="text-primary-700">*</span>
-                    </label>
-                    <span className="text-xs text-ink-subtle">
-                      {formData.address.length} ký tự
-                    </span>
+              {/* Danh sách địa chỉ đã lưu (nếu có) */}
+              {addresses.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs font-semibold text-ink-muted">
+                    <span>ĐỊA CHỈ ĐÃ LƯU ({addresses.length}):</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomAddress(!isCustomAddress)}
+                      className="text-primary-700 hover:underline cursor-pointer"
+                    >
+                      {isCustomAddress ? '← Chọn địa chỉ có sẵn' : '+ Nhập địa chỉ khác'}
+                    </button>
                   </div>
-                  <textarea
-                    id="address-textarea"
-                    name="address"
-                    rows={3}
-                    value={formData.address}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
-                    aria-invalid={Boolean(errors.address)}
-                    className={`w-full min-h-24 rounded-lg border bg-white px-3.5 py-2.5 text-base text-ink placeholder:text-ink-subtle focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all ${errors.address ? 'border-red-500' : 'border-line'
-                      }`}
-                  />
-                  {errors.address && (
-                    <p className="flex items-center gap-1.5 text-xs text-red-700 mt-1">
-                      <AlertCircle className="size-3.5 shrink-0" />
-                      {errors.address}
-                    </p>
+
+                  {!isCustomAddress && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {addresses.map((addr) => {
+                        const isSelected = selectedAddressId === addr.id;
+                        const isHome = addr.addressType === 'HOME';
+                        return (
+                          <div
+                            key={addr.id}
+                            onClick={() => handleSelectAddress(addr)}
+                            className={`p-3.5 rounded-xl border text-xs sm:text-sm cursor-pointer transition-all flex flex-col justify-between ${
+                              isSelected
+                                ? 'border-primary-500 bg-primary-50/50 ring-2 ring-primary-200 shadow-xs'
+                                : 'border-line bg-white hover:border-primary-200'
+                            }`}
+                          >
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="font-bold text-ink truncate">
+                                  {addr.recipientName}
+                                </span>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {addr.isDefault && (
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-green-100 text-green-700">
+                                      Mặc định
+                                    </span>
+                                  )}
+                                  <span
+                                    className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ${
+                                      isHome
+                                        ? 'bg-primary-100 text-primary-700'
+                                        : 'bg-secondary-100 text-secondary-700'
+                                    }`}
+                                  >
+                                    {isHome ? 'Nhà riêng' : 'Văn phòng'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <p className="text-ink-muted font-medium flex items-center gap-1">
+                                <span>{addr.phone}</span>
+                              </p>
+
+                              <p className="text-ink-muted line-clamp-2 leading-relaxed">
+                                {addr.fullAddress}
+                              </p>
+                            </div>
+
+                            <div className="pt-2 mt-2 border-t border-line/60 flex items-center justify-between text-xs">
+                              <span
+                                className={`font-semibold flex items-center gap-1 ${
+                                  isSelected ? 'text-primary-700' : 'text-ink-subtle'
+                                }`}
+                              >
+                                {isSelected ? (
+                                  <>
+                                    <Check className="size-3.5 stroke-[3]" />
+                                    <span>Đang giao tới địa chỉ này</span>
+                                  </>
+                                ) : (
+                                  'Bấm để chọn'
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
+              )}
 
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="note-textarea"
-                    className="block text-sm font-medium text-ink"
-                  >
-                    Ghi chú giao hàng (tùy chọn)
-                  </label>
-                  <textarea
-                    id="note-textarea"
-                    name="note"
-                    rows={2}
-                    value={formData.note}
+              {/* Form nhập thông tin người nhận (hiện khi chưa có địa chỉ lưu hoặc bấm nhập địa chỉ khác) */}
+              {(addresses.length === 0 || isCustomAddress) && (
+                <div className="space-y-4 pt-2">
+                  {isCustomAddress && (
+                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+                      Bạn đang nhập địa chỉ giao hàng tùy chỉnh cho đơn hàng này.
+                    </div>
+                  )}
+
+                  <Input
+                    label="Họ và tên người nhận"
+                    name="fullName"
+                    value={formData.fullName}
                     onChange={handleChange}
-                    placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi giao 15 phút..."
-                    className="w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-base text-ink placeholder:text-ink-subtle focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all"
+                    onBlur={handleBlur}
+                    placeholder="Ví dụ: Nguyễn Văn An"
+                    error={errors.fullName}
+                    required
                   />
+
+                  <Input
+                    label="Số điện thoại"
+                    name="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Ví dụ: 0912345678"
+                    error={errors.phone}
+                    required
+                  />
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm font-medium text-ink">
+                      <label htmlFor="address-textarea">
+                        Địa chỉ nhận hàng <span className="text-primary-700">*</span>
+                      </label>
+                      <span className="text-xs text-ink-subtle">
+                        {formData.address.length} ký tự
+                      </span>
+                    </div>
+                    <textarea
+                      id="address-textarea"
+                      name="address"
+                      rows={3}
+                      value={formData.address}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
+                      aria-invalid={Boolean(errors.address)}
+                      className={`w-full min-h-24 rounded-lg border bg-white px-3.5 py-2.5 text-base text-ink placeholder:text-ink-subtle focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all ${
+                        errors.address ? 'border-red-500' : 'border-line'
+                      }`}
+                    />
+                    {errors.address && (
+                      <p className="flex items-center gap-1.5 text-xs text-red-700 mt-1">
+                        <AlertCircle className="size-3.5 shrink-0" />
+                        {errors.address}
+                      </p>
+                    )}
+                  </div>
                 </div>
+              )}
+
+              {/* Ghi chú giao hàng luôn hiển thị */}
+              <div className="space-y-1.5 pt-2 border-t border-line">
+                <label
+                  htmlFor="note-textarea"
+                  className="block text-sm font-medium text-ink"
+                >
+                  Ghi chú giao hàng (tùy chọn)
+                </label>
+                <textarea
+                  id="note-textarea"
+                  name="note"
+                  rows={2}
+                  value={formData.note}
+                  onChange={handleChange}
+                  placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi giao 15 phút..."
+                  className="w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-base text-ink placeholder:text-ink-subtle focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all"
+                />
               </div>
             </div>
 
@@ -848,6 +1030,14 @@ export default function Checkout() {
         currentSubtotal={totalPrice}
         appliedCode={appliedVoucher?.voucherCode}
         onSelectVoucher={(code) => handleApplyVoucher(code)}
+      />
+
+      {/* Address Modal (Thêm địa chỉ nhanh ngay tại Checkout) */}
+      <AddressModal
+        isOpen={showAddressModal}
+        onClose={() => setShowAddressModal(false)}
+        onSubmit={handleCreateAddressQuick}
+        isSubmitting={isCreatingAddress}
       />
     </div>
   );
