@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ClipboardList, Layers, Users, Store, LogOut, X, Ticket, Bell, MessageSquare, Image, Star } from 'lucide-react';
+import { LayoutDashboard, Package, ClipboardList, Layers, Users, Store, LogOut, X, Ticket, Bell, MessageSquare, Image, Star, Zap } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import ConfirmDialog from '../ui/ConfirmDialog';
@@ -54,6 +54,11 @@ export default function SidebarAdmin({ onCloseMobile }) {
       to: '/admin/vouchers',
       label: 'Mã giảm giá',
       icon: Ticket,
+    },
+    {
+      to: '/admin/flash-sales',
+      label: '⚡ Flash Sale',
+      icon: Zap,
     },
     {
       to: '/admin/users',

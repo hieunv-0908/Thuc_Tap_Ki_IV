@@ -70,6 +70,21 @@ public class Order {
     @ToString.Include
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
+    @Column(name = "points_used")
+    @Builder.Default
+    @ToString.Include
+    private Integer pointsUsed = 0;
+
+    @Column(name = "points_discount", precision = 12, scale = 2)
+    @Builder.Default
+    @ToString.Include
+    private BigDecimal pointsDiscount = BigDecimal.ZERO;
+
+    @Column(name = "points_earned")
+    @Builder.Default
+    @ToString.Include
+    private Integer pointsEarned = 0;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "voucher_id")
     private Voucher voucher;

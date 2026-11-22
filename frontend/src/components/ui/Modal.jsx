@@ -50,9 +50,9 @@ export default function Modal({
     >
       <div
         ref={modalRef}
-        className={`bg-white rounded-xl shadow-xl w-full ${maxWidth} p-6 relative border border-line transform transition-all animate-in zoom-in-95 duration-200`}
+        className={`bg-white rounded-xl shadow-xl w-full ${maxWidth} max-h-[92vh] flex flex-col p-6 relative border border-line transform transition-all animate-in zoom-in-95 duration-200`}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 shrink-0">
           {title ? (
             <h3 className="text-lg font-semibold text-ink leading-tight">{title}</h3>
           ) : (
@@ -71,7 +71,7 @@ export default function Modal({
           )}
         </div>
 
-        <div>{children}</div>
+        <div className="flex-1 overflow-y-auto pr-1">{children}</div>
       </div>
     </div>
   );
