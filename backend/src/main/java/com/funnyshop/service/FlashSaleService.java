@@ -20,6 +20,8 @@ public interface FlashSaleService {
 
     FlashSaleResponse toggleFlashSaleActive(Long id);
 
+    FlashSaleResponse startFlashSaleNow(Long id);
+
     Optional<FlashSaleResponse> getActiveFlashSale();
 
     int getActiveDiscountPercentForProduct(Long productId, Long categoryId);

@@ -59,5 +59,11 @@ public class AdminFlashSaleController {
         FlashSaleResponse response = flashSaleService.toggleFlashSaleActive(id);
         return ResponseEntity.ok(ApiResponse.success(response, "Cập nhật trạng thái Flash Sale thành công"));
     }
+
+    @PatchMapping("/{id}/start-now")
+    public ResponseEntity<ApiResponse<FlashSaleResponse>> startNow(@PathVariable Long id) {
+        FlashSaleResponse response = flashSaleService.startFlashSaleNow(id);
+        return ResponseEntity.ok(ApiResponse.success(response, "Kích hoạt Flash Sale chạy ngay thành công"));
+    }
 }
 
