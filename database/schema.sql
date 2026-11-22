@@ -132,6 +132,7 @@ CREATE TABLE reviews (
     rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
     comment TEXT NOT NULL,
     is_verified_purchase BOOLEAN NOT NULL DEFAULT FALSE,
+    helpful_count INT NOT NULL DEFAULT 0,
     admin_reply TEXT NULL,
     admin_reply_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -143,4 +144,59 @@ CREATE TABLE reviews (
     INDEX idx_reviews_user_id (user_id),
     INDEX idx_reviews_rating (rating),
     INDEX idx_reviews_created_at (created_at)
+);
+
+-- Review Images table
+CREATE TABLE review_images (
+    review_id BIGINT NOT NULL,
+    image_url VARCHAR(500) NOT NULL,
+    image_order INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (review_id, image_order),
+    FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
+);
+
+-- Review Helpful Votes table
+CREATE TABLE review_helpful_votes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    review_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_review_user_helpful (review_id, user_id),
+    INDEX idx_helpful_review_id (review_id),
+    INDEX idx_helpful_user_id (user_id)
+);
+
+-- Addresses table (Multiple shipping addresses for customer)
+CREATE TABLE addresses (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    recipient_name VARCHAR(100) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    province VARCHAR(100) NOT NULL,
+    district VARCHAR(100) NOT NULL,
+    ward VARCHAR(100) NOT NULL,
+    detail_address VARCHAR(255) NOT NULL,
+    full_address TEXT,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    address_type VARCHAR(30) DEFAULT 'HOME',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_addresses_user_id (user_id),
+    INDEX idx_addresses_is_default (is_default)
+);
+
+-- Wishlists table
+CREATE TABLE wishlists (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_user_product_wishlist (user_id, product_id),
+    INDEX idx_wishlists_user_id (user_id),
+    INDEX idx_wishlists_product_id (product_id)
 );

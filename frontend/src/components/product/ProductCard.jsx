@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Shirt, Heart, Check, Plus } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useCartStore } from '../../store/cartStore';
+import { useAuthStore } from '../../store/authStore';
+import { useWishlistStore } from '../../store/wishlistStore';
 import { toast } from '../../store/toastStore';
 
 /**
@@ -20,10 +22,12 @@ import { toast } from '../../store/toastStore';
  */
 export default function ProductCard({ product, onClick }) {
   const [imgError, setImgError] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const navigate = useNavigate();
   const addItem = useCartStore((s) => s.addItem);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isLiked = useWishlistStore((s) => s.isLiked(product?.id));
+  const toggleWishlist = useWishlistStore((s) => s.toggleWishlist);
 
   const isOutOfStock = !product || product.stock <= 0;
   const rating = Number(product?.rating || 4.5);
@@ -103,7 +107,9 @@ export default function ProductCard({ product, onClick }) {
 
   const handleLikeClick = (e) => {
     e.stopPropagation();
-    setIsLiked((prev) => !prev);
+    if (product) {
+      toggleWishlist(product, isAuthenticated);
+    }
   };
 
   const handleCardClick = () => {
@@ -159,20 +165,21 @@ export default function ProductCard({ product, onClick }) {
           )}
         </div>
 
-        {/* Top-right Favorite Button (Subtle, visible on hover) */}
+        {/* Top-right Favorite Button */}
         <button
           type="button"
           onClick={handleLikeClick}
-          className={`absolute top-2.5 right-2.5 z-10 size-7 flex items-center justify-center transition-all cursor-pointer ${
+          className={`absolute top-2.5 right-2.5 z-10 size-8 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-xs ${
             isLiked
-              ? 'opacity-100 text-vermilion'
-              : 'opacity-0 group-hover:opacity-100 text-ink/70 hover:text-ink'
+              ? 'bg-white text-red-500 shadow-sm'
+              : 'bg-white/90 hover:bg-white text-ink/60 hover:text-red-500 hover:scale-110'
           }`}
           aria-label={isLiked ? 'Bỏ thích' : 'Yêu thích'}
+          title={isLiked ? 'Bỏ thích' : 'Thêm vào danh sách yêu thích'}
         >
           <Heart
             className={`size-4 transition-colors ${
-              isLiked ? 'fill-vermilion text-vermilion' : 'stroke-[1.5]'
+              isLiked ? 'fill-red-500 text-red-500' : 'stroke-[1.8]'
             }`}
           />
         </button>

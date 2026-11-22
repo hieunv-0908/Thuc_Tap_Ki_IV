@@ -20,6 +20,7 @@ import { formatDate } from '../utils/formatDate';
 import { ORDER_STATUS } from '../utils/constants';
 import { OrderBadge } from '../components/ui/Badge';
 import OrderTimeline from '../components/order/OrderTimeline';
+import DeliveryTrackingCard from '../components/order/DeliveryTrackingCard';
 import ErrorState from '../components/ui/ErrorState';
 import Button from '../components/ui/Button';
 import CancelOrderModal from '../components/order/CancelOrderModal';
@@ -350,6 +351,9 @@ export default function OrderDetail() {
           timeline={timeline}
         />
       </div>
+
+      {/* Thông tin vận chuyển & Tài xế giao hàng trực quan */}
+      <DeliveryTrackingCard order={order} />
 
       {/* Return Request Banner & Details */}
       {returnRequest && (

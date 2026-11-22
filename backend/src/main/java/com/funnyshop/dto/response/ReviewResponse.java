@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Builder
@@ -25,13 +27,20 @@ public class ReviewResponse {
     private String userEmail;
     private Integer rating;
     private String comment;
+    private List<String> images;
     private Boolean isVerifiedPurchase;
+    private Integer helpfulCount;
+    private Boolean isHelpfulByCurrentUser;
     private String adminReply;
     private LocalDateTime adminReplyAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public static ReviewResponse fromEntity(Review review) {
+        return fromEntity(review, false);
+    }
+
+    public static ReviewResponse fromEntity(Review review, boolean isHelpfulByCurrentUser) {
         if (review == null) {
             return null;
         }
@@ -64,7 +73,10 @@ public class ReviewResponse {
                 .userEmail(review.getUser() != null ? maskEmail(review.getUser().getEmail()) : null)
                 .rating(review.getRating())
                 .comment(review.getComment())
+                .images(review.getImages() != null ? new ArrayList<>(review.getImages()) : new ArrayList<>())
                 .isVerifiedPurchase(review.getIsVerifiedPurchase())
+                .helpfulCount(review.getHelpfulCount() != null ? review.getHelpfulCount() : 0)
+                .isHelpfulByCurrentUser(isHelpfulByCurrentUser)
                 .adminReply(review.getAdminReply())
                 .adminReplyAt(review.getAdminReplyAt())
                 .createdAt(review.getCreatedAt())
@@ -79,4 +91,3 @@ public class ReviewResponse {
         return email.charAt(0) + "***" + email.substring(atIndex - 1);
     }
 }
-

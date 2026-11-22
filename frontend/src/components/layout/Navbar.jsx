@@ -12,9 +12,11 @@ import {
   Shield,
   ChevronDown,
   MessageSquare,
+  Heart,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
+import { useWishlistStore } from '../../store/wishlistStore';
 import { toast } from '../../store/toastStore';
 import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
@@ -38,6 +40,14 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
   const location = useLocation();
   const { user, isAuthenticated, logout, isAdmin } = useAuthStore();
   const totalCartCount = useCartStore((s) => s.getTotalCount());
+  const wishlistIds = useWishlistStore((s) => s.wishlistIds);
+  const fetchWishlistIds = useWishlistStore((s) => s.fetchWishlistIds);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchWishlistIds();
+    }
+  }, [isAuthenticated, fetchWishlistIds]);
 
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [previousLocationSearch, setPreviousLocationSearch] = useState(null);
@@ -241,6 +251,25 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
             {/* Notification Bell */}
             <NotificationDropdown />
 
+            {/* Wishlist Icon */}
+            <Link
+              to="/wishlist"
+              className="relative p-2 text-ink hover:text-vermilion transition-colors flex items-center justify-center cursor-pointer"
+              aria-label={`Sản phẩm yêu thích (${wishlistIds.length})`}
+              title="Danh sách yêu thích"
+            >
+              <Heart className={`size-5 ${wishlistIds.length > 0 ? 'fill-vermilion/20 text-vermilion' : ''}`} />
+              {wishlistIds.length > 0 && (
+                <span
+                  key={wishlistIds.length}
+                  className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-vermilion text-paper text-[10px] font-bold flex items-center justify-center animate-[pop_300ms_ease-out]"
+                  aria-hidden="true"
+                >
+                  {wishlistIds.length > 9 ? '9+' : wishlistIds.length}
+                </span>
+              )}
+            </Link>
+
             {/* Cart Icon with Pop-animated Badge */}
             <Link
               to="/cart"
@@ -295,6 +324,20 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
                       >
                         <User className="size-3.5 text-mute" />
                         <span>Hồ sơ cá nhân</span>
+                      </Link>
+
+                      <Link
+                        to="/wishlist"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-ink hover:bg-sand/40 transition-colors"
+                      >
+                        <Heart className="size-3.5 text-mute" />
+                        <span>Sản phẩm yêu thích</span>
+                        {wishlistIds.length > 0 && (
+                          <span className="ml-auto text-[10px] bg-red-100 text-red-600 font-bold px-1.5 py-0.2 rounded-full">
+                            {wishlistIds.length}
+                          </span>
+                        )}
                       </Link>
 
                       <Link
