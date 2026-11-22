@@ -16,6 +16,7 @@ import com.funnyshop.repository.OrderItemRepository;
 import com.funnyshop.repository.ProductImageRepository;
 import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.repository.ProductVariantRepository;
+import com.funnyshop.repository.ReviewRepository;
 import com.funnyshop.service.impl.ProductServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,6 +55,9 @@ class ProductServiceImplTest {
 
     @Mock
     private OrderItemRepository orderItemRepository;
+
+    @Mock
+    private ReviewRepository reviewRepository;
 
     @InjectMocks
     private ProductServiceImpl productService;

@@ -123,3 +123,24 @@ CREATE TABLE cart (
     FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_variant (user_id, variant_id)
 );
+
+-- Reviews table (Product rating 1-5 stars & comment)
+CREATE TABLE reviews (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    product_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT NOT NULL,
+    is_verified_purchase BOOLEAN NOT NULL DEFAULT FALSE,
+    admin_reply TEXT NULL,
+    admin_reply_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_product_user_review (product_id, user_id),
+    INDEX idx_reviews_product_id (product_id),
+    INDEX idx_reviews_user_id (user_id),
+    INDEX idx_reviews_rating (rating),
+    INDEX idx_reviews_created_at (created_at)
+);

@@ -32,6 +32,8 @@ public class ProductResponse {
     private BigDecimal maxPrice;
     private Integer stockQuantity;
     private Integer stock;
+    private Double rating;
+    private Integer reviewCount;
     private CategoryResponse category;
     private String imageUrl;
     private List<ProductImageResponse> images;

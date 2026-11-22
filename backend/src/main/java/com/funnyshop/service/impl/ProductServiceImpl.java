@@ -19,6 +19,7 @@ import com.funnyshop.repository.OrderItemRepository;
 import com.funnyshop.repository.ProductImageRepository;
 import com.funnyshop.repository.ProductRepository;
 import com.funnyshop.repository.ProductVariantRepository;
+import com.funnyshop.repository.ReviewRepository;
 import com.funnyshop.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 
 @Service
@@ -41,6 +43,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductVariantRepository productVariantRepository;
     private final ProductImageRepository productImageRepository;
     private final OrderItemRepository orderItemRepository;
+    private final ReviewRepository reviewRepository;
 
     @Override
     public Page<ProductResponse> getProducts(
@@ -154,7 +157,18 @@ public class ProductServiceImpl implements ProductService {
                                 "Không tìm thấy sản phẩm với ID: " + id
                         )
                 );
-        return ProductResponse.fromEntity(product);
+        ProductResponse response = ProductResponse.fromEntity(product);
+        if (response != null && reviewRepository != null) {
+            Double avg = reviewRepository.getAverageRatingByProductId(id);
+            long count = reviewRepository.countByProductId(id);
+            if (avg != null && count > 0) {
+                response.setRating(BigDecimal.valueOf(avg).setScale(1, RoundingMode.HALF_UP).doubleValue());
+            } else {
+                response.setRating(5.0);
+            }
+            response.setReviewCount((int) count);
+        }
+        return response;
     }
 
     @Override
