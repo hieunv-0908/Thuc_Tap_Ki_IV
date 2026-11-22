@@ -16,6 +16,7 @@ import OrderDetail from './pages/OrderDetail';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 import Feedback from './pages/Feedback';
+import Wishlist from './pages/Wishlist';
 import NotFound from './pages/NotFound';
 import Forbidden from './pages/Forbidden';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="/orders" element={<Orders />} />
             <Route path="/orders/:id" element={<OrderDetail />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/feedbacks" element={<Feedback />} />

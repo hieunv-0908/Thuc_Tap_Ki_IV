@@ -15,6 +15,7 @@ import {
   KeyRound,
   Send,
   RefreshCw,
+  MapPin,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { userApi } from '../api/user';
@@ -27,6 +28,7 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Skeleton from '../components/ui/Skeleton';
+import AddressBook from '../components/profile/AddressBook';
 
 /**
  * Hồ sơ cá nhân — /profile (Design.md 7.7 v2.0)
@@ -49,6 +51,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState(null);
   const [orderCount, setOrderCount] = useState(null);
+  const [activeTab, setActiveTab] = useState('info');
 
   // Form 1: Thông tin
   const [infoForm, setInfoForm] = useState({
@@ -543,262 +546,317 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* --- Card 2: Form Thông tin (Design.md 7.7) --- */}
-        <div className="rounded-2xl border border-line bg-white shadow-soft p-5 sm:p-6 mb-6">
-          {/* Header sticker icon User */}
-          <div className="flex items-center gap-3 mb-5 pb-4 border-b border-line">
-            <div className="grid size-10 place-items-center rounded-xl bg-primary-100 text-primary-700 -rotate-3 shrink-0">
-              <User className="size-5" />
+        {/* --- Tab Navigation --- */}
+        <div className="flex items-center gap-2 mb-6 p-1.5 rounded-2xl bg-white border border-line shadow-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab('info')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'info'
+                ? 'bg-primary-50 text-primary-700 shadow-xs ring-1 ring-primary-200'
+                : 'text-ink-muted hover:text-ink hover:bg-gray-50'
+            }`}
+          >
+            <User className="size-4" />
+            <span>Thông tin cá nhân</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('address')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'address'
+                ? 'bg-primary-50 text-primary-700 shadow-xs ring-1 ring-primary-200'
+                : 'text-ink-muted hover:text-ink hover:bg-gray-50'
+            }`}
+          >
+            <MapPin className="size-4" />
+            <span>Sổ địa chỉ</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('password')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'password'
+                ? 'bg-secondary-50 text-secondary-700 shadow-xs ring-1 ring-secondary-200'
+                : 'text-ink-muted hover:text-ink hover:bg-gray-50'
+            }`}
+          >
+            <Lock className="size-4" />
+            <span>Đổi mật khẩu</span>
+          </button>
+        </div>
+
+        {/* Tab 1: Form Thông tin (Design.md 7.7) */}
+        {activeTab === 'info' && (
+          <div className="rounded-2xl border border-line bg-white shadow-soft p-5 sm:p-6 mb-6 animate-in fade-in duration-150">
+            {/* Header sticker icon User */}
+            <div className="flex items-center gap-3 mb-5 pb-4 border-b border-line">
+              <div className="grid size-10 place-items-center rounded-xl bg-primary-100 text-primary-700 -rotate-3 shrink-0">
+                <User className="size-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-ink">Thông tin cá nhân</h3>
+                <p className="text-xs text-ink-muted">Cập nhật họ tên và số điện thoại liên hệ</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-ink">Thông tin</h3>
-            </div>
-          </div>
 
-          <form onSubmit={handleInfoSubmit} className="space-y-4" noValidate>
-            <Input
-              label="Họ tên"
-              id="profile-fullName"
-              name="fullName"
-              type="text"
-              value={infoForm.fullName}
-              onChange={handleInfoChange}
-              placeholder="Nhập họ và tên"
-              error={infoErrors.fullName}
-              leftIcon={User}
-              required
-              disabled={infoSubmitting}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form onSubmit={handleInfoSubmit} className="space-y-4" noValidate>
               <Input
-                label="Email"
-                id="profile-email"
-                name="email"
-                type="email"
-                value={infoForm.email}
-                disabled
-                leftIcon={Mail}
-                helperText="Email cố định, không thể thay đổi"
-              />
-
-              <Input
-                label="Số điện thoại"
-                id="profile-phone"
-                name="phone"
-                type="tel"
-                value={infoForm.phone}
+                label="Họ tên"
+                id="profile-fullName"
+                name="fullName"
+                type="text"
+                value={infoForm.fullName}
                 onChange={handleInfoChange}
-                placeholder="Ví dụ: 0987654321"
-                error={infoErrors.phone}
-                leftIcon={Phone}
+                placeholder="Nhập họ và tên"
+                error={infoErrors.fullName}
+                leftIcon={User}
+                required
                 disabled={infoSubmitting}
               />
-            </div>
 
-            {/* Nút lưu chỉ bật khi form có thay đổi (Design.md 7.7) */}
-            <div className="pt-3 flex items-center justify-end border-t border-line">
-              <Button
-                type="submit"
-                variant="primary"
-                size="md"
-                leftIcon={Save}
-                loading={infoSubmitting}
-                disabled={!isInfoChanged || infoSubmitting}
-                className="w-full sm:w-auto font-semibold shadow-brand px-6"
-              >
-                Lưu thay đổi
-              </Button>
-            </div>
-          </form>
-        </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Email"
+                  id="profile-email"
+                  name="email"
+                  type="email"
+                  value={infoForm.email}
+                  disabled
+                  leftIcon={Mail}
+                  helperText="Email cố định, không thể thay đổi"
+                />
 
-        {/* --- Card 3: Form Đổi mật khẩu (Design.md 7.7) --- */}
-        <div className="rounded-2xl border border-line bg-white shadow-soft p-5 sm:p-6">
-          {/* Header sticker icon Lock */}
-          <div className="flex items-center gap-3 mb-5 pb-4 border-b border-line">
-            <div className="grid size-10 place-items-center rounded-xl bg-secondary-100 text-secondary-700 rotate-3 shrink-0">
-              <Lock className="size-5" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-ink">Đổi mật khẩu</h3>
-            </div>
-          </div>
-
-          {passwordServerError && (
-            <div
-              role="alert"
-              className="mb-4 flex items-start gap-3 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm animate-in shake duration-200"
-            >
-              <AlertCircle className="size-5 shrink-0 mt-0.5 text-red-600" aria-hidden="true" />
-              <div className="flex-1 font-medium">{passwordServerError}</div>
-            </div>
-          )}
-
-          <form onSubmit={handlePasswordSubmit} className="space-y-4" noValidate>
-            <div>
-              <Input
-                label="Mật khẩu mới"
-                id="profile-newPassword"
-                name="newPassword"
-                type="password"
-                value={passwordForm.newPassword}
-                onChange={handlePasswordChange}
-                placeholder="Tối thiểu 6 ký tự"
-                error={passwordErrors.newPassword}
-                leftIcon={Lock}
-                required
-                disabled={passwordSubmitting}
-              />
-
-              {/* Thanh độ mạnh mật khẩu (Design.md 7.7) */}
-              {passwordForm.newPassword && (
-                <div className="mt-2 space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-ink-subtle">Độ mạnh mật khẩu:</span>
-                    <span
-                      className={`font-semibold ${
-                        passwordStrength.level === 1
-                          ? 'text-red-500'
-                          : passwordStrength.level === 2
-                          ? 'text-amber-500'
-                          : 'text-emerald-500'
-                      }`}
-                    >
-                      {passwordStrength.label}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5 h-1.5 w-full">
-                    <div
-                      className={`rounded-full transition-colors ${
-                        passwordStrength.level >= 1
-                          ? passwordStrength.level === 1
-                            ? 'bg-red-500'
-                            : passwordStrength.level === 2
-                            ? 'bg-amber-500'
-                            : 'bg-emerald-500'
-                          : 'bg-gray-200'
-                      }`}
-                    />
-                    <div
-                      className={`rounded-full transition-colors ${
-                        passwordStrength.level >= 2
-                          ? passwordStrength.level === 2
-                            ? 'bg-amber-500'
-                            : 'bg-emerald-500'
-                          : 'bg-gray-200'
-                      }`}
-                    />
-                    <div
-                      className={`rounded-full transition-colors ${
-                        passwordStrength.level >= 3 ? 'bg-emerald-500' : 'bg-gray-200'
-                      }`}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <Input
-                label="Xác nhận mật khẩu"
-                id="profile-confirmPassword"
-                name="confirmPassword"
-                type="password"
-                value={passwordForm.confirmPassword}
-                onChange={handlePasswordChange}
-                placeholder="Nhập lại mật khẩu mới"
-                error={passwordErrors.confirmPassword}
-                leftIcon={Lock}
-                required
-                disabled={passwordSubmitting}
-              />
-
-              {isConfirmMatching && (
-                <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium mt-1">
-                  <Check className="size-3.5" />
-                  <span>Mật khẩu xác nhận trùng khớp</span>
-                </div>
-              )}
-            </div>
-
-            {/* Mã xác thực OTP gửi về Gmail */}
-            <div className="rounded-xl border border-line bg-gray-50/70 p-4 space-y-2">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                <label htmlFor="profile-otp" className="text-sm font-semibold text-ink flex items-center gap-1.5">
-                  <KeyRound className="size-4 text-primary-700" />
-                  <span>Mã xác thực OTP (từ Gmail)</span>
-                  <span className="text-red-500">*</span>
-                </label>
-                <span className="text-xs text-ink-muted">
-                  Gửi tới: <strong className="text-ink">{profileData?.email || storeUser?.email}</strong>
-                </span>
+                <Input
+                  label="Số điện thoại"
+                  id="profile-phone"
+                  name="phone"
+                  type="tel"
+                  value={infoForm.phone}
+                  onChange={handleInfoChange}
+                  placeholder="Ví dụ: 0987654321"
+                  error={infoErrors.phone}
+                  leftIcon={Phone}
+                  disabled={infoSubmitting}
+                />
               </div>
 
-              <div className="flex gap-2 items-start pt-1">
-                <div className="flex-1">
-                  <Input
-                    id="profile-otp"
-                    name="otp"
-                    type="text"
-                    maxLength={6}
-                    value={otp}
-                    onChange={(e) => {
-                      setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
-                      if (passwordErrors.otp) {
-                        setPasswordErrors((prev) => ({ ...prev, otp: '' }));
-                      }
-                    }}
-                    placeholder="Nhập mã 6 số"
-                    error={passwordErrors.otp}
-                    disabled={passwordSubmitting}
-                  />
-                </div>
-
+              {/* Nút lưu chỉ bật khi form có thay đổi (Design.md 7.7) */}
+              <div className="pt-3 flex items-center justify-end border-t border-line">
                 <Button
-                  type="button"
-                  variant={otpSent ? 'outline' : 'primary'}
+                  type="submit"
+                  variant="primary"
                   size="md"
-                  onClick={handleSendOtp}
-                  loading={isSendingOtp}
-                  disabled={isSendingOtp || (!canResend && resendCountdown > 0) || passwordSubmitting}
-                  leftIcon={otpSent ? RefreshCw : Send}
-                  className="shrink-0 h-10 px-3 sm:px-4 text-xs font-semibold cursor-pointer"
+                  leftIcon={Save}
+                  loading={infoSubmitting}
+                  disabled={!isInfoChanged || infoSubmitting}
+                  className="w-full sm:w-auto font-semibold shadow-brand px-6"
                 >
-                  {isSendingOtp
-                    ? 'Đang gửi...'
-                    : resendCountdown > 0
-                    ? `Gửi lại (${resendCountdown}s)`
-                    : otpSent
-                    ? 'Gửi lại mã'
-                    : 'Nhận mã OTP'}
+                  Lưu thay đổi
                 </Button>
               </div>
+            </form>
+          </div>
+        )}
 
-              {otpSent && (
-                <p className="text-xs text-emerald-600 font-medium flex items-center gap-1 mt-1.5">
-                  <Check className="size-3.5" />
-                  <span>Mã OTP đã được gửi đến Gmail của bạn. Vui lòng kiểm tra hòm thư!</span>
-                </p>
-              )}
+        {/* Tab 2: Sổ địa chỉ nhận hàng */}
+        {activeTab === 'address' && (
+          <div className="rounded-2xl border border-line bg-white shadow-soft p-5 sm:p-6 mb-6 animate-in fade-in duration-150">
+            <AddressBook />
+          </div>
+        )}
+
+        {/* Tab 3: Form Đổi mật khẩu (Design.md 7.7) */}
+        {activeTab === 'password' && (
+          <div className="rounded-2xl border border-line bg-white shadow-soft p-5 sm:p-6 animate-in fade-in duration-150">
+            {/* Header sticker icon Lock */}
+            <div className="flex items-center gap-3 mb-5 pb-4 border-b border-line">
+              <div className="grid size-10 place-items-center rounded-xl bg-secondary-100 text-secondary-700 rotate-3 shrink-0">
+                <Lock className="size-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-ink">Đổi mật khẩu</h3>
+                <p className="text-xs text-ink-muted">Bảo mật tài khoản thông qua xác thực OTP Gmail</p>
+              </div>
             </div>
 
-            {/* Nút lưu chỉ bật khi form có thay đổi (Design.md 7.7) */}
-            <div className="pt-3 flex items-center justify-end border-t border-line">
-              <Button
-                type="submit"
-                variant="secondary"
-                size="md"
-                leftIcon={Lock}
-                loading={passwordSubmitting}
-                disabled={!isPasswordChanged || passwordSubmitting}
-                className="w-full sm:w-auto font-semibold shadow-violet px-6"
+            {passwordServerError && (
+              <div
+                role="alert"
+                className="mb-4 flex items-start gap-3 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm animate-in shake duration-200"
               >
-                Cập nhật mật khẩu
-              </Button>
-            </div>
-          </form>
-        </div>
+                <AlertCircle className="size-5 shrink-0 mt-0.5 text-red-600" aria-hidden="true" />
+                <div className="flex-1 font-medium">{passwordServerError}</div>
+              </div>
+            )}
+
+            <form onSubmit={handlePasswordSubmit} className="space-y-4" noValidate>
+              <div>
+                <Input
+                  label="Mật khẩu mới"
+                  id="profile-newPassword"
+                  name="newPassword"
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={handlePasswordChange}
+                  placeholder="Tối thiểu 6 ký tự"
+                  error={passwordErrors.newPassword}
+                  leftIcon={Lock}
+                  required
+                  disabled={passwordSubmitting}
+                />
+
+                {/* Thanh độ mạnh mật khẩu (Design.md 7.7) */}
+                {passwordForm.newPassword && (
+                  <div className="mt-2 space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-ink-subtle">Độ mạnh mật khẩu:</span>
+                      <span
+                        className={`font-semibold ${
+                          passwordStrength.level === 1
+                            ? 'text-red-500'
+                            : passwordStrength.level === 2
+                            ? 'text-amber-500'
+                            : 'text-emerald-500'
+                        }`}
+                      >
+                        {passwordStrength.label}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5 h-1.5 w-full">
+                      <div
+                        className={`rounded-full transition-colors ${
+                          passwordStrength.level >= 1
+                            ? passwordStrength.level === 1
+                              ? 'bg-red-500'
+                              : passwordStrength.level === 2
+                              ? 'bg-amber-500'
+                              : 'bg-emerald-500'
+                            : 'bg-gray-200'
+                        }`}
+                      />
+                      <div
+                        className={`rounded-full transition-colors ${
+                          passwordStrength.level >= 2
+                            ? passwordStrength.level === 2
+                              ? 'bg-amber-500'
+                              : 'bg-emerald-500'
+                            : 'bg-gray-200'
+                        }`}
+                      />
+                      <div
+                        className={`rounded-full transition-colors ${
+                          passwordStrength.level >= 3 ? 'bg-emerald-500' : 'bg-gray-200'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Input
+                  label="Xác nhận mật khẩu"
+                  id="profile-confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={handlePasswordChange}
+                  placeholder="Nhập lại mật khẩu mới"
+                  error={passwordErrors.confirmPassword}
+                  leftIcon={Lock}
+                  required
+                  disabled={passwordSubmitting}
+                />
+
+                {isConfirmMatching && (
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium mt-1">
+                    <Check className="size-3.5" />
+                    <span>Mật khẩu xác nhận trùng khớp</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Mã xác thực OTP gửi về Gmail */}
+              <div className="rounded-xl border border-line bg-gray-50/70 p-4 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <label htmlFor="profile-otp" className="text-sm font-semibold text-ink flex items-center gap-1.5">
+                    <KeyRound className="size-4 text-primary-700" />
+                    <span>Mã xác thực OTP (từ Gmail)</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-xs text-ink-muted">
+                    Gửi tới: <strong className="text-ink">{profileData?.email || storeUser?.email}</strong>
+                  </span>
+                </div>
+
+                <div className="flex gap-2 items-start pt-1">
+                  <div className="flex-1">
+                    <Input
+                      id="profile-otp"
+                      name="otp"
+                      type="text"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => {
+                        setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
+                        if (passwordErrors.otp) {
+                          setPasswordErrors((prev) => ({ ...prev, otp: '' }));
+                        }
+                      }}
+                      placeholder="Nhập mã 6 số"
+                      error={passwordErrors.otp}
+                      disabled={passwordSubmitting}
+                    />
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant={otpSent ? 'outline' : 'primary'}
+                    size="md"
+                    onClick={handleSendOtp}
+                    loading={isSendingOtp}
+                    disabled={isSendingOtp || (!canResend && resendCountdown > 0) || passwordSubmitting}
+                    leftIcon={otpSent ? RefreshCw : Send}
+                    className="shrink-0 h-10 px-3 sm:px-4 text-xs font-semibold cursor-pointer"
+                  >
+                    {isSendingOtp
+                      ? 'Đang gửi...'
+                      : resendCountdown > 0
+                      ? `Gửi lại (${resendCountdown}s)`
+                      : otpSent
+                      ? 'Gửi lại mã'
+                      : 'Nhận mã OTP'}
+                  </Button>
+                </div>
+
+                {otpSent && (
+                  <p className="text-xs text-emerald-600 font-medium flex items-center gap-1 mt-1.5">
+                    <Check className="size-3.5" />
+                    <span>Mã OTP đã được gửi đến Gmail của bạn. Vui lòng kiểm tra hòm thư!</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Nút lưu chỉ bật khi form có thay đổi (Design.md 7.7) */}
+              <div className="pt-3 flex items-center justify-end border-t border-line">
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  size="md"
+                  leftIcon={Lock}
+                  loading={passwordSubmitting}
+                  disabled={!isPasswordChanged || passwordSubmitting}
+                  className="w-full sm:w-auto font-semibold shadow-violet px-6"
+                >
+                  Cập nhật mật khẩu
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );

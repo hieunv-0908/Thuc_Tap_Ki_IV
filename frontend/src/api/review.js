@@ -2,7 +2,7 @@ import axiosClient from './axios';
 
 export const reviewApi = {
   /**
-   * Lấy danh sách đánh giá của sản phẩm (hỗ trợ phân trang, lọc theo sao)
+   * Lấy danh sách đánh giá của sản phẩm (hỗ trợ phân trang, lọc theo sao, sắp xếp)
    * @param {number|string} productId
    * @param {Object} params { rating, page, size, sortBy, sortDir }
    */
@@ -29,7 +29,7 @@ export const reviewApi = {
   /**
    * Gửi đánh giá mới hoặc cập nhật đánh giá cho sản phẩm
    * @param {number|string} productId
-   * @param {{ rating: number, comment: string }} data
+   * @param {{ rating: number, comment: string, images?: string[] }} data
    */
   createProductReview: (productId, data) => {
     return axiosClient.post(`/api/v1/products/${productId}/reviews`, data);
@@ -38,7 +38,7 @@ export const reviewApi = {
   /**
    * Chỉnh sửa đánh giá hiện có
    * @param {number|string} reviewId
-   * @param {{ rating: number, comment: string }} data
+   * @param {{ rating: number, comment: string, images?: string[] }} data
    */
   updateReview: (reviewId, data) => {
     return axiosClient.put(`/api/v1/reviews/${reviewId}`, data);
@@ -50,6 +50,26 @@ export const reviewApi = {
    */
   deleteReview: (reviewId) => {
     return axiosClient.delete(`/api/v1/reviews/${reviewId}`);
+  },
+
+  /**
+   * Tải lên 1-3 hình ảnh thực tế cho đánh giá (lưu trên Cloudinary)
+   * @param {FormData} formData
+   */
+  uploadReviewImages: (formData) => {
+    return axiosClient.post('/api/v1/reviews/upload-images', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  /**
+   * Bấm hữu ích / bỏ hữu ích cho một đánh giá
+   * @param {number|string} reviewId
+   */
+  toggleHelpfulVote: (reviewId) => {
+    return axiosClient.post(`/api/v1/reviews/${reviewId}/helpful`);
   },
 
   /**
@@ -79,4 +99,3 @@ export const reviewApi = {
 };
 
 export default reviewApi;
-

@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(
@@ -43,9 +45,20 @@ public class Review {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String comment;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "review_images", joinColumns = @JoinColumn(name = "review_id"))
+    @Column(name = "image_url", length = 500)
+    @OrderColumn(name = "image_order")
+    @Builder.Default
+    private List<String> images = new ArrayList<>();
+
     @Column(name = "is_verified_purchase", nullable = false)
     @Builder.Default
     private Boolean isVerifiedPurchase = false;
+
+    @Column(name = "helpful_count", nullable = false)
+    @Builder.Default
+    private Integer helpfulCount = 0;
 
     @Column(name = "admin_reply", columnDefinition = "TEXT")
     private String adminReply;
@@ -70,11 +83,19 @@ public class Review {
         if (this.isVerifiedPurchase == null) {
             this.isVerifiedPurchase = false;
         }
+        if (this.helpfulCount == null) {
+            this.helpfulCount = 0;
+        }
+        if (this.images == null) {
+            this.images = new ArrayList<>();
+        }
     }
 
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+        if (this.helpfulCount == null) {
+            this.helpfulCount = 0;
+        }
     }
 }
-

@@ -1,11 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Star, MessageSquare, CheckCircle2, Store, Trash2, Edit3, Send, Loader2 } from 'lucide-react';
+import {
+  Star,
+  MessageSquare,
+  CheckCircle2,
+  Store,
+  Trash2,
+  Edit3,
+  Send,
+  Loader2,
+  Upload,
+  ThumbsUp,
+  X,
+  Camera,
+  Maximize2,
+} from 'lucide-react';
 import reviewApi from '../../api/review';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
+import Modal from '../ui/Modal';
 
 const RATING_LABELS = {
   1: 'Rất tệ',
@@ -28,6 +43,7 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
   });
   const [loading, setLoading] = useState(true);
   const [ratingFilter, setRatingFilter] = useState(null); // null = all, 1..5
+  const [sortBy, setSortBy] = useState('createdAt'); // 'createdAt' or 'helpfulCount'
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
@@ -39,7 +55,12 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
   const [ratingInput, setRatingInput] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [commentInput, setCommentInput] = useState('');
+  const [imageUrls, setImageUrls] = useState([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Lightbox preview modal state
+  const [previewImage, setPreviewImage] = useState(null);
 
   // Delete modal state
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -69,10 +90,12 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
         setMyReview(res.data);
         setRatingInput(res.data.rating);
         setCommentInput(res.data.comment);
+        setImageUrls(res.data.images || []);
       } else {
         setMyReview(null);
         setRatingInput(5);
         setCommentInput('');
+        setImageUrls([]);
       }
     } catch {
       setMyReview(null);
@@ -86,7 +109,7 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
         rating: ratingFilter || undefined,
         page,
         size: 6,
-        sortBy: 'createdAt',
+        sortBy,
         sortDir: 'desc',
       });
       if (res.data) {
@@ -99,7 +122,7 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
     } finally {
       setLoading(false);
     }
-  }, [productId, ratingFilter, page]);
+  }, [productId, ratingFilter, page, sortBy]);
 
   useEffect(() => {
     let ignore = false;
@@ -121,10 +144,12 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
               setMyReview(res.data);
               setRatingInput(res.data.rating);
               setCommentInput(res.data.comment);
+              setImageUrls(res.data.images || []);
             } else {
               setMyReview(null);
               setRatingInput(5);
               setCommentInput('');
+              setImageUrls([]);
             }
           }
         } catch {
@@ -149,7 +174,7 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
           rating: ratingFilter || undefined,
           page,
           size: 6,
-          sortBy: 'createdAt',
+          sortBy,
           sortDir: 'desc',
         });
         if (!ignore && res.data) {
@@ -172,7 +197,65 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
     return () => {
       ignore = true;
     };
-  }, [productId, ratingFilter, page]);
+  }, [productId, ratingFilter, page, sortBy]);
+
+  // Handle uploading images to Cloudinary
+  const handleUploadImages = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (imageUrls.length + files.length > 3) {
+      toast.warning('Bạn chỉ có thể tải lên tối đa 3 ảnh cho mỗi đánh giá!');
+      return;
+    }
+
+    setUploadingImages(true);
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+
+    try {
+      const res = await reviewApi.uploadReviewImages(formData);
+      if (res.data) {
+        setImageUrls((prev) => [...prev, ...res.data].slice(0, 3));
+        toast.success(`Đã tải lên ${res.data.length} hình ảnh thực tế!`);
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Không thể tải ảnh lên. Vui lòng thử lại sau.';
+      toast.error(msg);
+    } finally {
+      setUploadingImages(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveImage = (indexToRemove) => {
+    setImageUrls((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  // Toggle helpful vote
+  const handleToggleHelpful = async (reviewId) => {
+    if (!isAuthenticated) {
+      toast.warning('Vui lòng đăng nhập để đánh giá tính hữu ích!');
+      return;
+    }
+
+    try {
+      const res = await reviewApi.toggleHelpfulVote(reviewId);
+      if (res.data) {
+        const { helpfulCount, isHelpful } = res.data;
+        setReviews((prev) =>
+          prev.map((r) =>
+            r.id === reviewId
+              ? { ...r, helpfulCount, isHelpfulByCurrentUser: isHelpful }
+              : r
+          )
+        );
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Không thể thực hiện thao tác này';
+      toast.error(msg);
+    }
+  };
 
   // Handle submit review
   const handleSubmitReview = async (e) => {
@@ -192,17 +275,17 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
 
     setSubmitting(true);
     try {
+      const payload = {
+        rating: ratingInput,
+        comment: commentInput.trim(),
+        images: imageUrls,
+      };
+
       if (myReview && isEditing) {
-        await reviewApi.updateReview(myReview.id, {
-          rating: ratingInput,
-          comment: commentInput.trim(),
-        });
+        await reviewApi.updateReview(myReview.id, payload);
         toast.success('Cập nhật đánh giá thành công!');
       } else {
-        await reviewApi.createProductReview(productId, {
-          rating: ratingInput,
-          comment: commentInput.trim(),
-        });
+        await reviewApi.createProductReview(productId, payload);
         toast.success('Gửi đánh giá thành công! Cảm ơn bạn đã phản hồi.');
       }
       setIsEditing(false);
@@ -231,6 +314,7 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
       setIsEditing(false);
       setRatingInput(5);
       setCommentInput('');
+      setImageUrls([]);
       await fetchSummary();
       await fetchMyReview();
       await fetchReviews();
@@ -323,43 +407,61 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
         </div>
       </div>
 
-      {/* 2. Rating Filter Pills */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs font-bold text-ink mr-1">Lọc theo:</span>
-        <button
-          type="button"
-          onClick={() => {
-            setRatingFilter(null);
-            setPage(0);
-          }}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-            ratingFilter === null
-              ? 'bg-amber-500 text-white shadow-xs'
-              : 'bg-gray-100 text-ink-muted hover:bg-gray-200 hover:text-ink'
-          }`}
-        >
-          Tất cả ({summary.totalReviews})
-        </button>
-        {[5, 4, 3, 2, 1].map((star) => (
+      {/* 2. Rating Filter Pills & Sort Options */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold text-ink mr-1">Lọc theo:</span>
           <button
-            key={star}
             type="button"
             onClick={() => {
-              setRatingFilter((prev) => (prev === star ? null : star));
+              setRatingFilter(null);
               setPage(0);
             }}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-              ratingFilter === star
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              ratingFilter === null
                 ? 'bg-amber-500 text-white shadow-xs'
                 : 'bg-gray-100 text-ink-muted hover:bg-gray-200 hover:text-ink'
             }`}
           >
-            <span>{star} sao</span>
-            <span className="text-[11px] opacity-80">
-              ({summary.ratingCounts?.[star] || 0})
-            </span>
+            Tất cả ({summary.totalReviews})
           </button>
-        ))}
+          {[5, 4, 3, 2, 1].map((star) => (
+            <button
+              key={star}
+              type="button"
+              onClick={() => {
+                setRatingFilter((prev) => (prev === star ? null : star));
+                setPage(0);
+              }}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                ratingFilter === star
+                  ? 'bg-amber-500 text-white shadow-xs'
+                  : 'bg-gray-100 text-ink-muted hover:bg-gray-200 hover:text-ink'
+              }`}
+            >
+              <span>{star} sao</span>
+              <span className="text-[11px] opacity-80">
+                ({summary.ratingCounts?.[star] || 0})
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Sort selector */}
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-ink-muted">Sắp xếp:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value);
+              setPage(0);
+            }}
+            className="py-1 px-2.5 rounded-lg border border-line bg-white text-ink text-xs font-medium outline-hidden cursor-pointer"
+          >
+            <option value="createdAt">Mới nhất</option>
+            <option value="helpfulCount">Hữu ích nhất 👍</option>
+          </select>
+        </div>
       </div>
 
       {/* 3. Review Submission Form or User Review Status */}
@@ -372,7 +474,7 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
             <div>
               <h4 className="text-sm font-bold text-ink">Bạn đã trải nghiệm sản phẩm này?</h4>
               <p className="text-xs text-ink-muted">
-                Đăng nhập để chia sẻ cảm nhận và đánh giá sản phẩm cho cộng đồng FunnyShop nhé!
+                Đăng nhập để chia sẻ cảm nhận, đính kèm hình ảnh thực tế cho cộng đồng FunnyShop nhé!
               </p>
             </div>
           </div>
@@ -383,7 +485,7 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
           </Link>
         </div>
       ) : myReview && !isEditing ? (
-        // Already reviewed: Show My Review Banner with Edit/Delete actions
+        // Already reviewed: Show My Review Banner
         <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-3">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -416,6 +518,22 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
               <p className="text-xs sm:text-sm text-ink leading-relaxed">
                 {myReview.comment}
               </p>
+
+              {/* Photos if any */}
+              {myReview.images && myReview.images.length > 0 && (
+                <div className="flex items-center gap-2 mt-3">
+                  {myReview.images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setPreviewImage(img)}
+                      className="size-16 rounded-xl border border-line overflow-hidden hover:opacity-90 transition-opacity cursor-pointer shadow-2xs"
+                    >
+                      <img src={img} alt="Ảnh đánh giá" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Button
@@ -424,6 +542,7 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
                 onClick={() => {
                   setRatingInput(myReview.rating);
                   setCommentInput(myReview.comment);
+                  setImageUrls(myReview.images || []);
                   setIsEditing(true);
                 }}
               >
@@ -462,7 +581,7 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
                 {isEditing ? 'Chỉnh sửa đánh giá của bạn' : 'Viết đánh giá sản phẩm'}
               </h4>
               <p className="text-xs text-ink-muted">
-                Chia sẻ cảm nhận chân thật giúp FunnyShop và khách hàng khác lựa chọn tốt hơn
+                Chia sẻ cảm nhận chân thật và ảnh chụp sản phẩm giúp cộng đồng mua sắm tự tin hơn
               </p>
             </div>
             {isEditing && (
@@ -533,8 +652,58 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
             </div>
           </div>
 
+          {/* Attach Real Photos Section */}
+          <div className="space-y-2 pt-1">
+            <label className="block text-xs font-bold text-ink flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Camera className="size-3.5 text-primary-600" />
+                Hình ảnh sản phẩm thực tế ({imageUrls.length}/3)
+              </span>
+              <span className="text-[11px] font-normal text-ink-subtle">Tối đa 3 ảnh (JPG, PNG, WEBP)</span>
+            </label>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Existing Uploaded Images */}
+              {imageUrls.map((url, idx) => (
+                <div key={idx} className="relative size-20 rounded-xl border border-line overflow-hidden group shadow-2xs">
+                  <img src={url} alt={`Ảnh ${idx + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(idx)}
+                    className="absolute top-1 right-1 size-5 bg-black/70 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors cursor-pointer"
+                    title="Xóa ảnh này"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              ))}
+
+              {/* Upload Trigger Button */}
+              {imageUrls.length < 3 && (
+                <label className="size-20 rounded-xl border-2 border-dashed border-line hover:border-primary-500 bg-gray-50/60 hover:bg-primary-50/30 flex flex-col items-center justify-center gap-1 text-ink-muted hover:text-primary-700 transition-colors cursor-pointer">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleUploadImages}
+                    disabled={uploadingImages}
+                    className="hidden"
+                  />
+                  {uploadingImages ? (
+                    <Loader2 className="size-5 text-primary-600 animate-spin" />
+                  ) : (
+                    <>
+                      <Upload className="size-4" />
+                      <span className="text-[10px] font-semibold">Tải ảnh</span>
+                    </>
+                  )}
+                </label>
+              )}
+            </div>
+          </div>
+
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-1">
+          <div className="flex items-center justify-end gap-3 pt-2">
             {isEditing && (
               <Button
                 type="button"
@@ -549,7 +718,7 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
               type="submit"
               variant="primary"
               size="sm"
-              disabled={submitting}
+              disabled={submitting || uploadingImages}
               className="px-6"
             >
               {submitting ? (
@@ -615,7 +784,6 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
             {reviews.map((rev) => {
               const isOwner = user && user.id === rev.userId;
               const isAdmin = user && user.role === 'ADMIN';
-
               const initial = rev.userName ? rev.userName.charAt(0).toUpperCase() : 'U';
 
               return (
@@ -676,6 +844,7 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
                             onClick={() => {
                               setRatingInput(rev.rating);
                               setCommentInput(rev.comment);
+                              setImageUrls(rev.images || []);
                               setIsEditing(true);
                               window.scrollTo({ top: 400, behavior: 'smooth' });
                             }}
@@ -701,6 +870,41 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
                   <p className="text-xs sm:text-sm text-ink-muted leading-relaxed whitespace-pre-line pl-12">
                     {rev.comment}
                   </p>
+
+                  {/* Attached Real Photos */}
+                  {rev.images && rev.images.length > 0 && (
+                    <div className="flex items-center gap-2 pl-12 pt-1">
+                      {rev.images.map((imgUrl, imgIdx) => (
+                        <div
+                          key={imgIdx}
+                          onClick={() => setPreviewImage(imgUrl)}
+                          className="relative size-16 sm:size-20 rounded-xl border border-line overflow-hidden hover:opacity-90 hover:ring-2 hover:ring-amber-400 transition-all cursor-pointer group shadow-2xs"
+                        >
+                          <img src={imgUrl} alt={`Ảnh review ${imgIdx + 1}`} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
+                            <Maximize2 className="size-4" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Helpful Vote Button & Shop Reply */}
+                  <div className="pl-12 pt-1 flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleHelpful(rev.id)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer border ${
+                        rev.isHelpfulByCurrentUser
+                          ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold'
+                          : 'bg-gray-50 text-ink-muted hover:text-ink hover:bg-gray-100 border-line'
+                      }`}
+                      title="Bấm nếu bạn thấy đánh giá này hữu ích"
+                    >
+                      <ThumbsUp className={`size-3.5 ${rev.isHelpfulByCurrentUser ? 'fill-amber-500 text-amber-600' : ''}`} />
+                      <span>Hữu ích ({rev.helpfulCount || 0})</span>
+                    </button>
+                  </div>
 
                   {/* Shop Admin Reply */}
                   {rev.adminReply && (
@@ -751,6 +955,23 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
         )}
       </div>
 
+      {/* Lightbox Preview Modal */}
+      <Modal
+        isOpen={Boolean(previewImage)}
+        onClose={() => setPreviewImage(null)}
+        title="Hình ảnh thực tế từ khách hàng"
+      >
+        {previewImage && (
+          <div className="flex flex-col items-center justify-center p-2">
+            <img
+              src={previewImage}
+              alt="Hình ảnh thực tế"
+              className="max-h-[75vh] w-auto max-w-full rounded-2xl object-contain shadow-soft"
+            />
+          </div>
+        )}
+      </Modal>
+
       {/* Confirm Delete Dialog */}
       <ConfirmDialog
         isOpen={Boolean(deleteTargetId)}
@@ -766,4 +987,3 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
     </div>
   );
 }
-
