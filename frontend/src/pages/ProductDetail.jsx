@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   Star,
   ShoppingCart,
@@ -27,6 +27,7 @@ import SectionHeader from '../components/ui/SectionHeader';
 import Modal from '../components/ui/Modal';
 import { Skeleton, ProductCardSkeleton } from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
+import ProductReviews from '../components/product/ProductReviews';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getCategoryMeta } from '../utils/constants';
 import { useCartStore } from '../store/cartStore';
@@ -50,22 +51,45 @@ export default function ProductDetail() {
   const [justAdded, setJustAdded] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
+  const [searchParams] = useSearchParams();
+  const isReviewsTab = searchParams.get('tab') === 'reviews';
+
   // Tabs state
-  const [activeTab, setActiveTab] = useState('description');
+  const [activeTab, setActiveTab] = useState(isReviewsTab ? 'reviews' : 'description');
+
+  useEffect(() => {
+    if (isReviewsTab) {
+      const timer = setTimeout(() => {
+        const tabEl = document.getElementById('product-detail-tabs');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isReviewsTab]);
 
   // Related products state
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
 
+  // Silent reload product data when review updated
+  const handleReviewUpdated = useCallback(async () => {
+    if (!id) return;
+    try {
+      const data = await productApi.getProductById(id);
+      if (data && data.id) {
+        setProduct(data);
+      }
+    } catch {
+      // silent
+    }
+  }, [id]);
+
   // Load product detail
   useEffect(() => {
     let isCancelled = false;
 
-    async function fetchProduct() {
+    async function loadProductData() {
       if (!id) return;
-      setLoading(true);
-      setError(null);
-      setQuantity(1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
       try {
@@ -99,7 +123,7 @@ export default function ProductDetail() {
       }
     }
 
-    fetchProduct();
+    loadProductData();
 
     return () => {
       isCancelled = true;
@@ -552,10 +576,28 @@ export default function ProductDetail() {
 
             {/* Rating & Sold count */}
             <div className="flex items-center gap-4 text-xs sm:text-sm text-ink-muted mt-3">
-              <span className="flex items-center gap-1.5 font-bold text-amber-600">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('reviews');
+                  const tabEl = document.getElementById('product-detail-tabs');
+                  if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="flex items-center gap-1.5 font-bold text-amber-600 hover:text-amber-700 cursor-pointer transition-colors"
+                title="Xem đánh giá sản phẩm"
+              >
                 <Star className="size-4 fill-amber-400 text-amber-400" />
-                {rating.toFixed(1)}
-              </span>
+                <span>{rating.toFixed(1)}</span>
+                {product.reviewCount ? (
+                  <span className="text-ink-muted font-normal underline decoration-dotted text-xs">
+                    ({product.reviewCount} đánh giá)
+                  </span>
+                ) : (
+                  <span className="text-ink-subtle font-normal text-xs">
+                    (Chưa có đánh giá)
+                  </span>
+                )}
+              </button>
               <span>•</span>
               <span className="text-ink-muted">
                 {product.soldCount ? `Đã bán ${product.soldCount}` : 'Mới ra mắt'}
@@ -698,7 +740,7 @@ export default function ProductDetail() {
       </div>
 
       {/* 3. Detailed Tabs (Description, Policies, Reviews) */}
-      <div className="rounded-3xl border border-line bg-white shadow-soft overflow-hidden">
+      <div id="product-detail-tabs" className="rounded-3xl border border-line bg-white shadow-soft overflow-hidden">
         {/* Tab Headers */}
         <div className="flex border-b border-line bg-gray-50/70 overflow-x-auto">
           <button
@@ -734,7 +776,7 @@ export default function ProductDetail() {
                 : 'border-transparent text-ink-muted hover:text-ink hover:bg-gray-100/50'
             }`}
           >
-            Đánh giá ({product.rating || '4.8'})
+            Đánh giá {product.reviewCount ? `(${product.reviewCount})` : ''}
           </button>
         </div>
 
@@ -831,96 +873,10 @@ export default function ProductDetail() {
           )}
 
           {activeTab === 'reviews' && (
-            <div className="space-y-6 max-w-3xl">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-6 p-5 rounded-2xl bg-secondary-50/50 border border-secondary-200">
-                <div className="text-center sm:text-left">
-                  <div className="text-4xl font-extrabold text-ink">{rating.toFixed(1)}</div>
-                  <div className="flex items-center justify-center sm:justify-start gap-1 my-1 text-amber-500">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="size-4 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <div className="text-xs text-ink-muted">Dựa trên các đánh giá đã xác thực</div>
-                </div>
-
-                <div className="flex-1 space-y-1.5 text-xs text-ink-muted">
-                  <div className="flex items-center gap-2">
-                    <span>5 sao</span>
-                    <div className="h-2 flex-1 rounded-full bg-gray-200 overflow-hidden">
-                      <div className="h-full bg-amber-400 rounded-full w-[90%]" />
-                    </div>
-                    <span className="w-8 text-right">90%</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>4 sao</span>
-                    <div className="h-2 flex-1 rounded-full bg-gray-200 overflow-hidden">
-                      <div className="h-full bg-amber-400 rounded-full w-[8%]" />
-                    </div>
-                    <span className="w-8 text-right">8%</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>3 sao</span>
-                    <div className="h-2 flex-1 rounded-full bg-gray-200 overflow-hidden">
-                      <div className="h-full bg-amber-400 rounded-full w-[2%]" />
-                    </div>
-                    <span className="w-8 text-right">2%</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sample Verified Reviews */}
-              <div className="space-y-4 pt-2">
-                <div className="p-4 rounded-xl border border-line bg-white shadow-2xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="size-8 rounded-full bg-primary-100 text-primary-700 font-bold text-xs flex items-center justify-center">
-                        HN
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-ink">Hoàng Nam</h4>
-                        <span className="text-[11px] text-emerald-600 font-medium">
-                          ✓ Đã mua hàng tại FunnyShop
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex text-amber-400">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className="size-3.5 fill-amber-400 text-amber-400" />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-xs sm:text-sm text-ink-muted">
-                    Sản phẩm siêu dễ thương, đóng gói cẩn thận 2 lớp hộp và có kèm thiệp cảm ơn.
-                    Rất hài lòng!
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl border border-line bg-white shadow-2xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="size-8 rounded-full bg-secondary-100 text-secondary-700 font-bold text-xs flex items-center justify-center">
-                        TT
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-ink">Thanh Thảo</h4>
-                        <span className="text-[11px] text-emerald-600 font-medium">
-                          ✓ Đã mua hàng tại FunnyShop
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex text-amber-400">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className="size-3.5 fill-amber-400 text-amber-400" />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-xs sm:text-sm text-ink-muted">
-                    Chất vải và đường may rất tỉ mỉ, sờ êm ái cực kỳ. Giao hàng hỏa tốc trong 1 ngày
-                    đã nhận được rồi.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <ProductReviews
+              productId={product.id}
+              onReviewUpdated={handleReviewUpdated}
+            />
           )}
         </div>
       </div>
