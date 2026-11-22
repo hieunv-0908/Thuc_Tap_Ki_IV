@@ -52,70 +52,83 @@ export default function ProductDetail() {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const [searchParams] = useSearchParams();
+  const isReviewsTab = searchParams.get('tab') === 'reviews';
 
   // Tabs state
-  const [activeTab, setActiveTab] = useState(
-    searchParams.get('tab') === 'reviews' ? 'reviews' : 'description'
-  );
+  const [activeTab, setActiveTab] = useState(isReviewsTab ? 'reviews' : 'description');
 
   useEffect(() => {
-    if (searchParams.get('tab') === 'reviews') {
-      setActiveTab('reviews');
-      setTimeout(() => {
+    if (isReviewsTab) {
+      const timer = setTimeout(() => {
         const tabEl = document.getElementById('product-detail-tabs');
         if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth' });
       }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [searchParams]);
+  }, [isReviewsTab]);
 
   // Related products state
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
 
-  // Load product detail
-  const fetchProduct = useCallback(async (isSilent = false) => {
+  // Silent reload product data when review updated
+  const handleReviewUpdated = useCallback(async () => {
     if (!id) return;
-    if (!isSilent) {
-      setLoading(true);
-      setError(null);
-      setQuantity(1);
-    }
-
     try {
       const data = await productApi.getProductById(id);
-      if (!data || !data.id) {
-        if (!isSilent) setError('Không tìm thấy thông tin sản phẩm này.');
-        return;
+      if (data && data.id) {
+        setProduct(data);
       }
-      setProduct(data);
-      setCurrentImage((prev) => prev || data.imageUrl || null);
-
-      if (!isSilent) {
-        // Chọn biến thể đầu tiên khả dụng nếu có
-        if (data.variants && data.variants.length > 0) {
-          const firstAvailable =
-            data.variants.find((v) => !v.isDeleted && v.stockQuantity > 0) || data.variants[0];
-          setSelectedVariant(firstAvailable);
-        } else {
-          setSelectedVariant(null);
-        }
-      }
-    } catch (err) {
-      console.error('Lỗi khi tải chi tiết sản phẩm:', err);
-      if (!isSilent) {
-        setError(err.message || 'Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.');
-      }
-    } finally {
-      if (!isSilent) {
-        setLoading(false);
-      }
+    } catch {
+      // silent
     }
   }, [id]);
 
+  // Load product detail
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    fetchProduct(false);
-  }, [fetchProduct]);
+    let isCancelled = false;
+
+    async function loadProductData() {
+      if (!id) return;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      try {
+        const data = await productApi.getProductById(id);
+        if (!isCancelled) {
+          if (!data || !data.id) {
+            setError('Không tìm thấy thông tin sản phẩm này.');
+            return;
+          }
+          setProduct(data);
+          setCurrentImage(data.imageUrl || null);
+
+          // Chọn biến thể đầu tiên khả dụng nếu có
+          if (data.variants && data.variants.length > 0) {
+            const firstAvailable =
+              data.variants.find((v) => !v.isDeleted && v.stockQuantity > 0) || data.variants[0];
+            setSelectedVariant(firstAvailable);
+          } else {
+            setSelectedVariant(null);
+          }
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.error('Lỗi khi tải chi tiết sản phẩm:', err);
+          setError(err.message || 'Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.');
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProductData();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [id]);
 
   // Load related products
   useEffect(() => {
@@ -862,7 +875,7 @@ export default function ProductDetail() {
           {activeTab === 'reviews' && (
             <ProductReviews
               productId={product.id}
-              onReviewUpdated={() => fetchProduct(true)}
+              onReviewUpdated={handleReviewUpdated}
             />
           )}
         </div>

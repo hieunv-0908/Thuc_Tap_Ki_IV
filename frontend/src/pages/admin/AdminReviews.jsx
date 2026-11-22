@@ -8,7 +8,6 @@ import {
   Store,
   CheckCircle2,
   ExternalLink,
-  Filter,
   RefreshCw,
   Send,
   Calendar,
@@ -18,7 +17,6 @@ import {
 import reviewApi from '../../api/review';
 import { toast } from '../../store/toastStore';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { Link } from 'react-router-dom';
@@ -30,7 +28,7 @@ export default function AdminReviews() {
   const [searchQuery, setSearchQuery] = useState('');
   const [ratingFilter, setRatingFilter] = useState('');
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
@@ -43,9 +41,8 @@ export default function AdminReviews() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Fetch reviews list
+  // Fetch reviews list (called on user actions)
   const fetchReviews = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await reviewApi.adminGetReviews({
         keyword: searchQuery || undefined,
@@ -69,8 +66,39 @@ export default function AdminReviews() {
   }, [searchQuery, ratingFilter, page, pageSize]);
 
   useEffect(() => {
-    fetchReviews();
-  }, [fetchReviews]);
+    let ignore = false;
+    async function loadReviews() {
+      try {
+        const res = await reviewApi.adminGetReviews({
+          keyword: searchQuery || undefined,
+          rating: ratingFilter ? Number(ratingFilter) : undefined,
+          page,
+          size: pageSize,
+          sortBy: 'createdAt',
+          sortDir: 'desc',
+        });
+        if (!ignore && res.data) {
+          setReviews(res.data.content || []);
+          setTotalElements(res.data.totalElements || 0);
+          setTotalPages(res.data.totalPages || 0);
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error('Failed to load admin reviews:', err);
+          toast.error('Không thể tải danh sách đánh giá');
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadReviews();
+    return () => {
+      ignore = true;
+    };
+  }, [searchQuery, ratingFilter, page, pageSize]);
 
   // Handle Search submit
   const handleSearch = (e) => {

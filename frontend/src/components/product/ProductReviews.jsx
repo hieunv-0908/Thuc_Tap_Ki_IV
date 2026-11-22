@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Star, MessageSquare, CheckCircle2, Store, Trash2, Edit3, Send, AlertCircle, Loader2 } from 'lucide-react';
+import { Star, MessageSquare, CheckCircle2, Store, Trash2, Edit3, Send, Loader2 } from 'lucide-react';
 import reviewApi from '../../api/review';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
@@ -79,9 +79,8 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
     }
   }, [productId, isAuthenticated]);
 
-  // Fetch reviews list
+  // Fetch reviews list (on user action or pagination)
   const fetchReviews = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await reviewApi.getProductReviews(productId, {
         rating: ratingFilter || undefined,
@@ -103,13 +102,77 @@ export default function ProductReviews({ productId, onReviewUpdated }) {
   }, [productId, ratingFilter, page]);
 
   useEffect(() => {
-    fetchSummary();
-    fetchMyReview();
-  }, [fetchSummary, fetchMyReview]);
+    let ignore = false;
+    async function loadInitialData() {
+      try {
+        const res = await reviewApi.getProductReviewSummary(productId);
+        if (!ignore && res.data) {
+          setSummary(res.data);
+        }
+      } catch (err) {
+        console.error('Failed to load review summary:', err);
+      }
+
+      if (isAuthenticated) {
+        try {
+          const res = await reviewApi.getMyProductReview(productId);
+          if (!ignore) {
+            if (res.data) {
+              setMyReview(res.data);
+              setRatingInput(res.data.rating);
+              setCommentInput(res.data.comment);
+            } else {
+              setMyReview(null);
+              setRatingInput(5);
+              setCommentInput('');
+            }
+          }
+        } catch {
+          if (!ignore) setMyReview(null);
+        }
+      } else if (!ignore) {
+        setMyReview(null);
+      }
+    }
+
+    loadInitialData();
+    return () => {
+      ignore = true;
+    };
+  }, [productId, isAuthenticated]);
 
   useEffect(() => {
-    fetchReviews();
-  }, [fetchReviews]);
+    let ignore = false;
+    async function loadReviews() {
+      try {
+        const res = await reviewApi.getProductReviews(productId, {
+          rating: ratingFilter || undefined,
+          page,
+          size: 6,
+          sortBy: 'createdAt',
+          sortDir: 'desc',
+        });
+        if (!ignore && res.data) {
+          setReviews(res.data.content || []);
+          setTotalPages(res.data.totalPages || 0);
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error('Failed to load product reviews:', err);
+          toast.error('Không thể tải danh sách đánh giá');
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadReviews();
+    return () => {
+      ignore = true;
+    };
+  }, [productId, ratingFilter, page]);
 
   // Handle submit review
   const handleSubmitReview = async (e) => {
