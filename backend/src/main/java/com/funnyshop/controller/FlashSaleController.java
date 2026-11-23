@@ -28,5 +28,13 @@ public class FlashSaleController {
                 )
         );
     }
+
+    @GetMapping("/upcoming")
+    public ResponseEntity<ApiResponse<java.util.List<FlashSaleResponse>>> getUpcomingFlashSales() {
+        java.util.List<FlashSaleResponse> upcoming = flashSaleService.getUpcomingFlashSales();
+        return ResponseEntity.ok(
+                ApiResponse.success(upcoming, "Lấy danh sách Flash Sale sắp diễn ra thành công")
+        );
+    }
 }
 

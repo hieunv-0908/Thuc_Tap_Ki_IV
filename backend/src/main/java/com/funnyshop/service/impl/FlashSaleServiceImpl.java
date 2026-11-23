@@ -195,6 +195,27 @@ public class FlashSaleServiceImpl implements FlashSaleService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<FlashSaleResponse> getUpcomingFlashSales() {
+        LocalDateTime now = LocalDateTime.now();
+        List<FlashSale> allSales = flashSaleRepository.findAll();
+        List<FlashSaleResponse> result = new ArrayList<>();
+
+        for (FlashSale sale : allSales) {
+            if (Boolean.TRUE.equals(sale.getIsActive()) && sale.getStartTime().isAfter(now)) {
+                FlashSaleResponse res = mapToResponse(sale, true);
+                if (res.getItems() == null || res.getItems().isEmpty()) {
+                    res.setItems(generateDynamicFlashSaleItems(sale));
+                }
+                result.add(res);
+            }
+        }
+
+        result.sort(Comparator.comparing(FlashSaleResponse::getStartTime));
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public int getActiveDiscountPercentForProduct(Long productId, Long categoryId) {
         LocalDateTime now = LocalDateTime.now();
         List<FlashSale> activeSales = flashSaleRepository.findActiveFlashSales(now);

@@ -24,6 +24,8 @@ public interface FlashSaleService {
 
     Optional<FlashSaleResponse> getActiveFlashSale();
 
+    List<FlashSaleResponse> getUpcomingFlashSales();
+
     int getActiveDiscountPercentForProduct(Long productId, Long categoryId);
 }
 
