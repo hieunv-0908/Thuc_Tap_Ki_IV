@@ -3,6 +3,8 @@ spring:
     name: funnyshop
   profiles:
     active: dev
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
   jpa:
     open-in-view: false
   servlet:
