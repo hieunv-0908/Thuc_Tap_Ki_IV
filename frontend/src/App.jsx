@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Cart from './pages/Cart';
+import FlashSale from './pages/FlashSale';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
@@ -41,6 +42,7 @@ export default function App() {
         {/* Main Store Layout */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/flash-sale" element={<FlashSale />} />
           <Route path="/products/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/forbidden" element={<Forbidden />} />

@@ -13,6 +13,7 @@ import {
   ChevronDown,
   MessageSquare,
   Heart,
+  Zap,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
@@ -234,6 +235,19 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-3 sm:gap-4">
+            {/* Flash Sale Link (Desktop) */}
+            <Link
+              to="/flash-sale"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-linear-to-r from-red-500 to-amber-500 text-white text-xs font-bold shadow-xs hover:shadow-md hover:scale-105 transition-all group"
+              title="Flash Sale Giờ Vàng"
+            >
+              <Zap className="size-3.5 fill-white text-white animate-pulse" />
+              <span>Flash Sale</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-white text-[9px] font-black uppercase tracking-wider">
+                HOT
+              </span>
+            </Link>
+
             <div className="hidden sm:block">
               <ThemeToggle />
             </div>
@@ -467,6 +481,20 @@ export default function Navbar({ onSearch, initialSearchQuery = '' }) {
               >
                 <Package className="size-5 text-primary-700" />
                 <span>Trang chủ sản phẩm</span>
+              </Link>
+
+              <Link
+                to="/flash-sale"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Zap className="size-5 fill-red-500 text-red-500 animate-pulse" />
+                  <span>Flash Sale Giờ Vàng</span>
+                </div>
+                <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                  HOT
+                </span>
               </Link>
 
               <Link
