@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Clock, Flame } from 'lucide-react';
+import { Zap, Clock, Flame, ArrowRight } from 'lucide-react';
 import { flashSaleApi } from '../../api/flashSale';
 import { formatCurrency } from '../../utils/formatCurrency';
 
@@ -93,26 +93,37 @@ export default function FlashSaleBanner() {
           </div>
         </div>
 
-        {/* Countdown Box */}
-        <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/20 self-start md:self-auto">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 uppercase tracking-wider mr-1">
-            <Clock className="size-4 animate-spin-slow" />
-            <span>Kết thúc sau:</span>
+        {/* Countdown Box & View All Button */}
+        <div className="flex items-center gap-3 self-start md:self-auto flex-wrap">
+          <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/20">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 uppercase tracking-wider mr-1">
+              <Clock className="size-4 animate-spin-slow" />
+              <span>Kết thúc sau:</span>
+            </div>
+
+            <div className="flex items-center gap-1 font-mono font-black text-sm sm:text-base">
+              <span className="bg-white text-red-600 px-2 py-1 rounded-lg shadow-sm">
+                {padZero(timeLeft.hours)}
+              </span>
+              <span className="text-white font-bold">:</span>
+              <span className="bg-white text-red-600 px-2 py-1 rounded-lg shadow-sm">
+                {padZero(timeLeft.minutes)}
+              </span>
+              <span className="text-white font-bold">:</span>
+              <span className="bg-white text-red-600 px-2 py-1 rounded-lg shadow-sm">
+                {padZero(timeLeft.seconds)}
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 font-mono font-black text-sm sm:text-base">
-            <span className="bg-white text-red-600 px-2 py-1 rounded-lg shadow-sm">
-              {padZero(timeLeft.hours)}
-            </span>
-            <span className="text-white font-bold">:</span>
-            <span className="bg-white text-red-600 px-2 py-1 rounded-lg shadow-sm">
-              {padZero(timeLeft.minutes)}
-            </span>
-            <span className="text-white font-bold">:</span>
-            <span className="bg-white text-red-600 px-2 py-1 rounded-lg shadow-sm">
-              {padZero(timeLeft.seconds)}
-            </span>
-          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/flash-sale')}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-red-950 font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer"
+          >
+            <span>Xem tất cả</span>
+            <ArrowRight className="size-4" />
+          </button>
         </div>
       </div>
 

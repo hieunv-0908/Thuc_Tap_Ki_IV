@@ -6,6 +6,10 @@ export const flashSaleApi = {
     return axiosClient.get('/api/v1/flash-sales/active');
   },
 
+  getUpcomingFlashSales: () => {
+    return axiosClient.get('/api/v1/flash-sales/upcoming');
+  },
+
   // Admin
   getAllFlashSales: () => {
     return axiosClient.get('/api/v1/admin/flash-sales');
